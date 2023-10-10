@@ -59,7 +59,7 @@ data Cell = Cell CellType Vec2
 
 instance Eq Cell where
     (==) :: Cell -> Cell -> Bool
-    (==) (Cell t1 v1) (Cell t2 v2) = t1 == t2 && v1 == v2
+    (Cell t1 v1) == (Cell t2 v2) = t1 == t2 && v1 == v2
 
 instance Show Cell where
     show :: Cell -> String

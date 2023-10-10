@@ -1,8 +1,9 @@
 module Map where
 
-import Types ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Intersection, Pellet), Cell (Cell), allDirections, getCell, getCells, dirToVec2, setCells )
+import Types ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Intersection, Pellet), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, dirToVec2, setCells )
 import Data.Maybe
 import Data.List
+import Distribution.Compat.Graph (neighbors)
 
 getDiags :: [Cell] -> Cell -> [Cell]
 getDiags l c@(Cell t pos) = getCells (LevelMap l) (map (pos +) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1])
@@ -41,3 +42,33 @@ getWallGroups l@(LevelMap m) = getGroups (filter (\(Cell t _) -> t == Wall) m)
 
 calculateWallGroups :: LevelMap -> LevelMap
 calculateWallGroups l@(LevelMap m) = setCells l (map (\(Cell _ v) -> Cell Intersection v) (concat (getWallGroups l)))
+
+data WallType = StraightOne | OutCorner | InCorner | End | StraightTwo | Single deriving Eq
+data WallSection = WallSection WallType Direction
+
+instance Eq WallSection where
+    (==) :: WallSection -> WallSection -> Bool
+    (WallSection t1 d1) == (WallSection t2 d2) = (t1 == t2) && (d1 == d2)
+instance Show WallSection where
+    show :: WallSection -> String
+    show (WallSection Single _) = "⚀"
+    show (WallSection StraightOne North) = "⎺"
+    show (WallSection StraightOne East) = "⎜"
+    show (WallSection StraightOne South) = "⎽"
+    show (WallSection StraightOne West) = "⎟"
+    show (WallSection OutCorner North) = "◜"
+    show (WallSection OutCorner East) = "◝"
+    show (WallSection OutCorner South) = "◞"
+    show (WallSection OutCorner West) = "◟"
+    show (WallSection InCorner North) = "◞"
+    show (WallSection InCorner East) = "◟"
+    show (WallSection InCorner South) = "◜"
+    show (WallSection InCorner West) = "◝"
+    show (WallSection End North) = "⎴"
+    show (WallSection End East) = "["
+    show (WallSection End South) = "⎵"
+    show (WallSection End West) = "]"
+    show (WallSection StraightTwo North) = "⎕"
+    show (WallSection StraightTwo East) = "⏛"
+    show (WallSection StraightTwo South) = "⎕"
+    show (WallSection StraightTwo West) = "⏛"
