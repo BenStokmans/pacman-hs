@@ -82,9 +82,14 @@ setCell (LevelMap m) c@(Cell _ v1) = LevelMap (c : filter (\(Cell _ v2) -> v1 /=
 setCells :: LevelMap -> [Cell] -> LevelMap
 setCells = foldl setCell
 
-getCell :: LevelMap -> Vec2 -> Maybe Cell
-getCell (LevelMap m) v1 | null n = Nothing
-             | otherwise = Just (head n)
+getCell :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
+getCell (LevelMap []) _ = Nothing
+getCell (LevelMap (c@(Cell _ v2):xs)) v1 | v1 == v2 = Just c
+                                         | otherwise = getCell (LevelMap xs) v1
+
+getCell' :: LevelMap -> Vec2 -> Maybe Cell
+getCell' (LevelMap m) v1 | null n = Nothing
+                         | otherwise = Just (head n)
     where n = filter (\(Cell _ v2) -> v1 == v2) m
 
 getCells :: LevelMap -> [Vec2] -> [Cell]
