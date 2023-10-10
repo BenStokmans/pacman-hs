@@ -1,5 +1,8 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
 module Types where
 import Data.List
+import Data.Maybe
 
 data Direction = North | South | West | East deriving Eq
 instance Show Direction where
@@ -38,21 +41,25 @@ dirToVec2 South = Vec2 0 (-1)
 dirToVec2 West = Vec2 (-1) 0
 dirToVec2 East = Vec2 1 0
 
-data CellType = Empty | Pellet | Wall | Cross deriving Eq
+data CellType = Empty | Pellet | Wall | Intersection deriving Eq
 instance Show CellType where
     show :: CellType -> String
     show Empty = "E"
     show Pellet = "P"
     show Wall = "W"
-    show Cross = "X"
+    show Intersection = "X"
 
 stringToCellType :: String -> CellType
 stringToCellType "P" = Pellet
 stringToCellType "W" = Wall
-stringToCellType "X" = Cross
+stringToCellType "X" = Intersection
 stringToCellType _ = Empty
 
 data Cell = Cell CellType Vec2
+
+instance Eq Cell where
+    (==) :: Cell -> Cell -> Bool
+    (==) (Cell t1 v1) (Cell t2 v2) = t1 == t2 && v1 == v2
 
 instance Show Cell where
     show :: Cell -> String
@@ -80,6 +87,9 @@ getCell (LevelMap m) v1 | null n = Nothing
              | otherwise = Just (head n)
     where n = filter (\(Cell _ v2) -> v1 == v2) m
 
+getCells :: LevelMap -> [Vec2] -> [Cell]
+getCells l = mapMaybe (getCell l)
+
 mapHeight :: LevelMap -> Float
 mapHeight (LevelMap m) = foldr (max . (\(Cell _ (Vec2 _ y)) -> y)) 0 m
 
@@ -92,13 +102,13 @@ parseLevel s = LevelMap (parseAll (map words (lines s)))
         parseAll :: [[String]] -> [Cell]
         parseAll rows = concatMap (\(y, row) -> parseRow row (fromInteger y :: Float)) (zip [0..] rows)
         parseRow :: [String] -> Float -> [Cell]
-        parseRow r y = map (\(x,t) -> Cell (stringToCellType t) (Vec2 (fromInteger x :: Float) y)) (zip [0..] r)
+        parseRow r y = zipWith (\x t -> Cell (stringToCellType t) (Vec2 (fromInteger x :: Float) y)) [0..] r
 
 readLevel :: String -> IO LevelMap
 readLevel f = do
   mazeText <- readFile f
   return (parseLevel mazeText)
-  
+
 data GameStatus = Won | Lost | Playing deriving Eq
 data GameLevel = DefaultLevel -- would only change if we decide to implement additional levels
 data PowerUp = Cherry | Apple | PowerPellet deriving Eq

@@ -1,6 +1,6 @@
 module Pathfinding where
 
-import Types ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Cross), Cell (Cell), allDirections, stringToCellType, mapHeight, mapWidth, getCell, dirToVec2, setCells, Direction (North, East, South, West) )
+import Types ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Intersection), Cell (Cell), allDirections, stringToCellType, mapHeight, mapWidth, getCell, dirToVec2, setCells, Direction (North, East, South, West) )
 import Data.Maybe
 import Data.List
 
@@ -30,10 +30,10 @@ newCell h from p = AStarCell {
         dir' = getTraveledDirection (pos from) p
 
 isValidPos :: LevelMap -> Vec2 -> Bool
-isValidPos m p = isJust (getCell m p) && (maybe False (\(Cell t _) -> t /= Wall) (getCell m p))
+isValidPos m p = isJust (getCell m p) && maybe False (\(Cell t _) -> t /= Wall) (getCell m p)
 
 getAdjacent :: LevelMap -> (Vec2 -> Float) -> AStarCell -> [AStarCell]
-getAdjacent m h t@(AStarCell { pos = pos }) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + (dirToVec2 d)) allDirections))
+getAdjacent m h t@(AStarCell { pos = pos }) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
 
 vec2Dist :: Vec2 -> Vec2 -> Float
 vec2Dist (Vec2 x1 y1) (Vec2 x2 y2) = abs ((x1 - x2) + (y1 - y2))
