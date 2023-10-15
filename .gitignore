@@ -1,3 +1,9 @@
-.vscode
 *.hi
 *.o
+.stack-work/
+*~
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+dist*/
+.DS_Store

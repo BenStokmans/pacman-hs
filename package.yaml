@@ -1,0 +1,35 @@
+name: pacman
+version: 0.1.0.0
+github: "BenStokmans/pacman-hs"
+license: LICENSE
+author: "Ben Stokmans and Geerten Helmers"
+maintainer: "b.d.j.stokmans@students.uu.nl"
+copyright: "2023 Ben Stokmans and Geerten Helmers"
+
+dependencies:
+  - base >= 4.17
+  - gloss
+  - sdl2
+  - sdl2-ttf
+  - gloss-sdl2-surface
+  - text
+
+default-extensions:
+  - TupleSections
+  - BangPatterns
+  - OverloadedStrings
+  - InstanceSigs
+
+library:
+  source-dirs: src
+
+executables:
+  pacman-exe:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - pacman

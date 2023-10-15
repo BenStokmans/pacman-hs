@@ -3,8 +3,6 @@ module Map where
 import Types ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Intersection, Pellet), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, mapWidth, mapHeight, dirToVec2, setCells )
 import Data.Maybe
 import Data.List
-import Distribution.Compat.Graph (neighbors)
-import Language.Haskell.TH (Body(NormalB))
 
 getDiags :: [Cell] -> Cell -> [Cell]
 getDiags l c@(Cell t pos) = getCells (LevelMap l) (map (pos +) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1])

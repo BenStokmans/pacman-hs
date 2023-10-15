@@ -1,8 +1,8 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
 module Types where
 import Data.List
 import Data.Maybe
+
+data OriginPoint = OriginTopLeft | OriginCenter deriving (Show, Eq)
 
 data Direction = North | South | West | East deriving Eq
 instance Show Direction where

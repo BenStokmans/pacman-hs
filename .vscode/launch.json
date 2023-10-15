@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Start game",
+        "preLaunchTask": "exec",
+        "program": "--version"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Build game",
+        "preLaunchTask": "run",
+        "program": "--version"
+      },
+      {
+        "type": "ghc",
+        "request": "launch",
+        "name": "Debug game",
+        "internalConsoleOptions": "openOnSessionStart",
+        "workspace": "${workspaceFolder}",
+        "startup": "${workspaceFolder}/app/Main.hs",
+        "startupFunc": "",
+        "startupArgs": "",
+        "stopOnEntry": false,
+        "mainArgs": "",
+        "ghciPrompt": "H>>= ",
+        "ghciInitialPrompt": "> ",
+        "ghciCmd": "stack ghci --no-load --no-build",
+        "ghciEnv": {},
+        "logFile": "${workspaceFolder}/.vscode/phoityne.log",
+        "logLevel": "WARNING",
+        "forceInspect": false
+      },
+      {
+        "name": "Python: Current File",
+        "type": "python",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal"
+      }
+    ]
+  }
