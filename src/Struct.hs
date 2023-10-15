@@ -1,6 +1,7 @@
-module Types where
-import Data.List
-import Data.Maybe
+module Struct where
+import Data.List (intercalate)
+import Data.Maybe ( mapMaybe )
+import Assets(Assets)
 
 data OriginPoint = OriginTopLeft | OriginCenter deriving (Show, Eq)
 
@@ -114,22 +115,8 @@ readLevel f = do
   mazeText <- readFile f
   return (parseLevel mazeText)
 
-data GameStatus = Won | Lost | Playing deriving Eq
 data GameLevel = DefaultLevel -- would only change if we decide to implement additional levels
 data PowerUp = Cherry | Apple | PowerPellet deriving Eq
-
-data GameState = GameState
-    {
-        lives :: Int,
-        status :: GameStatus,
-        clock :: Int, -- the game time used for animation and ghost ai
-        level :: GameLevel, -- (if we decide to include multiple level options)
-        score :: Int,
-        player :: Player, -- the player character for pacman
-        pinky :: GhostActor, inky :: GhostActor, blinky :: GhostActor, clyde :: GhostActor, -- the four ghost
-        pellets :: [Vec2],
-        powerUps :: [PowerUp] -- could be either cherries, apples, etc.
-    }
 
 data Player = Player
     {
@@ -152,19 +139,19 @@ data GhostActor = GhostActor
         gCurrentBehaviour :: GhostBehaviour
     }
 
-nextPlayerPosition :: GameState -> Int -> GameState
-nextPlayerPosition game dTime = game
-                        {
-                            player = currPlayer
-                            {
-                                pLocation = currLocation +
-                                scaleVec2 dirVec timeScalar
-                            }
-                        }
-                where
-                    timeScalar = fromIntegral dTime :: Float
-                    currPlayer = player game
-                    currLocation = pLocation currPlayer
-                    currVelocity = pVelocity currPlayer
-                    currDirection = pDirection currPlayer
-                    dirVec = scaleVec2 (dirToVec2 currDirection) currVelocity
+-- nextPlayerPosition :: GameState -> Int -> GameState
+-- nextPlayerPosition game dTime = game
+--                         {
+--                             player = currPlayer
+--                             {
+--                                 pLocation = currLocation +
+--                                 scaleVec2 dirVec timeScalar
+--                             }
+--                         }
+--                 where
+--                     timeScalar = fromIntegral dTime :: Float
+--                     currPlayer = player game
+--                     currLocation = pLocation currPlayer
+--                     currVelocity = pVelocity currPlayer
+--                     currDirection = pDirection currPlayer
+--                     dirVec = scaleVec2 (dirToVec2 currDirection) currVelocity

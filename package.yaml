@@ -13,6 +13,8 @@ dependencies:
   - sdl2-ttf
   - gloss-sdl2-surface
   - text
+  - filepath
+  - MonadRandom
 
 default-extensions:
   - TupleSections
