@@ -15,6 +15,7 @@ dependencies:
   - text
   - filepath
   - MonadRandom
+  - JuicyPixels
 
 default-extensions:
   - TupleSections

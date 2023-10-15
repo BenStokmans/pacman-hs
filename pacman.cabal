@@ -30,6 +30,7 @@ library
       Router
       State
       Struct
+      Views.GameView
       Views.StartMenu
   other-modules:
       Paths_pacman
@@ -41,7 +42,8 @@ library
       OverloadedStrings
       InstanceSigs
   build-depends:
-      MonadRandom
+      JuicyPixels
+    , MonadRandom
     , base >=4.17
     , filepath
     , gloss
@@ -64,7 +66,8 @@ executable pacman-exe
       InstanceSigs
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      MonadRandom
+      JuicyPixels
+    , MonadRandom
     , base >=4.17
     , filepath
     , gloss
