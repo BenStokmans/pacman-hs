@@ -1,11 +1,16 @@
 # Install dependencies
 stack exec -- pacman -Syu
-stack exec -- pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf
 
-# Download and place next to exe
-# - https://www.libsdl.org/release/SDL2-devel-2.28.4-mingw.tar.gz
-# - https://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-devel-2.20.2-mingw.tar.gz
+# have to download older version because newest version is broken
+stack exec -- curl -O https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-SDL2-2.0.22-2-any.pkg.tar.zst
+stack exec -- pacman -U mingw-w64-x86_64-SDL2-2.0.22-2-any.pkg.tar.zst
+rm .\mingw-w64-x86_64-SDL2-2.0.22-2-any.pkg.tar.zst
+
+stack exec -- pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2_ttf
+
+# Download freeglut
+https://www.transmissionzero.co.uk/files/software/development/GLUT/freeglut-MinGW.zip
+move `freeglut-MinGW-3.0.0-1.mp.zip\freeglut\bin\x64\freeglut.dll` into the root of the project
 
 stack setup
 stack run
-stack build --file-watch
