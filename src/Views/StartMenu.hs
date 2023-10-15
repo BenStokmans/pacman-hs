@@ -1,6 +1,6 @@
 module Views.StartMenu where
 
-import State (GlobalState(..), MenuRoute (GameMenu), GameState (..))
+import State (GlobalState(..), MenuRoute (GameView), GameState (..))
 import Assets(Assets(Assets,pacFont, emuFont))
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle))
@@ -29,7 +29,7 @@ renderStartMenu s = do
 
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s 
-    | startButtonHover = do return s {route = GameMenu}
+    | startButtonHover = do return s {route = GameView}
     where 
         startButtonHover = rectangleHovered (mousePos s) startButton
 handleInputStartMenu _ s = do return s

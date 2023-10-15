@@ -10,7 +10,7 @@ data Settings = Settings
         windowSize :: (Float,Float)
     }
 
-data MenuRoute = StartMenu | GameMenu | PauseMenu | GameOverMenu deriving (Eq,Show)
+data MenuRoute = StartMenu | GameView | PauseMenu | GameOverMenu deriving (Eq,Show)
 data GameStatus = Won | Lost | Playing | Paused deriving Eq
 data GameState = GameState
     {
