@@ -55,7 +55,7 @@ initState = do
             }
             -- todo init ghosts
         },
-        route = GameView,
+        route = StartMenu,
         assets = assets,
         mousePos = (0,0),
         particles = []

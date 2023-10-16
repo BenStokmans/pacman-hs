@@ -1,8 +1,8 @@
 module Views.GameView where
 import State
-    ( GlobalState(gameState, settings, assets, GlobalState),
+    ( GlobalState(..),
       Settings(windowSize),
-      GameState(clock, player, prevClock) )
+      GameState(clock, player, prevClock), MenuRoute (..) )
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (..))
 import Assets (Assets(..), Anim (..), PacManSprite (..))
@@ -75,7 +75,7 @@ renderGameView gs = do
             (("Current pacman frame: " ++ show (pFrame $ player $ gameState gs)) ++
                 (let (x,y) = gridSize gs in "\n Gridsize: (" ++ show x ++ ", " ++ show y ++ ")"))
     let debug = translate (-400) 400 debugString
-    return (pictures [debugGrid gs,drawMap gs, drawPlayer gs, debug])
+    return (pictures [drawMap gs, drawPlayer gs, debug])
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North
@@ -89,6 +89,7 @@ keyToDirection _ (Char 'd') = East
 keyToDirection d _ = d
 
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
+handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu}
 handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player = ps { pDirection = keyToDirection (pDirection ps) k } } }
                         where
                             gs = gameState s

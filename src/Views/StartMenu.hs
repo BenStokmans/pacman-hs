@@ -8,6 +8,7 @@ import Graphics.Gloss ( Picture, blue, red, white, pictures )
 import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseButton (..) )
 import Graphics.Gloss.Data.Point ()
 import Particles (updateParticles, drawParticles)
+import System.Exit (exitSuccess)
 
 startButton :: Rectangle
 startButton = Rectangle (0,10) 500 100 10
@@ -30,8 +31,10 @@ renderStartMenu s = do
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s 
     | startButtonHover = do return s {route = GameView}
+    | quitButtonHover = do exitSuccess
     where 
         startButtonHover = rectangleHovered (mousePos s) startButton
+        quitButtonHover = rectangleHovered (mousePos s) quitButton
 handleInputStartMenu _ s = do return s
 
 handleUpdateStartMenu :: Float -> GlobalState -> IO GlobalState
