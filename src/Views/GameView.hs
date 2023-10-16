@@ -1,7 +1,8 @@
 module Views.GameView where
 import State
 import Graphics.Gloss
-import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..))
+import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (KeyEsc))
+import GHC.ResponseFile (escapeArgs)
 
 gridSize :: Float
 gridSize = 28
@@ -30,6 +31,7 @@ renderGameView s = do
     return (pictures [debugGrid s, drawPlayer s])
 
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
+handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu}
 handleInputGameView _ s = do return s
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState

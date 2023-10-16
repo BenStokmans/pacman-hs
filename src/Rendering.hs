@@ -10,7 +10,7 @@ import Graphics.Gloss( Color, Picture(Bitmap, Color), rgbaOfColor, translate, sc
 import Data.Text (pack)
 import Graphics.Gloss.Data.Point ( Point, pointInBox )
 
-data Rectangle = Rectangle Point Float Float Float
+data Rectangle = Rectangle Point Float Float Float --Centre point, width, height, borderthickness
 
 rectangleHovered :: Point -> Rectangle -> Bool
 rectangleHovered mouse (Rectangle (x,y) width height _) = pointInBox mouse (sx+x,-sy+y) (-sx+x,sy+y)
