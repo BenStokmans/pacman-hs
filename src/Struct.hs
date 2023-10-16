@@ -1,7 +1,7 @@
 module Struct where
+
 import Data.List (intercalate)
 import Data.Maybe ( mapMaybe )
-import Assets(Assets)
 
 data OriginPoint = OriginTopLeft | OriginCenter deriving (Show, Eq)
 
@@ -66,45 +66,45 @@ instance Show Cell where
     show :: Cell -> String
     show (Cell t v) = show t ++ ":" ++ show v
 
-data LevelMap = LevelMap [Cell]
+data LevelMap = LevelMap Float Float [Cell]
 
 instance Show LevelMap where
     show :: LevelMap -> String
-    show m = intercalate "\n" (map unwords cells)
+    show m@(LevelMap w h l) = intercalate "\n" (map unwords cells)
         where
-            w = mapWidth m
-            h = mapHeight m
             indeces = map (\y -> map (`Vec2` y) [0 .. w]) [0 .. h]
             cells = map (map (maybe "E" (\(Cell t _) -> show t) . getCell m)) indeces
 
 setCell :: LevelMap -> Cell -> LevelMap
-setCell (LevelMap m) c@(Cell _ v1) = LevelMap (c : filter (\(Cell _ v2) -> v1 /= v2) m)
+setCell (LevelMap w h m) c@(Cell _ v1) = LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
 
 setCells :: LevelMap -> [Cell] -> LevelMap
 setCells = foldl setCell
 
 getCell :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
-getCell (LevelMap []) _ = Nothing
-getCell (LevelMap (c@(Cell _ v2):xs)) v1 | v1 == v2 = Just c
-                                         | otherwise = getCell (LevelMap xs) v1
+getCell (LevelMap _ _ []) _ = Nothing
+getCell (LevelMap w h (c@(Cell _ v2@(Vec2 x y)):xs)) v1 | v1 == v2 = Just c
+                                                --    | x < 0 || y < 0 || x >= w || y >= h = Just OutOfBounds
+                                                   | otherwise = getCell (LevelMap w h xs) v1
 
 getCell' :: LevelMap -> Vec2 -> Maybe Cell
-getCell' (LevelMap m) v1 | null n = Nothing
+getCell' (LevelMap _ _ m) v1 | null n = Nothing
                          | otherwise = Just (head n)
     where n = filter (\(Cell _ v2) -> v1 == v2) m
 
 getCells :: LevelMap -> [Vec2] -> [Cell]
 getCells l = mapMaybe (getCell l)
 
-mapHeight :: LevelMap -> Float
-mapHeight (LevelMap m) = foldr (max . (\(Cell _ (Vec2 _ y)) -> y)) 0 m
+mapHeight :: [Cell] -> Float
+mapHeight = foldr (max . (\(Cell _ (Vec2 _ y)) -> y)) 0
 
-mapWidth :: LevelMap -> Float
-mapWidth (LevelMap m) = foldr (max . (\(Cell _ (Vec2 x _)) -> x)) 0 m
+mapWidth :: [Cell] -> Float
+mapWidth = foldr (max . (\(Cell _ (Vec2 x _)) -> x)) 0
 
 parseLevel :: String -> LevelMap
-parseLevel s = LevelMap (parseAll (map words (lines s)))
+parseLevel s = LevelMap (mapWidth cells+1) (mapHeight cells+1) cells
     where
+        cells = parseAll (map words (reverse (lines s)))
         parseAll :: [[String]] -> [Cell]
         parseAll rows = concatMap (\(y, row) -> parseRow row (fromInteger y :: Float)) (zip [0..] rows)
         parseRow :: [String] -> Float -> [Cell]
@@ -122,7 +122,8 @@ data Player = Player
     {
         pVelocity :: Float,
         pDirection :: Direction,
-        pLocation :: Vec2
+        pLocation :: Vec2,
+        pFrame :: Int
     }
 
 data Ghost = Pinky | Inky | Blinky | Clyde deriving Eq

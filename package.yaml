@@ -11,11 +11,13 @@ dependencies:
   - gloss
   - sdl2
   - sdl2-ttf
+  - gloss-juicy
   - gloss-sdl2-surface
   - text
   - filepath
   - MonadRandom
   - JuicyPixels
+  - directory
 
 default-extensions:
   - TupleSections

@@ -50,11 +50,12 @@ initState = do
             player = Player {
                 pVelocity = 0,
                 pDirection = North,
-                pLocation = Vec2 0 0
+                pLocation = Vec2 0 0,
+                pFrame = 0
             }
             -- todo init ghosts
         },
-        route = StartMenu,
+        route = GameView,
         assets = assets,
         mousePos = (0,0),
         particles = []

@@ -45,8 +45,10 @@ library
       JuicyPixels
     , MonadRandom
     , base >=4.17
+    , directory
     , filepath
     , gloss
+    , gloss-juicy
     , gloss-sdl2-surface
     , sdl2
     , sdl2-ttf
@@ -69,8 +71,10 @@ executable pacman-exe
       JuicyPixels
     , MonadRandom
     , base >=4.17
+    , directory
     , filepath
     , gloss
+    , gloss-juicy
     , gloss-sdl2-surface
     , pacman
     , sdl2
