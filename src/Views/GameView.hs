@@ -45,7 +45,7 @@ debugGrid s = let (w,h) = gridSizePx s in drawGrid s w h green
 --         (wn,hn) = cellSize (gridSize s) w h
 
 drawMap :: GlobalState -> Picture
-drawMap s = pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallSectionToPic wn hn w)) walls
+drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallSectionToPic wn hn w)) walls
     where
         walls = concat $ wallGroups $ assets s
         (w,h) = gridSizePx s

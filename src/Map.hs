@@ -50,7 +50,7 @@ data WallSection = WallSection WallType Direction
 
 instance Eq WallSection where
     (==) :: WallSection -> WallSection -> Bool
-    (WallSection t1 d1) == (WallSection t2 d2) = (t1 == t2) && (d1 == d2)
+    (WallSection t1 d1) == (WallSection t2 d2) = t1 == t2 && d1 == d2
 instance Show WallSection where
     show :: WallSection -> String
     show (WallSection StraightOne North) = "⎽"
@@ -77,32 +77,33 @@ instance Show WallSection where
     show (WallSection Single _) = "⚀"
 
 wallSectionToPic :: Float -> Float -> WallSection -> Picture
-wallSectionToPic w h (WallSection StraightOne North) = Color white $ Line [(-w/2,h/16),(w/2,h/16)]
-wallSectionToPic w h (WallSection StraightOne East) = Color white $ Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection StraightOne South) = Color white $ Line [(-w/2,-h/16),(w/2,-h/16)]
-wallSectionToPic w h (WallSection StraightOne West) = Color white $ Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection OutCorner North) = Color white $ translate (w/2) (-h/2) $ Arc 90 180 (w/2)
-wallSectionToPic w h (WallSection OutCorner East) = Color white $ translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
-wallSectionToPic w h (WallSection OutCorner South) = Color white $ translate (w/2) (h/2) $ Arc (180) (-90) (w/2)
-wallSectionToPic w h (WallSection OutCorner West) = Color white $ translate (-w/2) (-h/2) $ Arc (0) (90) (w/2)
-wallSectionToPic w h (WallSection InCorner North) = Color white $ translate (w/2) (h/2+h/16) $ Arc (180) (-90) (w/2)
-wallSectionToPic w h (WallSection InCorner East) = Color white $ translate (-w/2) (-h/2-h/8) $ Arc (0) (90) (w/2)
-wallSectionToPic w h (WallSection InCorner South) = Color white $ translate (-w/2) (h/2+h/16) $ Arc (-90) 0 (w/2)
-wallSectionToPic w h (WallSection InCorner West) = Color white $ translate (w/2) (-h/2-h/8) $ Arc (90) (180) (w/2)
-wallSectionToPic w h (WallSection End North) = Color white $ Arc (90) (90) (w/4) -- !!
-wallSectionToPic w h (WallSection End East) = Color white $ translate (-w/2) 0 $ Arc (-90) (90) (w/4)
-wallSectionToPic w h (WallSection End South) = Color white $ Arc (90) (90) (w/4) -- !!
-wallSectionToPic w h (WallSection End West) = Color white $ translate (w/2) 0 $ Arc (90) (-90) (w/4)
-wallSectionToPic w h (WallSection StraightTwo North) = Color white $ pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]] -- !!
-wallSectionToPic w h (WallSection StraightTwo East) = Color white $ pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
-wallSectionToPic w h (WallSection StraightTwo South) = Color white $ pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]] -- !!
-wallSectionToPic w h (WallSection StraightTwo West) = Color white $ pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
-wallSectionToPic w h (WallSection SingleCorner North) = Color white $ pictures [translate (w/2-w/16) (-h/2) $ Arc 90 180 (w/1.5), translate (w/2) (-h/2) $ Arc 90 180 (w/4)]
-wallSectionToPic w h (WallSection SingleCorner East) = Color white $ pictures [translate (-w/2+w/16) (-h/2) $ Arc 0 90 (w/1.5), translate (-w/2) (-h/2) $ Arc 0 90 (w/4)]
-wallSectionToPic w h (WallSection SingleCorner South) = Color white $ pictures [translate (-w/2+w/16) (h/2) $ Arc (-90) 0 (w/1.5), translate (-w/2) (h/2) $ Arc (-90) 0 (w/4)]
-wallSectionToPic w h (WallSection SingleCorner West) = Color white $ pictures [translate (w/2-w/16) (h/2) $ Arc (180) (-90) (w/1.5), translate (w/2) (h/2) $ Arc (180) (-90) (w/4)]
-wallSectionToPic w h (WallSection Misc _) = Color white $ circleSolid (w/2)
-wallSectionToPic w h (WallSection Single _) = Color white $ circleSolid (w/2)
+wallSectionToPic w h (WallSection StraightOne North) = Color blue $ Line [(-w/2,h/16),(w/2,h/16)]
+wallSectionToPic w h (WallSection StraightOne East) = Line [(0,h/2),(0,-h/2)]
+wallSectionToPic w h (WallSection StraightOne South) = Line [(-w/2,-h/16),(w/2,-h/16)]
+wallSectionToPic w h (WallSection StraightOne West) = Line [(0,h/2),(0,-h/2)]
+wallSectionToPic w h (WallSection OutCorner North) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
+wallSectionToPic w h (WallSection OutCorner East) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
+wallSectionToPic w h (WallSection OutCorner South) = translate (w/2) (h/2) $ Arc 180 (-90) (w/2)
+wallSectionToPic w h (WallSection OutCorner West) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)
+wallSectionToPic w h (WallSection InCorner North) = translate (w/2) (h/2) $ Arc 180 (-90) (w/2)
+wallSectionToPic w h (WallSection InCorner East) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)
+wallSectionToPic w h (WallSection InCorner South) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
+wallSectionToPic w h (WallSection InCorner West) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
+wallSectionToPic w h (WallSection End North) = Arc 90 90 (w/4) -- !!
+wallSectionToPic w h (WallSection End East) = translate (-w/2) 0 $ Arc (-90) 90 (w/4)
+wallSectionToPic w h (WallSection End South) = Arc 90 90 (w/4) -- !!
+wallSectionToPic w h (WallSection End West) = translate (w/2) 0 $ Arc 90 (-90) (w/4)
+wallSectionToPic w h (WallSection StraightTwo North) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]]
+wallSectionToPic w h (WallSection StraightTwo East) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
+wallSectionToPic w h (WallSection StraightTwo South) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]]
+wallSectionToPic w h (WallSection StraightTwo West) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
+wallSectionToPic w h (WallSection SingleCorner North) = pictures [translate (w/2) (-h/2) $ Arc 90 180 (w/1.5), translate (w/2) (-h/2) $ Arc 90 180 (w/4)]
+wallSectionToPic w h (WallSection SingleCorner East) = pictures [translate (-w/2) (-h/2) $ Arc 0 90 (w/1.5), translate (-w/2) (-h/2) $ Arc 0 90 (w/4)]
+wallSectionToPic w h (WallSection SingleCorner South) = pictures [translate (-w/2) (h/2) $ Arc (-90) 0 (w/1.5), translate (-w/2) (h/2) $ Arc (-90) 0 (w/4)]
+wallSectionToPic w h (WallSection SingleCorner West) = pictures [translate (w/2) (h/2) $ Arc 180 (-90) (w/1.5), translate (w/2) (h/2) $ Arc 180 (-90) (w/4)]
+wallSectionToPic w h (WallSection Misc _) = pictures []
+wallSectionToPic w h (WallSection Single _) = pictures []
+
 --                          North         East         South          West
 adjacentToWallSection :: Maybe Cell -> Maybe Cell -> Maybe Cell -> Maybe Cell -> WallSection
 adjacentToWallSection n e s w
