@@ -77,11 +77,11 @@ instance Show WallSection where
     show (WallSection Single _) = "⚀"
 
 wallSectionToPic :: Float -> Float -> WallSection -> Picture
-wallSectionToPic w h (WallSection StraightOne North) = Color blue $ Line [(-w/2,h/16),(w/2,h/16)]
+wallSectionToPic w h (WallSection StraightOne North) = Line [(-w/2,0),(w/2,0)]
 wallSectionToPic w h (WallSection StraightOne East) = Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection StraightOne South) = Line [(-w/2,-h/16),(w/2,-h/16)]
+wallSectionToPic w h (WallSection StraightOne South) = Line [(-w/2,0),(w/2,0)]
 wallSectionToPic w h (WallSection StraightOne West) = Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection OutCorner North) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
+wallSectionToPic w h (WallSection OutCorner North) = Color blue $ translate (w/2) (-h/2) $ Arc 90 180 (w/2)
 wallSectionToPic w h (WallSection OutCorner East) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
 wallSectionToPic w h (WallSection OutCorner South) = translate (w/2) (h/2) $ Arc 180 (-90) (w/2)
 wallSectionToPic w h (WallSection OutCorner West) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)

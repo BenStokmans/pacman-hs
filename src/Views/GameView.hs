@@ -63,7 +63,7 @@ getPlayerAnimation s | d == South = down as
                     as = pacSprite $ assets s
 
 drawPlayer :: GlobalState -> Picture
-drawPlayer s = Color yellow (scale scalar scalar (getPlayerAnimation s !! frame))
+drawPlayer s = scale scalar scalar (getPlayerAnimation s !! frame)
     where
         frame = pFrame $ player $ gameState s
         (wc,hc) = let (w,h) = gridSizePx s in cellSize (gridSize s) w h
