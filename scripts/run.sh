@@ -1,1 +1,1 @@
-stack build --flag gloss:glfw --flag gloss:-glut --ghc-options -O2 :pacman --exec pacman 
+stack build --flag gloss:glfw --flag gloss:-glut --fast :pacman --exec pacman 
