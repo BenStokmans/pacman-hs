@@ -125,7 +125,8 @@ data Player = Player
         pVelocity :: Float,
         pDirection :: Direction,
         pLocation :: Vec2,
-        pFrame :: Int
+        pFrame :: Int,
+        pBufferedInput :: Maybe Direction
     }
 
 data Ghost = Pinky | Inky | Blinky | Clyde deriving Eq
