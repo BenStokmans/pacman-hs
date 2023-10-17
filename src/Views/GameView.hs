@@ -1,8 +1,9 @@
+{-# LANGUAGE BlockArguments #-}
 module Views.GameView where
 import State
     ( GlobalState(..),
-      Settings(windowSize),
-      GameState(clock, player, prevClock), MenuRoute (..) )
+      Settings(..),
+      GameState(..), MenuRoute (..) )
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (..))
 import Assets (Assets(..), Anim (..), PacManSprite (..))
@@ -25,19 +26,20 @@ drawGrid s w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Li
         (x,y) = gridSize s
         (wn,hn) = cellSize (x,y) w h
 
-<<<<<<< HEAD
-gridSizePx :: GlobalState -> (Float, Float)
-gridSizePx s = (x*0.8*(c/r),y*0.8*(r/c))
-=======
 gridSizePx :: GlobalState -> (Float, Float) --gridsize in pixels onscreen
 gridSizePx s = (x*0.8*(c/r),y*0.8*(r / c))
->>>>>>> gridpos
     where
         (x,y) = windowSize (settings s)
         (r,c) = gridSize s
 
-getGridPos :: GlobalState -> Vec2 -> Vec2 --get position on grid with point on screen
-getGridPos s (Vec2 x y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
+gridToScreenPos :: GlobalState -> Vec2 -> Point -- get position screen from grid position 
+gridToScreenPos s (Vec2 x y) = (x*wn-(w/2)+wn/2, y*hn-(h/2)+hn/2)
+    where
+        (w,h) = gridSizePx s
+        (wn,hn) = cellSize (gridSize s) w h
+
+screenToGridPos :: GlobalState -> Point -> Vec2 -- get position on grid from screen position
+screenToGridPos s (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
     where
         (pw,ph) = gridSizePx s
         (collums,rows) = gridSize s
@@ -57,8 +59,10 @@ debugGrid s = let (w,h) = gridSizePx s in drawGrid s w h green
 --         (wn,hn) = cellSize (gridSize s) w h
 
 drawMap :: GlobalState -> Picture
-drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection wn hn w)) walls
+drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) walls
     where
+        m = mazeMargin $ settings s
+        t = lineThickness $ settings s
         walls = concat $ wallGroups $ assets s
         (w,h) = gridSizePx s
         w2 = w/2
@@ -75,22 +79,25 @@ getPlayerAnimation s | d == South = down as
                     as = pacSprite $ assets s
 
 drawPlayer :: GlobalState -> Picture
-drawPlayer s = scale scalarX scalarY (getPlayerAnimation s !! frame)
+drawPlayer s = translate px py $ scale scalarX scalarY (getPlayerAnimation s !! frame)
     where
+        (px,py) = pLocation $ player $ gameState s
         frame = pFrame $ player $ gameState s
         (r,c) = gridSize s
         (wc,hc) = let (w,h) = gridSizePx s in cellSize (r,c) w h
-        scalarX = (wc/8)*0.8*(c/r)
-        scalarY = (hc/8)*0.8*(r/c)
+        m = mazeMargin $ settings s
+        p = pacmanPadding $ settings s
+        pacmanScalar = (1+m*2)*(1-p*2)
+        scalarX = (wc/16)*pacmanScalar*(c/r)
+        scalarY = (hc/16)*pacmanScalar*(r/c)
 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
     debugString <- renderStringTopLeft (s (emuFont (assets gs))) green
-            (("Current pacman frame: " ++ show (pFrame $ player $ gameState gs)) ++
-                (let (x,y) = gridSize gs in "\n Gridsize: (" ++ show x ++ ", " ++ show y ++ ")")
-                ++ "\n Pac-Man position: " ++ show (getGridPos gs (pLocation $ player $ gameState gs)))
+            ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "    Pacman padding: " ++ show (pacmanPadding $ settings gs))
     let debug = translate (-400) 400 debugString
     return (pictures [drawMap gs, drawPlayer gs, debug])
+    -- return (pictures [debugGrid gs, drawMap gs, drawPlayer gs, debug])
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North

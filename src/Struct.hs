@@ -2,6 +2,7 @@ module Struct where
 
 import Data.List (intercalate)
 import Data.Maybe ( mapMaybe )
+import Graphics.Gloss (Point)
 
 data OriginPoint = OriginTopLeft | OriginCenter deriving (Show, Eq)
 
@@ -124,7 +125,7 @@ data Player = Player
     {
         pVelocity :: Float,
         pDirection :: Direction,
-        pLocation :: Vec2,
+        pLocation :: Point, -- point on screen
         pFrame :: Int,
         pBufferedInput :: Maybe Direction
     }

@@ -1,12 +1,19 @@
 module Map where
 
-import Struct ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Intersection, Pellet), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, mapWidth, mapHeight, dirToVec2, setCells )
+import Struct ( Vec2(Vec2), LevelMap(LevelMap), CellType (..), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, mapWidth, mapHeight, dirToVec2, setCells, scaleVec2 )
 import Data.Maybe ( isJust, isNothing )
 import Data.List ( intercalate )
-import Graphics.Gloss (Picture (..), translate, pictures, circleSolid)
+import Graphics.Gloss (Picture (..), translate, pictures, circleSolid, thickArc)
 import Codec.Picture.Metadata (Keys(Source))
 import Rendering (resize)
-import Graphics.Gloss.Data.Picture (scale)
+import Graphics.Gloss.Data.Picture (scale,rectangleSolid)
+import Graphics.Gloss.Data.Color ( green, red, white, yellow )
+ 
+getSpawnPoint :: LevelMap -> Vec2
+getSpawnPoint (LevelMap w h cs) = foldr (\x c -> c + scaleVec2 x sc) (Vec2 0 0) ss
+    where 
+        ss = map (\(Cell _ v) -> v) (filter (\(Cell t _) -> t == Spawn) cs)
+        sc = 1 / fromIntegral (length ss) :: Float
 
 getDiags :: LevelMap -> Cell -> [Cell]
 getDiags l c@(Cell t pos) = getCells l (map (pos +) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1])
@@ -77,47 +84,50 @@ instance Show WallSection where
     show (WallSection Misc _) = "𝗫"
     show (WallSection Single _) = "⚀"
 
-wallToSizedSection :: Float -> Float -> WallSection -> Picture
-wallToSizedSection nw nh ws = let (ow, oh) = defaultSize in resize ow oh nw nh (wallSectionToPic ow oh ws)
+
+wallToSizedSection :: Float -> Float -> Float -> Float -> WallSection -> Picture
+wallToSizedSection m t nw nh ws = let (ow, oh) = defaultSize in resize ow oh nw nh (wallSectionToPic m t ow oh ws)
 
 defaultSize :: (Float, Float)
 defaultSize = (100, 100)
 
-wallSectionToPic :: Float -> Float -> WallSection -> Picture
-wallSectionToPic w h (WallSection StraightOne North) =Line [(-w/2,0),(w/2,0)]
-wallSectionToPic w h (WallSection StraightOne East) = Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection StraightOne South) = Line [(-w/2,0),(w/2,0)]
-wallSectionToPic w h (WallSection StraightOne West) = Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection OutCorner North) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
-wallSectionToPic w h (WallSection OutCorner East) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
-wallSectionToPic w h (WallSection OutCorner South) = translate (w/2) (h/2) $ Arc 180 (-90) (w/2)
-wallSectionToPic w h (WallSection OutCorner West) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)
-wallSectionToPic w h (WallSection InCorner North) = translate (w/2) (h/2) $ Arc 180 (-90) (w/2)
-wallSectionToPic w h (WallSection InCorner East) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)
-wallSectionToPic w h (WallSection InCorner South) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
-wallSectionToPic w h (WallSection InCorner West) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
-wallSectionToPic w h (WallSection End North) = translate 0 (-h/2) $ Arc 0 180 (w/4)
-wallSectionToPic w h (WallSection End East) = translate (-w/2) 0 $ Arc (-90) 90 (w/4)
-wallSectionToPic w h (WallSection End South) = translate 0 (h/2) $ Arc (-180) 0 (w/4)
-wallSectionToPic w h (WallSection End West) = translate (w/2) 0 $ Arc 90 (-90) (w/4)
-wallSectionToPic w h (WallSection StraightTwo North) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]]
-wallSectionToPic w h (WallSection StraightTwo East) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
-wallSectionToPic w h (WallSection StraightTwo South) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]]
-wallSectionToPic w h (WallSection StraightTwo West) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
-wallSectionToPic w h (WallSection SingleOutCorner North) = pictures [translate (w/2) (-h/2) $ Arc 90 180 (w*(3/4)), translate (w/2) (-h/2) $ Arc 90 180 (w/4)]
-wallSectionToPic w h (WallSection SingleOutCorner East) = pictures [translate (-w/2) (-h/2) $ Arc 0 90 (w*0.75), translate (-w/2) (-h/2) $ Arc 0 90 (w/4)]
-wallSectionToPic w h (WallSection SingleOutCorner South) = pictures [translate (-w/2) (h/2) $ Arc (-90) 0 (w*0.75), translate (-w/2) (h/2) $ Arc (-90) 0 (w/4)]
-wallSectionToPic w h (WallSection SingleOutCorner West) = pictures [translate (w/2) (h/2) $ Arc 180 (-90) (w*0.75), translate (w/2) (h/2) $ Arc 180 (-90) (w/4)]
-wallSectionToPic w h (WallSection SingleInVerCorner North) = pictures [Line [(w/4,h/2),(w/4,-h/2)], translate (-w/2) (h/2) $ scale 1 2 $ Arc (-90) 0 (w/4)]
-wallSectionToPic w h (WallSection SingleInVerCorner East) = pictures [Line [(w/4,h/2),(w/4,-h/2)], translate (-w/2) (-h/2) $ scale 1 2 $ Arc 0 90 (w/4)]
-wallSectionToPic w h (WallSection SingleInVerCorner South) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)], translate (w/2) (h/2) $ scale 1 2 $ Arc 180 (-90) (w/4)]
-wallSectionToPic w h (WallSection SingleInVerCorner West) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)], translate (w/2) (-h/2) $ scale 1 2 $ Arc 90 180 (w/4)]
-wallSectionToPic w h (WallSection SingleInHorCorner North) = pictures [Line [(-w/2,h/4),(w/2,h/4)], translate (-w/2) (-h/2) $ scale 2 1 $ Arc 0 90 (w/4)]
-wallSectionToPic w h (WallSection SingleInHorCorner East) = pictures [Line [(-w/2,h/4),(w/2,h/4)], translate (w/2) (-h/2) $ scale 2 1 $ Arc 90 180 (w/4)]
-wallSectionToPic w h (WallSection SingleInHorCorner South) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)], translate (w/2) (h/2) $ scale 2 1 $ Arc 180 (-90) (w/4)]
-wallSectionToPic w h (WallSection SingleInHorCorner West) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)], translate (-w/2) (h/2) $ scale 2 1 $ Arc (-90) 0 (w/4)]
-wallSectionToPic w h (WallSection Misc _) = pictures []
-wallSectionToPic w h (WallSection Single _) = pictures []
+-- m = margin, t = thickness, w = width, h = height
+wallSectionToPic :: Float -> Float -> Float -> Float -> WallSection -> Picture
+wallSectionToPic m t w h (WallSection StraightOne North) = translate 0 ((h/2)-h*m) (rectangleSolid w t)
+wallSectionToPic m t w h (WallSection StraightOne East) = translate ((w/2)-w*m) 0 (rectangleSolid t h)
+wallSectionToPic m t w h (WallSection StraightOne South) = translate 0 (-(h/2)+h*m) (rectangleSolid w t)
+wallSectionToPic m t w h (WallSection StraightOne West) = translate (-(w/2)+w*m) 0 (rectangleSolid t h)
+wallSectionToPic m t w h (WallSection OutCorner North) = translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t
+wallSectionToPic m t w h (WallSection OutCorner East) = translate (-w/2) (h/2) $ thickArc (-90) 0 (w*(1-m)) t
+wallSectionToPic m t w h (WallSection OutCorner South) = translate (w/2) (h/2) $ thickArc 180 (-90) (w*(1-m)) t
+wallSectionToPic m t w h (WallSection OutCorner West) = translate (-w/2) (-h/2) $ thickArc 0 90 (w*(1-m)) t
+wallSectionToPic m t w h (WallSection InCorner North) = translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t
+wallSectionToPic m t w h (WallSection InCorner East) = translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t
+wallSectionToPic m t w h (WallSection InCorner South) = translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t
+wallSectionToPic m t w h (WallSection InCorner West) = translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t
+wallSectionToPic m t w h (WallSection End North) = translate 0 (-h/2) $ thickArc 0 180 ((w/2)-w*m) t
+-- thickArc does for some reason not see the difference between -90->90 and 90->-90 so we have to mirror it by hand
+-- this is because gloss normalizes the angles for a thick arc https://github.com/benl23x5/gloss/gloss-rendering/Graphics/Gloss/Internals/Rendering/Circle.hs#L127C27-L127C41
+wallSectionToPic m t w h (WallSection End East) = translate (-w/2) 0 $ scale (-1) 1 $ thickArc (-90) 90 ((w/2)-w*m) t 
+wallSectionToPic m t w h (WallSection End South) = translate 0 (h/2) $ thickArc (-180) 0 ((w/2)-w*m) t
+wallSectionToPic m t w h (WallSection End West) = translate (w/2) 0 $ thickArc 90 (-90) ((w/2)-w*m) t
+wallSectionToPic m t w h (WallSection StraightTwo North) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h),translate ((w/2)-w*m) 0 (rectangleSolid t h)]
+wallSectionToPic m t w h (WallSection StraightTwo East) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t),translate 0 ((h/2)-h*m) (rectangleSolid w t)]
+wallSectionToPic m t w h (WallSection StraightTwo South) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h),translate ((w/2)-w*m) 0 (rectangleSolid t h)]
+wallSectionToPic m t w h (WallSection StraightTwo West) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t),translate 0 ((h/2)-h*m) (rectangleSolid w t)]
+wallSectionToPic m t w h (WallSection SingleOutCorner North) = pictures [translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t, translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleOutCorner East) = pictures [translate (-w/2) (-h/2) $ thickArc 0 90 (w*(1-m)) t, translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleOutCorner South) = pictures [translate (-w/2) (h/2) $ thickArc (-90) 0 (w*(1-m)) t, translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleOutCorner West) = pictures [translate (w/2) (h/2) $ thickArc 180 (-90) (w*(1-m)) t, translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInVerCorner North) = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInVerCorner East) = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInVerCorner South) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInVerCorner West) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInHorCorner North) = pictures [translate 0 ((h/2)-h*m) (rectangleSolid w t), translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInHorCorner East) = pictures [translate 0 ((h/2)-h*m) (rectangleSolid w t), translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInHorCorner South) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t), translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t]
+wallSectionToPic m t w h (WallSection SingleInHorCorner West) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
+wallSectionToPic _ _ _ _ (WallSection _ _) = pictures []
 
 --                          North         East         South          West
 adjacentToWallSection :: Maybe Cell -> Maybe Cell -> Maybe Cell -> Maybe Cell -> WallSection

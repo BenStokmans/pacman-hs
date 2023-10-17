@@ -1,7 +1,7 @@
 module Views.StartMenu where
 
 import State (GlobalState(..), MenuRoute (GameView), GameState (..))
-import Assets(Assets(Assets,pacFont, emuFont))
+import Assets(Assets(Assets,pacFont, emuFont), level)
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle))
 import Graphics.Gloss ( Picture, blue, red, white, pictures )
@@ -9,6 +9,9 @@ import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseBu
 import Graphics.Gloss.Data.Point ()
 import Particles (updateParticles, drawParticles)
 import System.Exit (exitSuccess)
+import Struct (Player(pLocation))
+import Map (getSpawnPoint)
+import Views.GameView (gridToScreenPos)
 
 startButton :: Rectangle
 startButton = Rectangle (0,10) 500 100 10
@@ -30,9 +33,15 @@ renderStartMenu s = do
 
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s 
-    | startButtonHover = do return s {route = GameView}
+    | startButtonHover = do return s {
+        route = GameView,
+        gameState = gs { player = ps { pLocation = spawnLoc } }
+        }
     | quitButtonHover = do exitSuccess
     where 
+        gs = gameState s
+        ps = player gs
+        spawnLoc = gridToScreenPos s (getSpawnPoint (level $ assets s))
         startButtonHover = rectangleHovered (mousePos s) startButton
         quitButtonHover = rectangleHovered (mousePos s) quitButton
 handleInputStartMenu _ s = do return s
