@@ -3,7 +3,7 @@ module Views.StartMenu where
 import State (GlobalState(..), MenuRoute (GameView), GameState (..), Settings (..))
 import Assets(Assets(Assets,pacFont, emuFont), level)
 import FontContainer(FontContainer(..))
-import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle))
+import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), completeButton, defaultButton)
 import Graphics.Gloss ( Picture (..), blue, red, white, pictures, makeColor, translate, circleSolid, black )
 import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseButton (..) )
 import Graphics.Gloss.Data.Point ()
@@ -18,6 +18,9 @@ startButton = Rectangle (0,10) 500 100 10
 
 quitButton :: Rectangle
 quitButton = Rectangle (0,-150) 350 100 10
+
+editorButton :: Rectangle
+editorButton = Rectangle (0,-350) 250 50 10
 
 drawParticles :: GlobalState -> Picture
 drawParticles s = Color (makeColor 0 0 1 0.4) (pictures (map (\((x,y), r) -> translate x y (circleSolid r)) (particles s)))
@@ -44,27 +47,23 @@ renderStartMenu s = do
     titleBg <- renderString (0,250) (xxl (pacFont (assets s))) black "pacman"
     title <- renderString (0,250) (xxl (pacFont (assets s))) blue "PACMAN"
     subTitle <- renderString (0,160) (m (emuFont (assets s))) red "By Ben Stokmans and Geerten Helmers"
-    drawnStartButton <- renderButton startButton (l (emuFont (assets s))) startButtonColor "Start new game"
-    drawnQuitButton <- renderButton quitButton (l (emuFont (assets s))) quitButtonColor "Quit game "
-    return (pictures [drawParticles s,titleBg,title,subTitle,drawnStartButton,drawnQuitButton])
-    where 
-        startButtonColor = if rectangleHovered (mousePos s) startButton then white else blue
-        quitButtonColor = if rectangleHovered (mousePos s) quitButton then white else blue
+    drawnStartButton <- defaultButton startButton (l (emuFont (assets s))) "Start new game" (mousePos s)
+    drawnQuitButton <- defaultButton quitButton (l (emuFont (assets s))) "Quit game" (mousePos s)
+    drawnEditorButton <- defaultButton editorButton (m (emuFont (assets s))) "Open editor" (mousePos s)
+    return (pictures [drawParticles s,titleBg,title,subTitle,drawnStartButton,drawnQuitButton,drawnEditorButton])
 
 
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s 
-    | startButtonHover = do return s {
+    | rectangleHovered (mousePos s) startButton = do return s {
         route = GameView,
         gameState = gs { player = ps { pLocation = spawnLoc } }
         }
-    | quitButtonHover = do exitSuccess
+    | rectangleHovered (mousePos s) quitButton = do exitSuccess
     where 
         gs = gameState s
         ps = player gs
         spawnLoc = gridToScreenPos s (getSpawnPoint (level $ assets s))
-        startButtonHover = rectangleHovered (mousePos s) startButton
-        quitButtonHover = rectangleHovered (mousePos s) quitButton
 handleInputStartMenu _ s = do return s
 
 handleUpdateStartMenu :: Float -> GlobalState -> IO GlobalState

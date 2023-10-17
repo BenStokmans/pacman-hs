@@ -29,6 +29,7 @@ library
       Router
       State
       Struct
+      Views.EditorView
       Views.GameView
       Views.PauseMenu
       Views.StartMenu

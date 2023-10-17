@@ -13,7 +13,7 @@ data Settings = Settings
         lineThickness :: Float
     }
 
-data MenuRoute = StartMenu | GameView | PauseMenu | GameOverMenu deriving (Eq,Show)
+data MenuRoute = StartMenu | GameView | EditorView | PauseMenu | GameOverMenu deriving (Eq,Show)
 data GameStatus = Won | Lost | Playing | Paused deriving Eq
 data GameState = GameState
     {

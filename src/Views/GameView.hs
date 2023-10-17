@@ -94,7 +94,7 @@ drawPlayer s = translate px py $ scale scalarX scalarY (getPlayerAnimation s !! 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
     debugString <- renderStringTopLeft (s (emuFont (assets gs))) green
-            ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "    Pacman padding: " ++ show (pacmanPadding $ settings gs))
+            ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPacman padding: " ++ show (pacmanPadding $ settings gs))
     let debug = translate (-400) 400 debugString
     return (pictures [drawMap gs, drawPlayer gs, debug])
     -- return (pictures [debugGrid gs, drawMap gs, drawPlayer gs, debug])
