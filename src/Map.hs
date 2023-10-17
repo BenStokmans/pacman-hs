@@ -4,8 +4,9 @@ import Struct ( Vec2(Vec2), LevelMap(LevelMap), CellType (Empty, Wall, Intersect
 import Data.Maybe ( isJust, isNothing )
 import Data.List ( intercalate )
 import Graphics.Gloss (Picture (..), translate, pictures, circleSolid)
-import Graphics.Gloss.Data.Color
 import Codec.Picture.Metadata (Keys(Source))
+import Rendering (resize)
+import Graphics.Gloss.Data.Picture (scale)
 
 getDiags :: LevelMap -> Cell -> [Cell]
 getDiags l c@(Cell t pos) = getCells l (map (pos +) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1])
@@ -45,7 +46,7 @@ getWallGroups (LevelMap w h m) = getGroups (LevelMap w h (filter (\(Cell t _) ->
 calculateWallGroups :: LevelMap -> LevelMap
 calculateWallGroups l@(LevelMap _ _ m) = setCells l (map (\(Cell _ v) -> Cell Intersection v) (concat (getWallGroups l)))
 
-data WallType = StraightOne | OutCorner | InCorner | SingleCorner | End | StraightTwo | Single | Misc deriving Eq
+data WallType = StraightOne | OutCorner | InCorner | SingleOutCorner | SingleInVerCorner | SingleInHorCorner | End | StraightTwo | Single | Misc deriving Eq
 data WallSection = WallSection WallType Direction
 
 instance Eq WallSection where
@@ -76,12 +77,18 @@ instance Show WallSection where
     show (WallSection Misc _) = "𝗫"
     show (WallSection Single _) = "⚀"
 
+wallToSizedSection :: Float -> Float -> WallSection -> Picture
+wallToSizedSection nw nh ws = let (ow, oh) = defaultSize in resize ow oh nw nh (wallSectionToPic ow oh ws)
+
+defaultSize :: (Float, Float)
+defaultSize = (100, 100)
+
 wallSectionToPic :: Float -> Float -> WallSection -> Picture
-wallSectionToPic w h (WallSection StraightOne North) = Line [(-w/2,0),(w/2,0)]
+wallSectionToPic w h (WallSection StraightOne North) =Line [(-w/2,0),(w/2,0)]
 wallSectionToPic w h (WallSection StraightOne East) = Line [(0,h/2),(0,-h/2)]
 wallSectionToPic w h (WallSection StraightOne South) = Line [(-w/2,0),(w/2,0)]
 wallSectionToPic w h (WallSection StraightOne West) = Line [(0,h/2),(0,-h/2)]
-wallSectionToPic w h (WallSection OutCorner North) = Color blue $ translate (w/2) (-h/2) $ Arc 90 180 (w/2)
+wallSectionToPic w h (WallSection OutCorner North) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
 wallSectionToPic w h (WallSection OutCorner East) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
 wallSectionToPic w h (WallSection OutCorner South) = translate (w/2) (h/2) $ Arc 180 (-90) (w/2)
 wallSectionToPic w h (WallSection OutCorner West) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)
@@ -89,18 +96,26 @@ wallSectionToPic w h (WallSection InCorner North) = translate (w/2) (h/2) $ Arc 
 wallSectionToPic w h (WallSection InCorner East) = translate (-w/2) (-h/2) $ Arc 0 90 (w/2)
 wallSectionToPic w h (WallSection InCorner South) = translate (-w/2) (h/2) $ Arc (-90) 0 (w/2)
 wallSectionToPic w h (WallSection InCorner West) = translate (w/2) (-h/2) $ Arc 90 180 (w/2)
-wallSectionToPic w h (WallSection End North) = Arc 90 90 (w/4) -- !!
+wallSectionToPic w h (WallSection End North) = translate 0 (-h/2) $ Arc 0 180 (w/4)
 wallSectionToPic w h (WallSection End East) = translate (-w/2) 0 $ Arc (-90) 90 (w/4)
-wallSectionToPic w h (WallSection End South) = Arc 90 90 (w/4) -- !!
+wallSectionToPic w h (WallSection End South) = translate 0 (h/2) $ Arc (-180) 0 (w/4)
 wallSectionToPic w h (WallSection End West) = translate (w/2) 0 $ Arc 90 (-90) (w/4)
 wallSectionToPic w h (WallSection StraightTwo North) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]]
 wallSectionToPic w h (WallSection StraightTwo East) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
 wallSectionToPic w h (WallSection StraightTwo South) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)],Line [(w/4,h/2),(w/4,-h/2)]]
 wallSectionToPic w h (WallSection StraightTwo West) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)],Line [(-w/2,h/4),(w/2,h/4)]]
-wallSectionToPic w h (WallSection SingleCorner North) = pictures [translate (w/2) (-h/2) $ Arc 90 180 (w/1.5), translate (w/2) (-h/2) $ Arc 90 180 (w/4)]
-wallSectionToPic w h (WallSection SingleCorner East) = pictures [translate (-w/2) (-h/2) $ Arc 0 90 (w/1.5), translate (-w/2) (-h/2) $ Arc 0 90 (w/4)]
-wallSectionToPic w h (WallSection SingleCorner South) = pictures [translate (-w/2) (h/2) $ Arc (-90) 0 (w/1.5), translate (-w/2) (h/2) $ Arc (-90) 0 (w/4)]
-wallSectionToPic w h (WallSection SingleCorner West) = pictures [translate (w/2) (h/2) $ Arc 180 (-90) (w/1.5), translate (w/2) (h/2) $ Arc 180 (-90) (w/4)]
+wallSectionToPic w h (WallSection SingleOutCorner North) = pictures [translate (w/2) (-h/2) $ Arc 90 180 (w*(3/4)), translate (w/2) (-h/2) $ Arc 90 180 (w/4)]
+wallSectionToPic w h (WallSection SingleOutCorner East) = pictures [translate (-w/2) (-h/2) $ Arc 0 90 (w*0.75), translate (-w/2) (-h/2) $ Arc 0 90 (w/4)]
+wallSectionToPic w h (WallSection SingleOutCorner South) = pictures [translate (-w/2) (h/2) $ Arc (-90) 0 (w*0.75), translate (-w/2) (h/2) $ Arc (-90) 0 (w/4)]
+wallSectionToPic w h (WallSection SingleOutCorner West) = pictures [translate (w/2) (h/2) $ Arc 180 (-90) (w*0.75), translate (w/2) (h/2) $ Arc 180 (-90) (w/4)]
+wallSectionToPic w h (WallSection SingleInVerCorner North) = pictures [Line [(w/4,h/2),(w/4,-h/2)], translate (-w/2) (h/2) $ scale 1 2 $ Arc (-90) 0 (w/4)]
+wallSectionToPic w h (WallSection SingleInVerCorner East) = pictures [Line [(w/4,h/2),(w/4,-h/2)], translate (-w/2) (-h/2) $ scale 1 2 $ Arc 0 90 (w/4)]
+wallSectionToPic w h (WallSection SingleInVerCorner South) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)], translate (w/2) (h/2) $ scale 1 2 $ Arc 180 (-90) (w/4)]
+wallSectionToPic w h (WallSection SingleInVerCorner West) = pictures [Line [(-w/4,h/2),(-w/4,-h/2)], translate (w/2) (-h/2) $ scale 1 2 $ Arc 90 180 (w/4)]
+wallSectionToPic w h (WallSection SingleInHorCorner North) = pictures [Line [(-w/2,h/4),(w/2,h/4)], translate (-w/2) (-h/2) $ scale 2 1 $ Arc 0 90 (w/4)]
+wallSectionToPic w h (WallSection SingleInHorCorner East) = pictures [Line [(-w/2,h/4),(w/2,h/4)], translate (w/2) (-h/2) $ scale 2 1 $ Arc 90 180 (w/4)]
+wallSectionToPic w h (WallSection SingleInHorCorner South) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)], translate (w/2) (h/2) $ scale 2 1 $ Arc 180 (-90) (w/4)]
+wallSectionToPic w h (WallSection SingleInHorCorner West) = pictures [Line [(-w/2,-h/4),(w/2,-h/4)], translate (-w/2) (h/2) $ scale 2 1 $ Arc (-90) 0 (w/4)]
 wallSectionToPic w h (WallSection Misc _) = pictures []
 wallSectionToPic w h (WallSection Single _) = pictures []
 
@@ -118,21 +133,22 @@ adjacentToWallSection n e s w
                 | isNothing n && isNothing e && isNothing s && isJust w = WallSection End East
                 | isJust n && isNothing e && isNothing s && isNothing w = WallSection End South
                 | isNothing n && isJust e && isNothing s && isNothing w = WallSection End West
-                | otherwise = WallSection Misc North
-
---                      NW            NE            SE            SW
-diagToWallCorner :: Maybe Cell -> Maybe Cell -> Maybe Cell -> Maybe Cell -> WallSection
-diagToWallCorner nw ne se sw
-                | isNothing nw && isNothing ne && isNothing se && isJust sw = WallSection OutCorner East
-                | isNothing nw && isNothing ne && isJust se && isNothing sw = WallSection OutCorner North
-                | isNothing nw && isJust ne && isNothing se && isNothing sw = WallSection OutCorner West
-                | isJust nw && isNothing ne && isNothing se && isNothing sw = WallSection OutCorner South
-                | isJust nw && isJust ne && isJust se && isNothing sw = WallSection InCorner South
-                | isJust nw && isJust ne && isNothing se && isJust sw = WallSection InCorner West
-                | isJust nw && isNothing ne && isJust se && isJust sw = WallSection InCorner East
-                | isNothing nw && isJust ne && isJust se && isJust sw = WallSection InCorner North
                 | otherwise = WallSection Single North
 
+--                      NE            SW            SE            NW
+diagToWallCorner :: Maybe Cell -> Maybe Cell -> Maybe Cell -> Maybe Cell -> WallSection
+diagToWallCorner ne sw se nw
+                | isNothing ne && isNothing sw && isNothing se && isJust nw = WallSection OutCorner East
+                | isNothing ne && isNothing ne && isJust se && isNothing nw = WallSection OutCorner North
+                | isNothing ne && isJust sw && isNothing se && isNothing nw = WallSection OutCorner West
+                | isJust ne && isNothing sw && isNothing se && isNothing nw = WallSection OutCorner South
+                | isJust ne && isJust sw && isJust se && isNothing nw = WallSection InCorner South
+                | isJust ne && isJust sw && isNothing se && isJust nw = WallSection InCorner West
+                | isJust ne && isNothing sw && isJust se && isJust nw = WallSection InCorner East
+                | isNothing ne && isJust sw && isJust se && isJust nw = WallSection InCorner North
+                | otherwise = WallSection Misc North
+
+-- returns ne sw se nw
 getDiagsTuple :: LevelMap-> Cell -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell)
 getDiagsTuple l c@(Cell t pos) = (getCell l (pos + Vec2 1 1), getCell l (pos + Vec2 (-1) (-1)), getCell l (pos + Vec2 1 (-1)), getCell l (pos + Vec2 (-1) 1))
 
@@ -145,25 +161,41 @@ singleVert l c@(Cell t pos) = isNothing (getCell l (pos+dirToVec2 West)) && isJu
 singleHor :: LevelMap -> Cell -> Bool
 singleHor l c@(Cell t pos) = isJust (getCell l (pos+dirToVec2 West)) && isNothing (getCell l (pos+dirToVec2 North)) && isNothing (getCell l (pos+dirToVec2 South)) && isJust (getCell l (pos+dirToVec2 East))
 
---                      n         e           s         w              nw         ne         se         sw
-identifySingle :: (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell) -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell) -> WallSection
-identifySingle (n,e,s,w) (nw,ne,se,sw)
-            | isJust e && isJust s && isNothing nw && isNothing se = WallSection SingleCorner North
-            | isJust e && isJust n && isNothing nw && isNothing sw = WallSection SingleCorner West
-            | isJust w && isJust s && isNothing nw && isNothing sw = WallSection SingleCorner East
-            | isJust w && isJust n && isNothing nw && isNothing se = WallSection SingleCorner South
-            | otherwise = WallSection Single North
+--                                      n         e           s         w              ne         sw         se         nw
+remapWallEdges :: WallSection -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell) -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell) -> WallSection
+remapWallEdges ws@(WallSection Single _) (n,e,s,w) (ne,sw,se,nw)
+            | isJust e && isJust s && isNothing ne && isNothing se = WallSection SingleOutCorner North
+            | isJust e && isJust n && isNothing ne && isNothing nw = WallSection SingleOutCorner West
+            | isJust w && isJust s && isNothing ne && isNothing nw = WallSection SingleOutCorner East
+            | isJust w && isJust n && isNothing ne && isNothing se = WallSection SingleOutCorner South
+            | otherwise = ws
+remapWallEdges ws@(WallSection StraightOne _) (n,e,s,w) (ne,sw,se,nw)
+            | isNothing ne && isNothing e && isNothing se && isNothing nw && isJust w && isJust sw && isJust s && isJust n = WallSection SingleInVerCorner North
+            | isNothing ne && isNothing e && isNothing se && isJust nw && isJust w && isNothing sw && isJust s && isJust n = WallSection SingleInVerCorner East
+            | isNothing nw && isNothing w && isNothing sw && isNothing ne && isJust e && isJust se && isJust s && isJust n = WallSection SingleInVerCorner South
+            | isNothing nw && isNothing w && isNothing sw && isNothing se && isJust e && isJust ne && isJust s && isJust n = WallSection SingleInVerCorner West
+            | isNothing nw && isNothing n && isNothing ne && isNothing sw && isJust s && isJust se && isJust e && isJust w = WallSection SingleInHorCorner North
+            | isNothing nw && isNothing n && isNothing ne && isJust sw && isJust s && isNothing se && isJust e && isJust w = WallSection SingleInHorCorner East -- !!
+            | isNothing sw && isNothing s && isNothing se && isJust nw && isJust n && isNothing ne && isJust e && isJust w = WallSection SingleInHorCorner South -- !!
+            | isNothing sw && isNothing s && isNothing se && isNothing nw && isJust n && isJust ne && isJust e && isJust w = WallSection SingleInHorCorner West
+            | otherwise = ws
+remapWallEdges ws _ _ = ws
 
+mapWallEdges :: LevelMap -> (Cell,WallSection) -> (Cell,WallSection)
+mapWallEdges (LevelMap w h cs) x@(c, ws@(WallSection s _)) 
+        | s == Single || s == StraightOne = let (a,b) = (getAdjacentTuple (LevelMap w h cs) c, getDiagsTuple (LevelMap w h cs) c) in (c, remapWallEdges ws a b)
+        | otherwise = x
 
 processWallGroup :: LevelMap -> [Cell] -> [(Cell,WallSection)]
-processWallGroup (LevelMap w h _) cs = mappedCorners ++ remappedWalls
+processWallGroup (LevelMap w h _) cs = mappedCorners ++ mappedWallsEdges
             where
                 corners = filter (\c -> let (ld, la) = (length (getDiags (LevelMap w h cs) c),length (getAdjacent (LevelMap w h cs) c)) in (ld == 1 || ld == 3) && (la == 2 || la == 4)) cs
                 fcorners = filter (\c -> not (singleVert (LevelMap w h cs) c) && not (singleHor (LevelMap w h cs) c)) corners
                 walls = deleteMultiple cs fcorners
                 mappedWalls = map (\cell -> let (a,b,c,d) = getAdjacentTuple (LevelMap w h cs) cell in (cell, adjacentToWallSection a b c d)) walls
                 mappedCorners = map (\cell -> let (a,b,c,d) = getDiagsTuple (LevelMap w h cs) cell in (cell, diagToWallCorner a b c d)) fcorners
-                remappedWalls = map (\s@(c,WallSection t _) -> if t == Misc then let (a,b) = (getAdjacentTuple (LevelMap w h cs) c, getDiagsTuple (LevelMap w h cs) c) in (c, identifySingle a b) else s) mappedWalls
+                mappedWallsEdges = map (mapWallEdges (LevelMap w h cs)) mappedWalls
+
 processWallGroups :: LevelMap -> [[(Cell,WallSection)]]
 processWallGroups m = map (processWallGroup m) (getWallGroups m)
 

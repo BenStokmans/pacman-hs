@@ -12,6 +12,9 @@ import Graphics.Gloss.Data.Point ( Point, pointInBox )
 
 data Rectangle = Rectangle Point Float Float Float --Centre point, width, height, borderthickness
 
+resize :: Float -> Float -> Float -> Float -> Picture -> Picture
+resize ow oh nw nh = scale (nw/ow) (nh/oh)
+
 rectangleHovered :: Point -> Rectangle -> Bool
 rectangleHovered mouse (Rectangle (x,y) width height _) = pointInBox mouse (sx+x,-sy+y) (-sx+x,sy+y)
     where

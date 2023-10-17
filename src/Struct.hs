@@ -42,18 +42,20 @@ dirToVec2 South = Vec2 0 (-1)
 dirToVec2 West = Vec2 (-1) 0
 dirToVec2 East = Vec2 1 0
 
-data CellType = Empty | Pellet | Wall | Intersection deriving Eq
+data CellType = Empty | Pellet | Wall | Intersection | Spawn deriving Eq
 instance Show CellType where
     show :: CellType -> String
     show Empty = "E"
     show Pellet = "P"
     show Wall = "W"
     show Intersection = "X"
+    show Spawn = "S"
 
 stringToCellType :: String -> CellType
 stringToCellType "P" = Pellet
 stringToCellType "W" = Wall
 stringToCellType "X" = Intersection
+stringToCellType "S" = Spawn
 stringToCellType _ = Empty
 
 data Cell = Cell CellType Vec2

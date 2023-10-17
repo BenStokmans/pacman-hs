@@ -9,7 +9,7 @@ import Assets (Assets(..), Anim (..), PacManSprite (..))
 import Struct (LevelMap(..), Player(..), Direction (..), Cell(..), CellType(..), Vec2(..))
 import Rendering (renderStringTopLeft)
 import FontContainer (FontContainer(..))
-import Map (wallSectionToPic)
+import Map (wallSectionToPic, wallToSizedSection)
 
 gridSize :: GlobalState -> (Float,Float)
 gridSize GlobalState { assets = Assets { level = (LevelMap w h _) }} = (w,h)
@@ -26,7 +26,7 @@ drawGrid s w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Li
         (wn,hn) = cellSize (x,y) w h
 
 gridSizePx :: GlobalState -> (Float, Float)
-gridSizePx s = (x*0.8*(c/r),y*0.8*(r / c))
+gridSizePx s = (x*0.8*(c/r),y*0.8*(r/c))
     where
         (x,y) = windowSize (settings s)
         (r,c) = gridSize s
@@ -45,7 +45,7 @@ debugGrid s = let (w,h) = gridSizePx s in drawGrid s w h green
 --         (wn,hn) = cellSize (gridSize s) w h
 
 drawMap :: GlobalState -> Picture
-drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallSectionToPic wn hn w)) walls
+drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection wn hn w)) walls
     where
         walls = concat $ wallGroups $ assets s
         (w,h) = gridSizePx s
@@ -63,11 +63,13 @@ getPlayerAnimation s | d == South = down as
                     as = pacSprite $ assets s
 
 drawPlayer :: GlobalState -> Picture
-drawPlayer s = scale scalar scalar (getPlayerAnimation s !! frame)
+drawPlayer s = scale scalarX scalarY (getPlayerAnimation s !! frame)
     where
         frame = pFrame $ player $ gameState s
-        (wc,hc) = let (w,h) = gridSizePx s in cellSize (gridSize s) w h
-        scalar = (wc/8)*0.8
+        (r,c) = gridSize s
+        (wc,hc) = let (w,h) = gridSizePx s in cellSize (r,c) w h
+        scalarX = (wc/8)*0.8*(c/r)
+        scalarY = (hc/8)*0.8*(r/c)
 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
