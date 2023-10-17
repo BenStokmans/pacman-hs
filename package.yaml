@@ -18,6 +18,8 @@ dependencies:
   - MonadRandom
   - JuicyPixels
   - directory
+  - OpenGL
+  - GLFW-b
 
 default-extensions:
   - TupleSections
@@ -29,7 +31,7 @@ library:
   source-dirs: src
 
 executables:
-  pacman-exe:
+  pacman:
     main: Main.hs
     source-dirs: app
     ghc-options:

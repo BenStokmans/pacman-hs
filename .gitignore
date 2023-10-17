@@ -6,5 +6,6 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 dist*/
+build/
 .DS_Store
 *.dll

@@ -2,7 +2,7 @@ module Rendering where
 
 import Graphics.Gloss.SDL.Surface (CacheTexture (..), bitmapOfSurface, bitmapDataOfSurface)
 import SDL.Video.Renderer (Surface)
-import SDL.Font (Font, solid, blended)
+import SDL.Font (Font, blended)
 import SDL.Vect (V4 (..))
 import Text.Printf (printf)
 import Data.Word (Word8)

@@ -7,8 +7,8 @@ import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectang
 import Graphics.Gloss ( Picture, blue, red, white, pictures)
 import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseButton (..) )
 import Graphics.Gloss.Data.Point ()
-import Particles (updateParticles, drawParticles)
 import System.Exit (exitSuccess)
+import Views.StartMenu (drawParticles, updateParticles)
 
 continueButton :: Rectangle
 continueButton = Rectangle (0,0) 400 100 10
