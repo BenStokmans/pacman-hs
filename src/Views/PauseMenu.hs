@@ -36,7 +36,7 @@ renderPauseMenu s = do
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
 handleInputPauseMenu (EventKey (MouseButton LeftButton) b c _) s 
     | continueButtonHover = do return s {route = GameView}
-    | saveButtonHover = do return s
+    | saveButtonHover = do return s                                 --TODO implement saving
     | mainMenuButtonHover = do return s {route = StartMenu}
     where 
         continueButtonHover = rectangleHovered (mousePos s) continueButton

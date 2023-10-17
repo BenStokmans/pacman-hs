@@ -11,10 +11,10 @@ import Rendering (renderStringTopLeft)
 import FontContainer (FontContainer(..))
 import Map (wallSectionToPic)
 
-gridSize :: GlobalState -> (Float,Float)
+gridSize :: GlobalState -> (Float,Float) --gridsize of level 
 gridSize GlobalState { assets = Assets { level = (LevelMap w h _) }} = (w,h)
 
-cellSize :: (Float,Float) -> Float -> Float -> (Float,Float)
+cellSize :: (Float,Float) -> Float -> Float -> (Float,Float) --cellsize in px
 cellSize (sx,sy) w h = (w/sx, h/sy)
 
 drawGrid :: GlobalState -> Float -> Float -> Color -> Picture
@@ -25,11 +25,18 @@ drawGrid s w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Li
         (x,y) = gridSize s
         (wn,hn) = cellSize (x,y) w h
 
-gridSizePx :: GlobalState -> (Float, Float)
+gridSizePx :: GlobalState -> (Float, Float) --gridsize in pixels onscreen
 gridSizePx s = (x*0.8*(c/r),y*0.8*(r / c))
     where
         (x,y) = windowSize (settings s)
         (r,c) = gridSize s
+
+getGridPos :: GlobalState -> Vec2 -> Vec2 --get position on grid with point on screen
+getGridPos s (Vec2 x y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
+    where
+        (pw,ph) = gridSizePx s
+        (collums,rows) = gridSize s
+        (cw,ch) = cellSize (collums,rows) pw ph
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = let (w,h) = gridSizePx s in drawGrid s w h green
@@ -73,7 +80,8 @@ renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
     debugString <- renderStringTopLeft (s (emuFont (assets gs))) green
             (("Current pacman frame: " ++ show (pFrame $ player $ gameState gs)) ++
-                (let (x,y) = gridSize gs in "\n Gridsize: (" ++ show x ++ ", " ++ show y ++ ")"))
+                (let (x,y) = gridSize gs in "\n Gridsize: (" ++ show x ++ ", " ++ show y ++ ")")
+                ++ "\n Pac-Man position: " ++ show (getGridPos gs (pLocation $ player $ gameState gs)))
     let debug = translate (-400) 400 debugString
     return (pictures [drawMap gs, drawPlayer gs, debug])
 
@@ -96,8 +104,8 @@ handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player
                             ps = player gs
 handleInputGameView _ s = do return s
 
-updatePlayerAnimState :: Float -> GlobalState -> IO GlobalState
-updatePlayerAnimState f s | c-p >= 0.1 = do return s { gameState = gs {
+updatePlayerAnimState :: GlobalState -> IO GlobalState
+updatePlayerAnimState s | c-p >= 0.1 = do return s { gameState = gs {
                                 player = ps {
                                     pFrame = if fr == length anim - 1 then 0 else fr+1
                                     },
@@ -113,7 +121,7 @@ updatePlayerAnimState f s | c-p >= 0.1 = do return s { gameState = gs {
                 p = prevClock gs
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
-handleUpdateGameView add s = updatePlayerAnimState add newState
+handleUpdateGameView add s = updatePlayerAnimState newState
     where
         g = gameState s
         c = clock g

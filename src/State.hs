@@ -51,7 +51,8 @@ initState = do
                 pVelocity = 0,
                 pDirection = North,
                 pLocation = Vec2 0 0,
-                pFrame = 0
+                pFrame = 0,
+                pBufferedInput = Nothing
             }
             -- todo init ghosts
         },
