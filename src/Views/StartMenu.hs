@@ -1,6 +1,6 @@
 module Views.StartMenu where
 
-import State (GlobalState(..), MenuRoute (GameView), GameState (..), Settings (..))
+import State (GlobalState(..), MenuRoute (GameView, EditorView), GameState (..), Settings (..))
 import Assets(Assets(Assets,pacFont, emuFont), level)
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), completeButton, defaultButton)
@@ -59,6 +59,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
         route = GameView,
         gameState = gs { player = ps { pLocation = spawnLoc } }
         }
+    | rectangleHovered (mousePos s) editorButton = do return s { route = EditorView }
     | rectangleHovered (mousePos s) quitButton = do exitSuccess
     where 
         gs = gameState s
