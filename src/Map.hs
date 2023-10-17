@@ -3,7 +3,7 @@ module Map where
 import Struct ( Vec2(Vec2), LevelMap(LevelMap), CellType (..), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, mapWidth, mapHeight, dirToVec2, setCells, scaleVec2 )
 import Data.Maybe ( isJust, isNothing )
 import Data.List ( intercalate )
-import Graphics.Gloss (Picture (..), translate, pictures, circleSolid, thickArc)
+import Graphics.Gloss (Picture (..), translate, pictures, circleSolid, thickArc, rotate, blank)
 import Codec.Picture.Metadata (Keys(Source))
 import Rendering (resize)
 import Graphics.Gloss.Data.Picture (scale,rectangleSolid)
@@ -59,30 +59,6 @@ data WallSection = WallSection WallType Direction
 instance Eq WallSection where
     (==) :: WallSection -> WallSection -> Bool
     (WallSection t1 d1) == (WallSection t2 d2) = t1 == t2 && d1 == d2
-instance Show WallSection where
-    show :: WallSection -> String
-    show (WallSection StraightOne North) = "⎽"
-    show (WallSection StraightOne East) = "⎟"
-    show (WallSection StraightOne South) = "⎺"
-    show (WallSection StraightOne West) = "⎜"
-    show (WallSection OutCorner North) = "◟"
-    show (WallSection OutCorner East) = "◝"
-    show (WallSection OutCorner South) = "◜"
-    show (WallSection OutCorner West) = "◞"
-    show (WallSection InCorner North) = "◟"
-    show (WallSection InCorner East) = "◜"
-    show (WallSection InCorner South) = "◞"
-    show (WallSection InCorner West) = "◝"
-    show (WallSection End North) = "⎴"
-    show (WallSection End East) = "]"
-    show (WallSection End South) = "⎵"
-    show (WallSection End West) = "["
-    show (WallSection StraightTwo North) = "⎕"
-    show (WallSection StraightTwo East) = "⏛"
-    show (WallSection StraightTwo South) = "⎕"
-    show (WallSection StraightTwo West) = "⏛"
-    show (WallSection Misc _) = "𝗫"
-    show (WallSection Single _) = "⚀"
 
 
 wallToSizedSection :: Float -> Float -> Float -> Float -> WallSection -> Picture
@@ -91,43 +67,26 @@ wallToSizedSection m t nw nh ws = let (ow, oh) = defaultSize in resize ow oh nw 
 defaultSize :: (Float, Float)
 defaultSize = (100, 100)
 
+dirToAngle :: Direction -> Float
+dirToAngle North = 0
+dirToAngle East = 90
+dirToAngle South = 180
+dirToAngle West = 270
+
+wallTypeToPic :: WallType -> Float -> Float -> Float -> Float -> Picture
+wallTypeToPic StraightOne m t w h = translate 0 ((h/2)-h*m) (rectangleSolid w t)
+wallTypeToPic OutCorner m t w h = translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t
+wallTypeToPic InCorner m t w h = translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t
+wallTypeToPic End m t w h = translate 0 (-h/2) $ thickArc 0 180 ((w/2)-w*m) t
+wallTypeToPic StraightTwo m t w h = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h),translate ((w/2)-w*m) 0 (rectangleSolid t h)]
+wallTypeToPic SingleOutCorner m t w h = pictures [translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t, translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
+wallTypeToPic SingleInVerCorner m t w h = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
+wallTypeToPic SingleInHorCorner m t w h = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (h/2) $ thickArc (-180) (-90) (w*m) t]
+wallTypeToPic _ _ _ _ _ = blank
+
 -- m = margin, t = thickness, w = width, h = height
 wallSectionToPic :: Float -> Float -> Float -> Float -> WallSection -> Picture
-wallSectionToPic m t w h (WallSection StraightOne North) = translate 0 ((h/2)-h*m) (rectangleSolid w t)
-wallSectionToPic m t w h (WallSection StraightOne East) = translate ((w/2)-w*m) 0 (rectangleSolid t h)
-wallSectionToPic m t w h (WallSection StraightOne South) = translate 0 (-(h/2)+h*m) (rectangleSolid w t)
-wallSectionToPic m t w h (WallSection StraightOne West) = translate (-(w/2)+w*m) 0 (rectangleSolid t h)
-wallSectionToPic m t w h (WallSection OutCorner North) = translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t
-wallSectionToPic m t w h (WallSection OutCorner East) = translate (-w/2) (h/2) $ thickArc (-90) 0 (w*(1-m)) t
-wallSectionToPic m t w h (WallSection OutCorner South) = translate (w/2) (h/2) $ thickArc 180 (-90) (w*(1-m)) t
-wallSectionToPic m t w h (WallSection OutCorner West) = translate (-w/2) (-h/2) $ thickArc 0 90 (w*(1-m)) t
-wallSectionToPic m t w h (WallSection InCorner North) = translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t
-wallSectionToPic m t w h (WallSection InCorner East) = translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t
-wallSectionToPic m t w h (WallSection InCorner South) = translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t
-wallSectionToPic m t w h (WallSection InCorner West) = translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t
-wallSectionToPic m t w h (WallSection End North) = translate 0 (-h/2) $ thickArc 0 180 ((w/2)-w*m) t
--- thickArc does for some reason not see the difference between -90->90 and 90->-90 so we have to mirror it by hand
--- this is because gloss normalizes the angles for a thick arc https://github.com/benl23x5/gloss/gloss-rendering/Graphics/Gloss/Internals/Rendering/Circle.hs#L127C27-L127C41
-wallSectionToPic m t w h (WallSection End East) = translate (-w/2) 0 $ scale (-1) 1 $ thickArc (-90) 90 ((w/2)-w*m) t 
-wallSectionToPic m t w h (WallSection End South) = translate 0 (h/2) $ thickArc (-180) 0 ((w/2)-w*m) t
-wallSectionToPic m t w h (WallSection End West) = translate (w/2) 0 $ thickArc 90 (-90) ((w/2)-w*m) t
-wallSectionToPic m t w h (WallSection StraightTwo North) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h),translate ((w/2)-w*m) 0 (rectangleSolid t h)]
-wallSectionToPic m t w h (WallSection StraightTwo East) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t),translate 0 ((h/2)-h*m) (rectangleSolid w t)]
-wallSectionToPic m t w h (WallSection StraightTwo South) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h),translate ((w/2)-w*m) 0 (rectangleSolid t h)]
-wallSectionToPic m t w h (WallSection StraightTwo West) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t),translate 0 ((h/2)-h*m) (rectangleSolid w t)]
-wallSectionToPic m t w h (WallSection SingleOutCorner North) = pictures [translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t, translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleOutCorner East) = pictures [translate (-w/2) (-h/2) $ thickArc 0 90 (w*(1-m)) t, translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleOutCorner South) = pictures [translate (-w/2) (h/2) $ thickArc (-90) 0 (w*(1-m)) t, translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleOutCorner West) = pictures [translate (w/2) (h/2) $ thickArc 180 (-90) (w*(1-m)) t, translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInVerCorner North) = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInVerCorner East) = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInVerCorner South) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInVerCorner West) = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInHorCorner North) = pictures [translate 0 ((h/2)-h*m) (rectangleSolid w t), translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInHorCorner East) = pictures [translate 0 ((h/2)-h*m) (rectangleSolid w t), translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInHorCorner South) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t), translate (w/2) (h/2) $ thickArc 180 (-90) (w*m) t]
-wallSectionToPic m t w h (WallSection SingleInHorCorner West) = pictures [translate 0 (-(h/2)+h*m) (rectangleSolid w t), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
-wallSectionToPic _ _ _ _ (WallSection _ _) = pictures []
+wallSectionToPic m t w h (WallSection wt dir) = rotate (dirToAngle dir) (wallTypeToPic wt m t w h)
 
 --                          North         East         South          West
 adjacentToWallSection :: Maybe Cell -> Maybe Cell -> Maybe Cell -> Maybe Cell -> WallSection
@@ -148,13 +107,13 @@ adjacentToWallSection n e s w
 --                      NE            SW            SE            NW
 diagToWallCorner :: Maybe Cell -> Maybe Cell -> Maybe Cell -> Maybe Cell -> WallSection
 diagToWallCorner ne sw se nw
-                | isNothing ne && isNothing sw && isNothing se && isJust nw = WallSection OutCorner East
+                | isNothing ne && isNothing sw && isNothing se && isJust nw = WallSection OutCorner South
                 | isNothing ne && isNothing ne && isJust se && isNothing nw = WallSection OutCorner North
-                | isNothing ne && isJust sw && isNothing se && isNothing nw = WallSection OutCorner West
-                | isJust ne && isNothing sw && isNothing se && isNothing nw = WallSection OutCorner South
-                | isJust ne && isJust sw && isJust se && isNothing nw = WallSection InCorner South
-                | isJust ne && isJust sw && isNothing se && isJust nw = WallSection InCorner West
-                | isJust ne && isNothing sw && isJust se && isJust nw = WallSection InCorner East
+                | isNothing ne && isJust sw && isNothing se && isNothing nw = WallSection OutCorner East
+                | isJust ne && isNothing sw && isNothing se && isNothing nw = WallSection OutCorner West
+                | isJust ne && isJust sw && isJust se && isNothing nw = WallSection InCorner West
+                | isJust ne && isJust sw && isNothing se && isJust nw = WallSection InCorner East
+                | isJust ne && isNothing sw && isJust se && isJust nw = WallSection InCorner South
                 | isNothing ne && isJust sw && isJust se && isJust nw = WallSection InCorner North
                 | otherwise = WallSection Misc North
 
@@ -181,12 +140,12 @@ remapWallEdges ws@(WallSection Single _) (n,e,s,w) (ne,sw,se,nw)
             | otherwise = ws
 remapWallEdges ws@(WallSection StraightOne _) (n,e,s,w) (ne,sw,se,nw)
             | isNothing ne && isNothing e && isNothing se && isNothing nw && isJust w && isJust sw && isJust s && isJust n = WallSection SingleInVerCorner North
-            | isNothing ne && isNothing e && isNothing se && isJust nw && isJust w && isNothing sw && isJust s && isJust n = WallSection SingleInVerCorner East
-            | isNothing nw && isNothing w && isNothing sw && isNothing ne && isJust e && isJust se && isJust s && isJust n = WallSection SingleInVerCorner South
-            | isNothing nw && isNothing w && isNothing sw && isNothing se && isJust e && isJust ne && isJust s && isJust n = WallSection SingleInVerCorner West
-            | isNothing nw && isNothing n && isNothing ne && isNothing sw && isJust s && isJust se && isJust e && isJust w = WallSection SingleInHorCorner North
-            | isNothing nw && isNothing n && isNothing ne && isJust sw && isJust s && isNothing se && isJust e && isJust w = WallSection SingleInHorCorner East -- !!
-            | isNothing sw && isNothing s && isNothing se && isJust nw && isJust n && isNothing ne && isJust e && isJust w = WallSection SingleInHorCorner South -- !!
+            | isNothing ne && isNothing e && isNothing se && isJust nw && isJust w && isNothing sw && isJust s && isJust n = WallSection SingleInHorCorner South
+            | isNothing nw && isNothing w && isNothing sw && isNothing ne && isJust e && isJust se && isJust s && isJust n = WallSection SingleInHorCorner North
+            | isNothing nw && isNothing w && isNothing sw && isNothing se && isJust e && isJust ne && isJust s && isJust n = WallSection SingleInVerCorner South
+            | isNothing nw && isNothing n && isNothing ne && isNothing sw && isJust s && isJust se && isJust e && isJust w = WallSection SingleInVerCorner West
+            | isNothing nw && isNothing n && isNothing ne && isJust sw && isJust s && isNothing se && isJust e && isJust w = WallSection SingleInHorCorner East
+            | isNothing sw && isNothing s && isNothing se && isJust nw && isJust n && isNothing ne && isJust e && isJust w = WallSection SingleInVerCorner East
             | isNothing sw && isNothing s && isNothing se && isNothing nw && isJust n && isJust ne && isJust e && isJust w = WallSection SingleInHorCorner West
             | otherwise = ws
 remapWallEdges ws _ _ = ws
@@ -208,14 +167,3 @@ processWallGroup (LevelMap w h _) cs = mappedCorners ++ mappedWallsEdges
 
 processWallGroups :: LevelMap -> [[(Cell,WallSection)]]
 processWallGroups m = map (processWallGroup m) (getWallGroups m)
-
-showMapWithWalls :: LevelMap -> String
-showMapWithWalls m@(LevelMap w h l) = intercalate "\n" (map unwords cells)
-    where
-        indeces = map (\y -> map (`Vec2` y) [0 .. w]) [0 .. h]
-        cells = map (map (maybe "E" getIcon . getCell m)) indeces
-        wallGroups = concat $ processWallGroups m
-        getIcon c@(Cell t _) | t == Pellet || t == Empty = " "
-                             | not (null e) = let (_,ws) = head e in show ws
-                             | otherwise = show t
-            where e = filter (\(cell,_) -> cell == c) wallGroups

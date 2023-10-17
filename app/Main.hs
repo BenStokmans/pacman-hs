@@ -6,7 +6,7 @@ import Pathfinding (getShortestPath)
 import Rendering (renderString)
 import State (GlobalState(..), GameStatus (..), GameState(..),initState, Settings (windowSize))
 import Struct (Vec2(Vec2), Cell(Cell), CellType (Intersection), readLevel, setCells )
-import Map ( calculateIntersections, calculateWallGroups, showMapWithWalls )
+import Map ( calculateIntersections, calculateWallGroups )
 import Text.Printf
 import Graphics.Gloss ( black, Display(InWindow) )
 import Graphics.Gloss.Interface.IO.Game ( playIO )
