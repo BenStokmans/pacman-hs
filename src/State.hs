@@ -10,7 +10,9 @@ data Settings = Settings
         windowSize :: (Float,Float),
         pacmanPadding :: Float,
         mazeMargin :: Float,
-        lineThickness :: Float
+        lineThickness :: Float,
+        enableDebugGrid :: Bool,
+        keyCooldown :: Float
     }
 
 data MenuRoute = StartMenu | GameView | EditorView | PauseMenu | GameOverMenu deriving (Eq,Show)
@@ -30,6 +32,7 @@ data GameState = GameState
 data GlobalState = GlobalState 
     {
         settings :: Settings,
+        lastKeyPress :: Float,
         gameState :: GameState,
         route :: MenuRoute,
         assets :: Assets,
@@ -45,7 +48,9 @@ initState = do
             windowSize = (800,800),
             pacmanPadding = 0.1,
             mazeMargin = 0.35,
-            lineThickness = 15
+            lineThickness = 15,
+            enableDebugGrid = False,
+            keyCooldown = 0.2
         },
         gameState = GameState {
             lives = 0,
@@ -64,5 +69,6 @@ initState = do
         route = StartMenu,
         assets = assets,
         mousePos = (0,0),
-        particles = []
+        particles = [],
+        lastKeyPress = 0
     }

@@ -1,6 +1,6 @@
 module Router where
 
-import State(GlobalState(..),MenuRoute(..), windowSize)
+import State(GlobalState(..),MenuRoute(..), windowSize, GameState (clock), Settings (..))
 import Views.StartMenu
     ( renderStartMenu, handleInputStartMenu, handleUpdateStartMenu )
 import Views.PauseMenu
@@ -23,15 +23,24 @@ handleRender _ = error "Route not implemented"
 
 handleInput :: Event -> GlobalState -> IO GlobalState
 handleInput (EventResize (w, h)) s = do return s { settings = set { windowSize = (fromIntegral w :: Float, fromIntegral h :: Float) } }
-        where 
-          set = settings s   
+        where
+          set = settings s
 handleInput (EventKey (Char 'q') _ _ _) _ = do exitSuccess
 handleInput (EventMotion p) s = do return s { mousePos = p }
-handleInput e s@(GlobalState { route = StartMenu }) = handleInputStartMenu e s
-handleInput e s@(GlobalState { route = GameView }) = handleInputGameView e s
-handleInput e s@(GlobalState { route = EditorView }) = handleInputEditorView e s
-handleInput e s@(GlobalState { route = PauseMenu }) = handleInputPauseMenu e s
-handleInput e _ = error "Route not implemented"
+handleInput e@(EventKey {}) s = if c-lp>cd then do
+    ns <- newState
+    return ns{ lastKeyPress = c }
+    else do return s
+        where
+            r = route s
+            cd = keyCooldown $ settings s
+            lp = lastKeyPress s
+            c = clock $ gameState s
+            newState | r == StartMenu = handleInputStartMenu e s
+                     | r == GameView = handleInputGameView e s
+                     | r == EditorView = handleInputEditorView e s
+                     | r == PauseMenu = handleInputPauseMenu e s
+                     | otherwise = error "Route not implemented"
 
 handleUpdate :: Float -> GlobalState -> IO GlobalState
 handleUpdate e s@(GlobalState { route = StartMenu }) = handleUpdateStartMenu e s

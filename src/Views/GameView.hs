@@ -96,8 +96,9 @@ renderGameView gs = do
     debugString <- renderStringTopLeft (s (emuFont (assets gs))) green
             ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPacman padding: " ++ show (pacmanPadding $ settings gs))
     let debug = translate (-400) 400 debugString
-    return (pictures [drawMap gs, drawPlayer gs, debug])
-    -- return (pictures [debugGrid gs, drawMap gs, drawPlayer gs, debug])
+    return (pictures [grid, drawMap gs, drawPlayer gs, debug])
+    where
+        grid = if enableDebugGrid $ settings gs then debugGrid gs else blank
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North
@@ -112,6 +113,7 @@ keyToDirection d _ = d
 
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
 handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu}
+handleInputGameView (EventKey (Char 'g') _ _ _) s@(GlobalState { settings = set }) = do return s {settings = set { enableDebugGrid = not (enableDebugGrid set) }}
 handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player = ps { pDirection = keyToDirection (pDirection ps) k } } }
                         where
                             gs = gameState s
