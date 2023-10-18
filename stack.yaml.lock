@@ -15,6 +15,13 @@ packages:
   original:
     commit: acbdfd864b7e574dfbe1595fbdcd154563b2a0ef
     git: https://github.com/hpacheco/gloss-juicy.git
+- completed:
+    hackage: tinyfiledialogs-0.2.1.0@sha256:118f9fd7b721de68f1e84c8b820784e31140bf34e32f23fd6410fb57914a309c,1905
+    pantry-tree:
+      sha256: 518def606ee59dad71b77dec20a9dc55072bdd8fe2194a0ccfca2b2afee1767e
+      size: 482
+  original:
+    hackage: tinyfiledialogs-0.2.1.0
 snapshots:
 - completed:
     sha256: 1d663bec402f77fa09fa3e8cf288c3c7eb18a1f28a5e0c331ac47adeacd21346

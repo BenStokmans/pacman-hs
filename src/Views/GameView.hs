@@ -5,6 +5,15 @@ import State
       Settings(..),
       GameState(..), MenuRoute (..) )
 import Graphics.Gloss
+    ( Picture(Color, Line),
+      pictures,
+      blank,
+      blue,
+      green,
+      scale,
+      translate,
+      Color,
+      Point )
 import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (..))
 import Assets (Assets(..), Anim (..), PacManSprite (..))
 import Struct (LevelMap(..), Player(..), Direction (..), Cell(..), CellType(..), Vec2(..))
@@ -45,16 +54,6 @@ screenToGridPos s (c,r) (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (from
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = let (w,h) = gridSizePx (gridSize s) s in drawGrid (gridSize s) w h green
-
--- drawMap :: GlobalState -> Picture
--- drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y)) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (rectangleSolid wn hn)) walls
---     where
---         (LevelMap _ _ m) = level (assets s)
---         walls = filter (\(Cell t _) -> t == Wall) m
---         (w,h) = gridSizePx s
---         w2 = w/2
---         h2 = h/2
---         (wn,hn) = cellSize (gridSize s) w h
 
 drawMap :: GlobalState -> Picture
 drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) walls

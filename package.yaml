@@ -20,6 +20,7 @@ dependencies:
   - directory
   - GLFW-b
   - containers
+  - tinyfiledialogs
 
 default-extensions:
   - TupleSections
