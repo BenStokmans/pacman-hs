@@ -59,13 +59,12 @@ confirmHeightPrompt :: GlobalState -> String -> GlobalState
 confirmHeightPrompt s v | isJust heightInt =
                             let (Vec2 w _) = editorGridDimensions set in s {
                                 settings = set { editorGridDimensions = Vec2 w height },
-                                assets = as { level = LevelMap w height [] },
+                                editorLevel = LevelMap w height [],
                                 prompt = Nothing,
                                 route = EditorView
                                 }
                        | otherwise = s { prompt = errorPrompt $ "Invalid width: \n" ++ show v }
         where
-            as = assets s
             set = settings s
             heightInt = readMaybe v :: Maybe Int
             height = maybe 0 (\v -> fromIntegral v :: Float) heightInt

@@ -23,14 +23,16 @@ renderPauseMenu :: GlobalState -> IO Picture
 renderPauseMenu s = do
     title <- renderString (0,250) (xxl (pacFont (assets s))) blue "PAUSED"
     drawnContinuButton <- defaultButton continueButton (l (emuFont (assets s))) "Continue" (mousePos s)
-    drawnSaveButton <- defaultButton saveButton (l (emuFont (assets s))) "Save game " (mousePos s)
+    drawnSaveButton <- defaultButton saveButton (l (emuFont (assets s))) ("Save " ++ saveText) (mousePos s)
     drawnMainMenuButton <- defaultButton mainMenuButton (l (emuFont (assets s))) "Main Menu" (mousePos s)
     return (pictures [drawParticles s,title,drawnContinuButton,drawnSaveButton,drawnMainMenuButton])
+    where
+        saveText = if lastRoute s == GameView then "game" else "level"
 
 
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
 handleInputPauseMenu (EventKey (MouseButton LeftButton) b c _) s 
-    | continueButtonHover = do return s {route = GameView}
+    | continueButtonHover = do return s {route = lastRoute s}
     | saveButtonHover = do return s                                 --TODO implement saving
     | mainMenuButtonHover = do return s {route = StartMenu}
     where 

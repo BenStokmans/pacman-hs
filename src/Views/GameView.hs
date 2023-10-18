@@ -18,35 +18,35 @@ gridSize GlobalState { assets = Assets { level = (LevelMap w h _) }} = (w,h)
 cellSize :: (Float,Float) -> Float -> Float -> (Float,Float) --cellsize in px
 cellSize (sx,sy) w h = (w/sx, h/sy)
 
-drawGrid :: GlobalState -> Float -> Float -> Color -> Picture
-drawGrid s w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Line [(hc, -h2),(hc,h2)]) [0..x] ++ map (\i -> let hr = -h2 + hn*i in Line [(-w2, hr),(w2,hr)]) [0..y]
+drawGrid :: (Float, Float) -> Float -> Float -> Color -> Picture
+drawGrid (r,c) w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Line [(hc, -h2),(hc,h2)]) [0..c] ++ map (\i -> let hr = -h2 + hn*i in Line [(-w2, hr),(w2,hr)]) [0..r]
     where
         w2 = w/2
         h2 = h/2
-        (x,y) = gridSize s
-        (wn,hn) = cellSize (x,y) w h
+        (wn,hn) = cellSize (r,c) w h
 
-gridSizePx :: GlobalState -> (Float, Float) --gridsize in pixels onscreen
-gridSizePx s = (x*0.8*(c/r),y*0.8*(r / c))
+gridSizePx :: (Float,Float) -> GlobalState -> (Float, Float) --gridsize in pixels onscreen
+gridSizePx (r,c) s = (x*0.8*(c/r),y*0.8*(r / c))
     where
         (x,y) = windowSize (settings s)
-        (r,c) = gridSize s
 
 gridToScreenPos :: GlobalState -> Vec2 -> Point -- get position screen from grid position 
 gridToScreenPos s (Vec2 x y) = (x*wn-(w/2)+wn/2, y*hn-(h/2)+hn/2)
     where
-        (w,h) = gridSizePx s
-        (wn,hn) = cellSize (gridSize s) w h
+        dim = gridSize s
+        (w,h) = gridSizePx dim s
+        (wn,hn) = cellSize dim w h
 
 screenToGridPos :: GlobalState -> Point -> Vec2 -- get position on grid from screen position
 screenToGridPos s (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
     where
-        (pw,ph) = gridSizePx s
+        dim = gridSize s
+        (pw,ph) = gridSizePx dim s
         (collums,rows) = gridSize s
         (cw,ch) = cellSize (collums,rows) pw ph
 
 debugGrid :: GlobalState -> Picture
-debugGrid s = let (w,h) = gridSizePx s in drawGrid s w h green
+debugGrid s = let (w,h) = gridSizePx (gridSize s) s in drawGrid (gridSize s) w h green
 
 -- drawMap :: GlobalState -> Picture
 -- drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y)) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (rectangleSolid wn hn)) walls
@@ -64,10 +64,11 @@ drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*
         m = mazeMargin $ settings s
         t = lineThickness $ settings s
         walls = concat $ wallGroups $ assets s
-        (w,h) = gridSizePx s
+        dims = gridSize s
+        (w,h) = gridSizePx dims s
         w2 = w/2
         h2 = h/2
-        (wn,hn) = cellSize (gridSize s) w h
+        (wn,hn) = cellSize dims w h
 
 getPlayerAnimation :: GlobalState -> Anim
 getPlayerAnimation s | d == South = down as
@@ -84,7 +85,7 @@ drawPlayer s = translate px py $ scale scalarX scalarY (getPlayerAnimation s !! 
         (px,py) = pLocation $ player $ gameState s
         frame = pFrame $ player $ gameState s
         (r,c) = gridSize s
-        (wc,hc) = let (w,h) = gridSizePx s in cellSize (r,c) w h
+        (wc,hc) = let (w,h) = gridSizePx (r,c) s in cellSize (r,c) w h
         m = mazeMargin $ settings s
         p = pacmanPadding $ settings s
         pacmanScalar = (1+m*2)*(1-p*2)
@@ -112,7 +113,7 @@ keyToDirection _ (Char 'd') = East
 keyToDirection d _ = d
 
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
-handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu}
+handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu, lastRoute = GameView}
 handleInputGameView (EventKey (Char 'g') _ _ _) s@(GlobalState { settings = set }) = do return s {settings = set { enableDebugGrid = not (enableDebugGrid set) }}
 handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player = ps { pDirection = keyToDirection (pDirection ps) k } } }
                         where

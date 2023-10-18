@@ -10,7 +10,7 @@ import Graphics.Gloss.Interface.IO.Game
     ( Picture, Key(Char, SpecialKey), Event(EventMotion, EventKey, EventResize), SpecialKey (..), KeyState (..), Modifiers (..) )
 import System.Exit (exitSuccess)
 import Control.Exception (handle)
-import Views.GameView (renderGameView, handleInputGameView, handleUpdateGameView, gridSizePx)
+import Views.GameView (renderGameView, handleInputGameView, handleUpdateGameView, gridSizePx, gridSize)
 import SDL.Audio (PlaybackState(Pause))
 import Views.EditorView (renderEditorView, handleInputEditorView, handleUpdateEditorView)
 import Prompt (renderPrompt, handleInputPrompt, handleUpdatePrompt)
@@ -32,7 +32,7 @@ handleRender s@(GlobalState { route = r, prompt = p }) = do
                 | otherwise = do return blank
         curtain | isJust p = 
                         if darkenBackground (fromMaybe Prompt{} p) 
-                        then Color (makeColor 0 0 0 0.4) $ let (w,h) = gridSizePx s in rectangleSolid w h 
+                        then Color (makeColor 0 0 0 0.4) $ let (w,h) = windowSize $ settings s in rectangleSolid w h 
                         else blank
                 | otherwise = blank
 
@@ -43,7 +43,6 @@ handleInput :: Event -> GlobalState -> IO GlobalState
 handleInput (EventResize (w, h)) s = do return s { settings = set { windowSize = (fromIntegral w :: Float, fromIntegral h :: Float) } }
         where
           set = settings s
-handleInput (EventKey (Char 'q') _ _ _) _ = do exitSuccess
 handleInput (EventMotion p) s = do return s { mousePos = p }
 handleInput e@(EventKey k Down _ _) s = if cp then do
     let ps = promptState s

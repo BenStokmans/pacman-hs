@@ -71,7 +71,9 @@ data GlobalState = GlobalState
         mousePos :: Point,
         particles :: [(Point,Float)],
         prompt :: Maybe Prompt,
-        clock :: Float
+        clock :: Float,
+        lastRoute :: MenuRoute,
+        editorLevel :: LevelMap
     }
 
 initState :: IO GlobalState
@@ -99,7 +101,9 @@ initState = do
             }
             -- todo init ghosts
         },
+        editorLevel = LevelMap 0 0 [],
         route = StartMenu,
+        lastRoute = StartMenu,
         assets = assets,
         mousePos = (0,0),
         particles = [],
