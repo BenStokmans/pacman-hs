@@ -133,12 +133,8 @@ updatePlayerAnimState s | c-p >= 0.1 = do return s { gameState = gs {
                 ps = player gs
                 anim = getPlayerAnimation s
                 fr = pFrame ps
-                c = clock gs
+                c = clock s
                 p = prevClock gs
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
-handleUpdateGameView add s = updatePlayerAnimState newState
-    where
-        g = gameState s
-        c = clock g
-        newState = s { gameState = g { clock = c + add } }
+handleUpdateGameView _ = updatePlayerAnimState

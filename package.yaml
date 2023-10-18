@@ -18,8 +18,8 @@ dependencies:
   - MonadRandom
   - JuicyPixels
   - directory
-  - OpenGL
   - GLFW-b
+  - containers
 
 default-extensions:
   - TupleSections

@@ -40,8 +40,4 @@ handleInputPauseMenu (EventKey (MouseButton LeftButton) b c _) s
 handleInputPauseMenu _ s = do return s
 
 handleUpdatePauseMenu :: Float -> GlobalState -> IO GlobalState
-handleUpdatePauseMenu add s = updateParticles add newState
-    where
-        g = gameState s
-        c = clock g
-        newState = s { gameState = g { clock = c + add } }
+handleUpdatePauseMenu = updateParticles

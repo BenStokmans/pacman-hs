@@ -1,9 +1,42 @@
-{-# OPTIONS_GHC -Wno-missing-fields #-}
 module State where
 
 import Assets(Assets(Assets),loadAssets)
 import Struct
-import Graphics.Gloss (Point)
+import Graphics.Gloss (Point, Color, blue)
+import Graphics.Gloss.Interface.IO.Game (Key (..), SpecialKey (..))
+import Data.Map (Map, empty)
+
+data Prompt = Prompt 
+    {
+        accentColor :: Color,
+        promptText :: String,
+        promptValue :: String,
+        showTextField :: Bool,
+        showCloseButton :: Bool,
+        showConfirmButton :: Bool,
+        blinkInterval :: Float,
+        lastBlink :: Float,
+        blink :: Bool,
+        confirmAction :: GlobalState -> String -> GlobalState,
+        closeAction :: GlobalState -> String -> GlobalState,
+        darkenBackground :: Bool
+    }
+
+defaultPrompt :: Prompt
+defaultPrompt = Prompt {
+            accentColor = blue,
+            promptText = "",
+            promptValue = "",
+            showCloseButton = True,
+            showTextField = True,
+            showConfirmButton = True,
+            blinkInterval = 0.3,
+            lastBlink = 0,
+            blink = True,
+            confirmAction = const,
+            closeAction = const,
+            darkenBackground = True
+        }
 
 data Settings = Settings 
     {
@@ -12,7 +45,7 @@ data Settings = Settings
         mazeMargin :: Float,
         lineThickness :: Float,
         enableDebugGrid :: Bool,
-        keyCooldown :: Float
+        editorGridDimensions :: Vec2
     }
 
 data MenuRoute = StartMenu | GameView | EditorView | PauseMenu | GameOverMenu deriving (Eq,Show)
@@ -21,7 +54,6 @@ data GameState = GameState
     {
         lives :: Int,
         status :: GameStatus,
-        clock :: Float, -- the game time used for animation and ghost ai
         prevClock :: Float,
         -- level :: GameLevel, -- (if we decide to include multiple level options)
         score :: Int,
@@ -32,12 +64,14 @@ data GameState = GameState
 data GlobalState = GlobalState 
     {
         settings :: Settings,
-        lastKeyPress :: Float,
+        keys :: [Key],
         gameState :: GameState,
         route :: MenuRoute,
         assets :: Assets,
         mousePos :: Point,
-        particles :: [(Point,Float)]
+        particles :: [(Point,Float)],
+        prompt :: Maybe Prompt,
+        clock :: Float
     }
 
 initState :: IO GlobalState
@@ -50,12 +84,11 @@ initState = do
             mazeMargin = 0.35,
             lineThickness = 15,
             enableDebugGrid = False,
-            keyCooldown = 0.2
+            editorGridDimensions = Vec2 25 25
         },
         gameState = GameState {
             lives = 0,
             status = Paused,
-            clock = 0,
             prevClock = 0,
             player = Player {
                 pVelocity = 0,
@@ -70,5 +103,7 @@ initState = do
         assets = assets,
         mousePos = (0,0),
         particles = [],
-        lastKeyPress = 0
+        keys = [],
+        prompt = Nothing,
+        clock = 0
     }

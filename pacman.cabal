@@ -25,6 +25,7 @@ library
       FontContainer
       Map
       Pathfinding
+      Prompt
       Rendering
       Router
       State
@@ -46,8 +47,8 @@ library
       GLFW-b
     , JuicyPixels
     , MonadRandom
-    , OpenGL
     , base >=4.17
+    , containers
     , directory
     , filepath
     , gloss
@@ -74,8 +75,8 @@ executable pacman
       GLFW-b
     , JuicyPixels
     , MonadRandom
-    , OpenGL
     , base >=4.17
+    , containers
     , directory
     , filepath
     , gloss
