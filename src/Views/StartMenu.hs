@@ -9,7 +9,7 @@ import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (..), MouseButton (..)
 import Graphics.Gloss.Data.Point ()
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen)
 import System.Exit (exitSuccess)
-import Struct (Player(pLocation), Vec2 (..), LevelMap (LevelMap))
+import Struct (Player(pLocation), Vec2 (..), LevelMap (LevelMap), CellType (..), Cell (..))
 import Map (getSpawnPoint)
 import Views.GameView (gridToScreenPos)
 import Text.Read (readMaybe)
@@ -59,7 +59,9 @@ confirmHeightPrompt :: GlobalState -> String -> GlobalState
 confirmHeightPrompt s v | isJust heightInt =
                             let (Vec2 w _) = editorGridDimensions set in s {
                                 settings = set { editorGridDimensions = Vec2 w height },
-                                editorLevel = LevelMap w height [],
+                                editorLevel = LevelMap w height $ -- generate walls on the edges
+                                    concatMap (\x -> [Cell Wall (Vec2 (fromInteger x :: Float) 0),Cell Wall (Vec2 (fromInteger x :: Float) (height-1))]) [0..(round w-1)] ++ 
+                                    concatMap (\y -> [Cell Wall (Vec2 0 (fromInteger y :: Float)),Cell Wall (Vec2 (w-1) (fromInteger y :: Float))]) [0..(round height-1)],
                                 prompt = Nothing,
                                 route = EditorView
                                 }

@@ -3,7 +3,7 @@ module State where
 import Assets(Assets(Assets),loadAssets)
 import Struct
 import Graphics.Gloss (Point, Color, blue)
-import Graphics.Gloss.Interface.IO.Game (Key (..), SpecialKey (..))
+import Graphics.Gloss.Interface.IO.Game (Key (..), SpecialKey (..), MouseButton)
 import Data.Map (Map, empty)
 
 data Prompt = Prompt 
@@ -61,6 +61,8 @@ data GameState = GameState
         pinky :: GhostActor, inky :: GhostActor, blinky :: GhostActor, clyde :: GhostActor -- the four ghost
     }
 
+data EditorTool = WallTool | SpawnTool | FoodTool | AppleTool deriving Eq
+
 data GlobalState = GlobalState 
     {
         settings :: Settings,
@@ -73,7 +75,9 @@ data GlobalState = GlobalState
         prompt :: Maybe Prompt,
         clock :: Float,
         lastRoute :: MenuRoute,
-        editorLevel :: LevelMap
+        editorLevel :: LevelMap,
+        editorTool :: EditorTool,
+        mouseDown :: Maybe MouseButton
     }
 
 initState :: IO GlobalState
@@ -101,7 +105,7 @@ initState = do
             }
             -- todo init ghosts
         },
-        editorLevel = LevelMap 0 0 [],
+        editorLevel = LevelMap 25 25 [],
         route = StartMenu,
         lastRoute = StartMenu,
         assets = assets,
@@ -109,5 +113,7 @@ initState = do
         particles = [],
         keys = [],
         prompt = Nothing,
-        clock = 0
+        clock = 0,
+        editorTool = WallTool,
+        mouseDown = Nothing
     }

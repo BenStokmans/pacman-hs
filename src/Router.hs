@@ -7,7 +7,7 @@ import Views.PauseMenu
     ( renderPauseMenu, handleInputPauseMenu, handleUpdatePauseMenu )
 import Graphics.Gloss ( Picture (..), pictures, blank, rectangleSolid, makeColor )
 import Graphics.Gloss.Interface.IO.Game
-    ( Picture, Key(Char, SpecialKey), Event(EventMotion, EventKey, EventResize), SpecialKey (..), KeyState (..), Modifiers (..) )
+    ( Picture, Key(..), Event(EventMotion, EventKey, EventResize), SpecialKey (..), KeyState (..), Modifiers (..) )
 import System.Exit (exitSuccess)
 import Control.Exception (handle)
 import Views.GameView (renderGameView, handleInputGameView, handleUpdateGameView, gridSizePx, gridSize)
@@ -40,6 +40,7 @@ dummyEvent :: Event
 dummyEvent = EventKey (SpecialKey KeyF25) Up (Modifiers {}) (0,0)
 
 handleInput :: Event -> GlobalState -> IO GlobalState
+handleInput (EventKey (Char 'q') _ _ _) _ = do exitSuccess -- comment when not debugging
 handleInput (EventResize (w, h)) s = do return s { settings = set { windowSize = (fromIntegral w :: Float, fromIntegral h :: Float) } }
         where
           set = settings s
@@ -59,7 +60,7 @@ handleInput e@(EventKey k Down _ _) s = if cp then do
                      | r == EditorView = handleInputEditorView promptEvent
                      | r == PauseMenu = handleInputPauseMenu promptEvent
                      | otherwise = error "Route not implemented"
-handleInput e@(EventKey k Up _ _) s = do return s { keys = delete k $ keys s } -- maybe this could just return s
+handleInput e@(EventKey k Up _ _) s = do return s { keys = delete k $ keys s }
 
 handleUpdate :: Float -> GlobalState -> IO GlobalState
 handleUpdate f s@(GlobalState { route = r, prompt = p }) = do

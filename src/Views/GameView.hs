@@ -19,14 +19,14 @@ cellSize :: (Float,Float) -> Float -> Float -> (Float,Float) --cellsize in px
 cellSize (sx,sy) w h = (w/sx, h/sy)
 
 drawGrid :: (Float, Float) -> Float -> Float -> Color -> Picture
-drawGrid (r,c) w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Line [(hc, -h2),(hc,h2)]) [0..c] ++ map (\i -> let hr = -h2 + hn*i in Line [(-w2, hr),(w2,hr)]) [0..r]
+drawGrid (c,r) w h col = Color col $ pictures $ map (\i -> let hc = -w2 + wn*i in Line [(hc, -h2),(hc,h2)]) [0..c] ++ map (\i -> let hr = -h2 + hn*i in Line [(-w2, hr),(w2,hr)]) [0..r]
     where
         w2 = w/2
         h2 = h/2
-        (wn,hn) = cellSize (r,c) w h
+        (wn,hn) = cellSize (c,r) w h
 
 gridSizePx :: (Float,Float) -> GlobalState -> (Float, Float) --gridsize in pixels onscreen
-gridSizePx (r,c) s = (x*0.8*(c/r),y*0.8*(r / c))
+gridSizePx (c,r) s = (x*0.8*(c/r),y*0.8*(r / c))
     where
         (x,y) = windowSize (settings s)
 
@@ -37,13 +37,11 @@ gridToScreenPos s (Vec2 x y) = (x*wn-(w/2)+wn/2, y*hn-(h/2)+hn/2)
         (w,h) = gridSizePx dim s
         (wn,hn) = cellSize dim w h
 
-screenToGridPos :: GlobalState -> Point -> Vec2 -- get position on grid from screen position
-screenToGridPos s (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
+screenToGridPos :: GlobalState -> (Float,Float) -> Point -> Vec2 -- get position on grid from screen position
+screenToGridPos s (c,r) (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
     where
-        dim = gridSize s
-        (pw,ph) = gridSizePx dim s
-        (collums,rows) = gridSize s
-        (cw,ch) = cellSize (collums,rows) pw ph
+        (pw,ph) = gridSizePx (c,r) s
+        (cw,ch) = cellSize (c,r) pw ph
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = let (w,h) = gridSizePx (gridSize s) s in drawGrid (gridSize s) w h green
@@ -84,8 +82,8 @@ drawPlayer s = translate px py $ scale scalarX scalarY (getPlayerAnimation s !! 
     where
         (px,py) = pLocation $ player $ gameState s
         frame = pFrame $ player $ gameState s
-        (r,c) = gridSize s
-        (wc,hc) = let (w,h) = gridSizePx (r,c) s in cellSize (r,c) w h
+        (c,r) = gridSize s
+        (wc,hc) = let (w,h) = gridSizePx (c,r) s in cellSize (c,r) w h
         m = mazeMargin $ settings s
         p = pacmanPadding $ settings s
         pacmanScalar = (1+m*2)*(1-p*2)
@@ -94,10 +92,9 @@ drawPlayer s = translate px py $ scale scalarX scalarY (getPlayerAnimation s !! 
 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
-    debugString <- renderStringTopLeft (s (emuFont (assets gs))) green
+    debugString <- renderStringTopLeft (-400,400) (s (emuFont (assets gs))) green
             ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPacman padding: " ++ show (pacmanPadding $ settings gs))
-    let debug = translate (-400) 400 debugString
-    return (pictures [grid, drawMap gs, drawPlayer gs, debug])
+    return (pictures [grid, drawMap gs, drawPlayer gs, debugString])
     where
         grid = if enableDebugGrid $ settings gs then debugGrid gs else blank
 

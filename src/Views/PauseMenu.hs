@@ -5,10 +5,11 @@ import Assets(Assets(Assets,pacFont, emuFont))
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), defaultButton)
 import Graphics.Gloss ( Picture, blue, red, white, pictures)
-import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseButton (..) )
+import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseButton (..), SpecialKey (KeyEsc) )
 import Graphics.Gloss.Data.Point ()
 import System.Exit (exitSuccess)
 import Views.StartMenu (drawParticles, updateParticles)
+import Graphics.Gloss.Interface.IO.Interact (Key(..))
 
 continueButton :: Rectangle
 continueButton = Rectangle (0,0) 400 100 10
@@ -31,7 +32,8 @@ renderPauseMenu s = do
 
 
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
-handleInputPauseMenu (EventKey (MouseButton LeftButton) b c _) s 
+handleInputPauseMenu (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = lastRoute s}
+handleInputPauseMenu (EventKey (MouseButton LeftButton) _ _ _) s 
     | continueButtonHover = do return s {route = lastRoute s}
     | saveButtonHover = do return s                                 --TODO implement saving
     | mainMenuButtonHover = do return s {route = StartMenu}
