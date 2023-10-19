@@ -9,12 +9,15 @@ import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (..), MouseButton (..)
 import Graphics.Gloss.Data.Point ()
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen)
 import System.Exit (exitSuccess)
-import Struct (Player(pLocation), Vec2 (..), LevelMap (LevelMap), CellType (..), Cell (..))
+import Struct (Player(pLocation), Vec2 (..), LevelMap (LevelMap), CellType (..), Cell (..), readLevel)
 import Map (getSpawnPoint)
 import Views.GameView (gridToScreenPos)
 import Text.Read (readMaybe)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromMaybe)
 import Prompt (errorPrompt)
+import System.Directory (getCurrentDirectory)
+import Graphics.UI.TinyFileDialogs (saveFileDialog, openFileDialog)
+import Data.Text (pack, unpack)
 
 startButton :: Rectangle
 startButton = Rectangle (0,10) 500 100 10
@@ -22,8 +25,11 @@ startButton = Rectangle (0,10) 500 100 10
 quitButton :: Rectangle
 quitButton = Rectangle (0,-150) 350 100 10
 
-editorButton :: Rectangle
-editorButton = Rectangle (0,-350) 250 50 10
+newMapButton :: Rectangle
+newMapButton = Rectangle (-140,-350) 250 50 10
+
+editMapButton :: Rectangle
+editMapButton = Rectangle (150,-350) 300 50 10
 
 drawParticles :: GlobalState -> Picture
 drawParticles s = Color (makeColor 0 0 1 0.4) (pictures (map (\((x,y), r) -> translate x y (circleSolid r)) (particles s)))
@@ -52,16 +58,20 @@ renderStartMenu s = do
     subTitle <- renderString (0,160) (m (emuFont (assets s))) red "By Ben Stokmans and Geerten Helmers"
     drawnStartButton <- defaultButton startButton (l (emuFont (assets s))) "Start new game" (mousePos s)
     drawnQuitButton <- defaultButton quitButton (l (emuFont (assets s))) "Quit game" (mousePos s)
-    drawnEditorButton <- defaultButton editorButton (m (emuFont (assets s))) "Open editor" (mousePos s)
-    return (pictures [drawParticles s,titleBg,title,subTitle,drawnStartButton,drawnQuitButton,drawnEditorButton])
+    drawnNewMapButton <- defaultButton newMapButton (m (emuFont (assets s))) "Create new map" (mousePos s)
+    drawnEditMapButton <- defaultButton editMapButton (m (emuFont (assets s))) "Edit existing map" (mousePos s)
+    return (pictures [drawParticles s,titleBg,title,subTitle,drawnStartButton,drawnQuitButton,drawnNewMapButton,drawnEditMapButton])
+
+emptyMap :: Float -> Float -> LevelMap
+emptyMap w h = LevelMap w h $ -- generate walls on the edges
+                    concatMap (\x -> [Cell Wall (Vec2 (fromInteger x :: Float) 0),Cell Wall (Vec2 (fromInteger x :: Float) (h-1))]) [0..(round w-1)] ++
+                    concatMap (\y -> [Cell Wall (Vec2 0 (fromInteger y :: Float)),Cell Wall (Vec2 (w-1) (fromInteger y :: Float))]) [0..(round h-1)]
 
 confirmHeightPrompt :: GlobalState -> String -> GlobalState
 confirmHeightPrompt s v | isJust heightInt =
                             let (Vec2 w _) = editorGridDimensions set in s {
                                 settings = set { editorGridDimensions = Vec2 w height },
-                                editorLevel = LevelMap w height $ -- generate walls on the edges
-                                    concatMap (\x -> [Cell Wall (Vec2 (fromInteger x :: Float) 0),Cell Wall (Vec2 (fromInteger x :: Float) (height-1))]) [0..(round w-1)] ++ 
-                                    concatMap (\y -> [Cell Wall (Vec2 0 (fromInteger y :: Float)),Cell Wall (Vec2 (w-1) (fromInteger y :: Float))]) [0..(round height-1)],
+                                editorLevel = emptyMap w height,
                                 prompt = Nothing,
                                 route = EditorView
                                 }
@@ -96,13 +106,18 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
         route = GameView,
         gameState = gs { player = ps { pLocation = spawnLoc } }
         }
-    | rectangleHovered (mousePos s) editorButton = do return s { prompt = Just
+    | rectangleHovered (mousePos s) newMapButton = do return s { prompt = Just
         defaultPrompt {
             promptText = "Enter grid width:",
             promptValue = let (Vec2 x _ ) = editorGridDimensions $ settings s in show (round x),
             confirmAction = confirmWidthPrompt,
             closeAction = \state _ -> state { route = StartMenu, prompt = Nothing }
         } }
+    | rectangleHovered (mousePos s) editMapButton = do
+        ws <- getCurrentDirectory
+        file <- openFileDialog (pack "select level") (pack ws) [pack "*.txt"] (pack "level file") False
+        map@(LevelMap w h _) <- maybe (do return $ emptyMap 25 25) (readLevel . head) $ (Just . map unpack) =<< file
+        return $ if isJust file then s { editorLevel = map, route = EditorView, settings = (settings s) { editorGridDimensions = Vec2 w h} } else s
     | rectangleHovered (mousePos s) quitButton = do exitSuccess
     where
         gs = gameState s

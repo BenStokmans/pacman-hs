@@ -71,8 +71,8 @@ cellToIcon gs w h x y ct = do translate (x*w-(gw/2)+w/2) (y*h-(gh/2)+h/2) <$> ic
                            | otherwise = do return blank
                       (_,(gw,gh)) = getEditorGridInfo gs
 
-previewButton :: Float -> Rectangle
-previewButton mx = Rectangle (mx, -360) 325 40 10
+previewButton :: Float -> Float -> Rectangle
+previewButton mx my = Rectangle (mx, my) 325 40 10
 
 drawPreview :: GlobalState -> Picture
 drawPreview s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) walls
@@ -87,7 +87,7 @@ drawPreview s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate
 
 renderEditorView :: GlobalState -> IO Picture
 renderEditorView s = do
-    txt <- renderString (mx/2,350) (m (emuFont (assets s))) red "Pac-Man Level Editor"
+    txt <- renderString (mx/2,h/2+25) (m (emuFont (assets s))) red "Pac-Man Level Editor"
     toolsText <- renderString (-350, 300) (m (emuFont (assets s))) white "Tools:"
     toolArrow <- renderString (-380, toolY) (m (emuFont (assets s))) white "->"
 
@@ -109,10 +109,10 @@ renderEditorView s = do
 
     instructionText <- renderStringTopLeft (-390,100) (FontContainer.s (emuFont (assets s))) white "Select tool\nUsing arrow keys\n \nThen select\nAny square \nin the maze\nusing the mouse\n  \nLeft click: place\nRight click: del.\n    \nThe keys:\nW,A,F and P \nalso activate \ntheir respective\ntools."
     debugString <- renderStringTopLeft (-400,400) (FontContainer.s (emuFont (assets s))) green
-                ("Hovered cell: " ++ show v ++ "\nCells occupied: " ++ show (length cells) ++ "\nMouse down: " ++ mouseDebugText)
+                ("Hovered cell: " ++ show v ++ "\nCells occupied: " ++ show (length cells) ++ "\nMouse down: " ++ mouseDebugText ++ "\n Grids size: cells: " ++ show (editorGridDimensions $ settings s) ++ " pixels: " ++ show w ++ ", " ++ show h)
     cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon s cw ch vx vy t) cells
 
-    previewButton <- defaultButton (previewButton $ mx/2) (m (emuFont (assets s))) (previewText ++ " preview (V)") mPos
+    previewButton <- defaultButton (previewButton (mx/2) (-h/2-30)) (m (emuFont (assets s))) (previewText ++ " preview (V)") mPos
     let tools = pictures [toolsText,toolArrow,wallButton,wallToolText,spawnButton,spawnToolText,foodToolText,foodButton,appleToolText,appleButton,instructionText]
     wi <- editorToolToIcon s cw ch tool
     let hoveredCell = if x<c && x>=0 && y<r && y>=0 then translate (x*cw-(w/2)+cw/2) (y*ch-(h/2)+ch/2) wi else blank -- check if hovered cell is on the grid
@@ -172,10 +172,10 @@ handleInputEditorView (EventKey (SpecialKey KeyUp) _ _ _) s@(GlobalState {editor
 handleInputEditorView (EventKey (SpecialKey KeyDown) _ _ _) s@(GlobalState {editorTool = et}) = do return s {editorTool = nextTool et}
 handleInputEditorView (EventKey (Char 'v') _ _ _ ) s = do return s {previewEditor = not $ previewEditor s}
 handleInputEditorView (EventKey (Char c) _ _ _ ) s = do return s { editorTool = charToTool c }
-handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) s 
-    | rectangleHovered (mousePos s) $ previewButton mx = do return s {previewEditor = not $ previewEditor s}
+handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) s
+    | rectangleHovered (mousePos s) $ previewButton mx (-h/2-30) = do return s {previewEditor = not $ previewEditor s}
     where
-        (dim,_) = getEditorGridInfo s
+        (dim,(_,h)) = getEditorGridInfo s
         (mx,_) = windowMargin dim s
 handleInputEditorView _ s = do return s
 
