@@ -30,9 +30,9 @@ handleRender s@(GlobalState { route = r, prompt = p }) = do
                 | otherwise = error "Route not implemented"
         pImage  | isJust p = renderPrompt s (fromMaybe Prompt{} p)
                 | otherwise = do return blank
-        curtain | isJust p = 
-                        if darkenBackground (fromMaybe Prompt{} p) 
-                        then Color (makeColor 0 0 0 0.4) $ let (w,h) = windowSize $ settings s in rectangleSolid w h 
+        curtain | isJust p =
+                        if darkenBackground (fromMaybe Prompt{} p)
+                        then Color (makeColor 0 0 0 0.4) $ let (w,h) = windowSize $ settings s in rectangleSolid w h
                         else blank
                 | otherwise = blank
 
@@ -60,6 +60,13 @@ handleInput e@(EventKey k Down _ _) s = if cp then do
                      | r == EditorView = handleInputEditorView promptEvent
                      | r == PauseMenu = handleInputPauseMenu promptEvent
                      | otherwise = error "Route not implemented"
+handleInput e@(EventKey (SpecialKey KeyUnknown) Up _ _) s = do -- for some reason when the user lets go of a number key its reported as unknown
+    return s { keys = filter (not . checkSpecialUnknown) $ keys s } -- so we have to implement this workaround
+    where
+        numberChars = ['1','2','3','4','5','6','7','8','9','0']
+        checkSpecialUnknown k = case k of
+                        (Char c) -> c `elem` numberChars
+                        _        -> False
 handleInput e@(EventKey k Up _ _) s = do return s { keys = delete k $ keys s }
 
 handleUpdate :: Float -> GlobalState -> IO GlobalState
