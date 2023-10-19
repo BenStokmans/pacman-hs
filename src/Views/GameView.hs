@@ -56,11 +56,10 @@ debugGrid :: GlobalState -> Picture
 debugGrid s = let (w,h) = gridSizePx (gridSize s) s in drawGrid (gridSize s) w h green
 
 drawMap :: GlobalState -> Picture
-drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) walls
+drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) (walls $ assets s)
     where
         m = mazeMargin $ settings s
         t = lineThickness $ settings s
-        walls = concat $ wallGroups $ assets s
         dims = gridSize s
         (w,h) = gridSizePx dims s
         w2 = w/2

@@ -1,7 +1,7 @@
 module Views.EditorView where
 
 import State (GlobalState(..), MenuRoute (..), MenuRoute(StartMenu), GameState (..), Settings (..), EditorTool (..))
-import Assets(Assets(Assets,pacFont, emuFont), wallGroups)
+import Assets(Assets(Assets,pacFont, emuFont), walls)
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), renderString', renderStringTopLeft, defaultButton)
 import Graphics.Gloss
@@ -22,7 +22,7 @@ import Views.GameView (debugGrid, screenToGridPos, gridSizePx, cellSize, gridSiz
 import Struct (Vec2(..), getCell, Cell (..), CellType (..), LevelMap (LevelMap))
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.List
-import Map (WallType, processWallGroups, wallToSizedSection)
+import Map (WallType, processWalls, wallToSizedSection)
 import Text.Printf
 import SDL.Font (Font(Font))
 
@@ -79,7 +79,7 @@ drawPreview s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate
     where
         m = mazeMargin $ settings s
         t = lineThickness $ settings s
-        walls = concat $ processWallGroups $ editorLevel s
+        walls = processWalls $ editorLevel s
         ((r,c),(w,h)) = getEditorGridInfo s
         w2 = w/2
         h2 = h/2

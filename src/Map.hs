@@ -83,7 +83,7 @@ wallTypeToPic SingleOutCorner m t w h = pictures [translate (w/2) (-h/2) $ thick
 wallTypeToPic SingleInVerCorner m t w h = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
 wallTypeToPic SingleInHorCorner m t w h = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (h/2) $ thickArc (-180) (-90) (w*m) t]
 wallTypeToPic DoubleCorner m t w h = pictures [translate 0 ((h/2)-h*m) (rectangleSolid w t), translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t, translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
-wallTypeToPic Single m t w _ = thickCircle (w*m) t
+-- wallTypeToPic Single m t w _ = thickCircle (w*m) t
 wallTypeToPic _ _ _ _ _ = blank
 
 -- m = margin, t = thickness, w = width, h = height
@@ -172,5 +172,5 @@ processWallGroup (LevelMap w h _) cs = mappedCorners ++ mappedWallsEdges
                 mappedCorners = map (\cell -> let (a,b,c,d) = getDiagsTuple (LevelMap w h cs) cell in (cell, diagToWallCorner a b c d)) fcorners
                 mappedWallsEdges = map (mapWallEdges (LevelMap w h cs)) mappedWalls
 
-processWallGroups :: LevelMap -> [[(Cell,WallSection)]]
-processWallGroups m = map (processWallGroup m) (getWallGroups m)
+processWalls :: LevelMap -> [(Cell,WallSection)]
+processWalls m@(LevelMap _ _ l) = processWallGroup m (filter (\(Cell t _) -> t == Wall) l)

@@ -1,7 +1,7 @@
 module Assets where
 
 import Struct (LevelMap,readLevel, Cell)
-import Map (calculateIntersections, WallSection, processWallGroups)
+import Map (calculateIntersections, WallSection, processWalls)
 import SDL.Font (Font, initialize, load)
 import FontContainer (FontContainer(..),loadFont)
 import Graphics.Gloss (Picture (Pictures))
@@ -35,7 +35,7 @@ data Assets = Assets {
     emuFont :: FontContainer,
     pacSprite :: PacManSprite,
     level :: LevelMap,
-    wallGroups :: [[(Cell, WallSection)]]
+    walls :: [(Cell, WallSection)]
   }
 
 loadPacSprite :: String -> IO PacManSprite
@@ -63,5 +63,5 @@ loadAssets p = do
         emuFont = emuFont,
         pacSprite = pacSprite,
         level = calculateIntersections level,
-        wallGroups = processWallGroups level
+        walls = processWalls level
     }
