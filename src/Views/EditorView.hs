@@ -1,9 +1,9 @@
 module Views.EditorView where
 
 import State (GlobalState(..), MenuRoute (..), MenuRoute(StartMenu), GameState (..), Settings (..), EditorTool (..))
-import Assets(Assets(Assets,pacFont, emuFont))
+import Assets(Assets(Assets,pacFont, emuFont), wallGroups)
 import FontContainer(FontContainer(..))
-import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), renderString', renderStringTopLeft)
+import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), renderString', renderStringTopLeft, defaultButton)
 import Graphics.Gloss
     ( Picture,
       blue,
@@ -22,7 +22,7 @@ import Views.GameView (debugGrid, screenToGridPos, gridSizePx, cellSize, gridSiz
 import Struct (Vec2(..), getCell, Cell (..), CellType (..), LevelMap (LevelMap))
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.List
-import Map (WallType)
+import Map (WallType, processWallGroups, wallToSizedSection)
 import Text.Printf
 import SDL.Font (Font(Font))
 
@@ -71,9 +71,23 @@ cellToIcon gs w h x y ct = do translate (x*w-(gw/2)+w/2) (y*h-(gh/2)+h/2) <$> ic
                            | otherwise = do return blank
                       (_,(gw,gh)) = getEditorGridInfo gs
 
+previewButton :: Float -> Rectangle
+previewButton mx = Rectangle (mx, -360) 325 40 10
+
+drawPreview :: GlobalState -> Picture
+drawPreview s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) walls
+    where
+        m = mazeMargin $ settings s
+        t = lineThickness $ settings s
+        walls = concat $ processWallGroups $ editorLevel s
+        ((r,c),(w,h)) = getEditorGridInfo s
+        w2 = w/2
+        h2 = h/2
+        (wn,hn) = cellSize (r,c) w h
+
 renderEditorView :: GlobalState -> IO Picture
 renderEditorView s = do
-    txt <- renderString (0,350) (m (emuFont (assets s))) red "Pac-Man Level Editor"
+    txt <- renderString (mx/2,350) (m (emuFont (assets s))) red "Pac-Man Level Editor"
     toolsText <- renderString (-350, 300) (m (emuFont (assets s))) white "Tools:"
     toolArrow <- renderString (-380, toolY) (m (emuFont (assets s))) white "->"
 
@@ -98,19 +112,22 @@ renderEditorView s = do
                 ("Hovered cell: " ++ show v ++ "\nCells occupied: " ++ show (length cells) ++ "\nMouse down: " ++ mouseDebugText)
     cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon s cw ch vx vy t) cells
 
+    previewButton <- defaultButton (previewButton $ mx/2) (m (emuFont (assets s))) (previewText ++ " preview (V)") mPos
     let tools = pictures [toolsText,toolArrow,wallButton,wallToolText,spawnButton,spawnToolText,foodToolText,foodButton,appleToolText,appleButton,instructionText]
     wi <- editorToolToIcon s cw ch tool
     let hoveredCell = if x<c && x>=0 && y<r && y>=0 then translate (x*cw-(w/2)+cw/2) (y*ch-(h/2)+ch/2) wi else blank -- check if hovered cell is on the grid
-    let gridStuff = translate (mx/2) 0 $ pictures [pictures cs,hoveredCell,editorGrid s] -- give beter name
-    return (pictures [gridStuff,txt,tools,debugString])
+    let gridEditor = translate (mx/2) 0 $ pictures [pictures cs,hoveredCell,editorGrid s] -- give beter name
+    let gridPreview = translate (mx/2) 0 $ drawPreview s
+    return (pictures [if previewEditor s then gridPreview else gridEditor,txt,tools,debugString,previewButton])
     where
         ((c,r),(w,h)) = getEditorGridInfo s
         (LevelMap _ _ cells) = editorLevel s
-        (mouseX,mouseY) = mousePos s
+        mPos@(mouseX,mouseY) = mousePos s
         v@(Vec2 x y) = screenToGridPos s (c,r) (mouseX - mx/2, mouseY)
         (cw,ch) = cellSize (c,r) w h
         (mx,_) = windowMargin (c,r) s
         tool = editorTool s
+        previewText = if previewEditor s then "Disable" else "Enable"
         toolY
             | tool == WallTool = 260
             | tool == SpawnTool = 220
@@ -153,7 +170,13 @@ handleInputEditorView :: Event -> GlobalState -> IO GlobalState
 handleInputEditorView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu, lastRoute = EditorView}
 handleInputEditorView (EventKey (SpecialKey KeyUp) _ _ _) s@(GlobalState {editorTool = et}) = do return s {editorTool = prevTool et}
 handleInputEditorView (EventKey (SpecialKey KeyDown) _ _ _) s@(GlobalState {editorTool = et}) = do return s {editorTool = nextTool et}
+handleInputEditorView (EventKey (Char 'v') _ _ _ ) s = do return s {previewEditor = not $ previewEditor s}
 handleInputEditorView (EventKey (Char c) _ _ _ ) s = do return s { editorTool = charToTool c }
+handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) s 
+    | rectangleHovered (mousePos s) $ previewButton mx = do return s {previewEditor = not $ previewEditor s}
+    where
+        (dim,_) = getEditorGridInfo s
+        (mx,_) = windowMargin dim s
 handleInputEditorView _ s = do return s
 
 handleUpdateEditorView :: Float -> GlobalState -> IO GlobalState

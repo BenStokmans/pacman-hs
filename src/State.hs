@@ -77,7 +77,8 @@ data GlobalState = GlobalState
         lastRoute :: MenuRoute,
         editorLevel :: LevelMap,
         editorTool :: EditorTool,
-        mouseDown :: Maybe MouseButton
+        mouseDown :: Maybe MouseButton,
+        previewEditor :: Bool
     }
 
 initState :: IO GlobalState
@@ -115,5 +116,6 @@ initState = do
         prompt = Nothing,
         clock = 0,
         editorTool = WallTool,
-        mouseDown = Nothing
+        mouseDown = Nothing,
+        previewEditor = False
     }

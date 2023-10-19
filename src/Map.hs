@@ -3,8 +3,8 @@ module Map where
 import Struct ( Vec2(Vec2), LevelMap(LevelMap), CellType (..), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, mapWidth, mapHeight, dirToVec2, setCells, scaleVec2 )
 import Data.Maybe ( isJust, isNothing )
 import Data.List ( intercalate )
-import Graphics.Gloss (Picture (..), translate, pictures, circleSolid, thickArc, rotate, blank)
-import Codec.Picture.Metadata (Keys(Source))
+import Graphics.Gloss (Picture (..), translate, pictures, circleSolid, thickArc, rotate, blank, thickCircle)
+import Codec.Picture.Metadata (Keys(Source), Value (Double))
 import Rendering (resize)
 import Graphics.Gloss.Data.Picture (scale,rectangleSolid)
 import Graphics.Gloss.Data.Color ( green, red, white, yellow )
@@ -53,7 +53,7 @@ getWallGroups (LevelMap w h m) = getGroups (LevelMap w h (filter (\(Cell t _) ->
 calculateWallGroups :: LevelMap -> LevelMap
 calculateWallGroups l@(LevelMap _ _ m) = setCells l (map (\(Cell _ v) -> Cell Intersection v) (concat (getWallGroups l)))
 
-data WallType = StraightOne | OutCorner | InCorner | SingleOutCorner | SingleInVerCorner | SingleInHorCorner | End | StraightTwo | Single | Misc deriving Eq
+data WallType = StraightOne | OutCorner | InCorner | SingleOutCorner | SingleInVerCorner | SingleInHorCorner | DoubleCorner | End | StraightTwo | Single | Misc deriving Eq
 data WallSection = WallSection WallType Direction
 
 instance Eq WallSection where
@@ -82,6 +82,8 @@ wallTypeToPic StraightTwo m t w h = pictures [translate (-(w/2)+w*m) 0 (rectangl
 wallTypeToPic SingleOutCorner m t w h = pictures [translate (w/2) (-h/2) $ thickArc 90 180 (w*(1-m)) t, translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
 wallTypeToPic SingleInVerCorner m t w h = pictures [translate ((w/2)-w*m) 0 (rectangleSolid t h), translate (-w/2) (h/2) $ thickArc (-90) 0 (w*m) t]
 wallTypeToPic SingleInHorCorner m t w h = pictures [translate (-(w/2)+w*m) 0 (rectangleSolid t h), translate (w/2) (h/2) $ thickArc (-180) (-90) (w*m) t]
+wallTypeToPic DoubleCorner m t w h = pictures [translate 0 ((h/2)-h*m) (rectangleSolid w t), translate (-w/2) (-h/2) $ thickArc 0 90 (w*m) t, translate (w/2) (-h/2) $ thickArc 90 180 (w*m) t]
+wallTypeToPic Single m t w _ = thickCircle (w*m) t
 wallTypeToPic _ _ _ _ _ = blank
 
 -- m = margin, t = thickness, w = width, h = height
@@ -115,7 +117,7 @@ diagToWallCorner ne sw se nw
                 | isJust ne && isJust sw && isNothing se && isJust nw = WallSection InCorner East
                 | isJust ne && isNothing sw && isJust se && isJust nw = WallSection InCorner South
                 | isNothing ne && isJust sw && isJust se && isJust nw = WallSection InCorner North
-                | otherwise = WallSection Misc North
+                | otherwise = WallSection Single North
 
 -- returns ne sw se nw
 getDiagsTuple :: LevelMap-> Cell -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell)
@@ -133,12 +135,17 @@ singleHor l c@(Cell t pos) = isJust (getCell l (pos+dirToVec2 West)) && isNothin
 --                                      n         e           s         w              ne         sw         se         nw
 remapWallEdges :: WallSection -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell) -> (Maybe Cell,Maybe Cell,Maybe Cell,Maybe Cell) -> WallSection
 remapWallEdges ws@(WallSection Single _) (n,e,s,w) (ne,sw,se,nw)
+            | isNothing n && isNothing e && isNothing s && isNothing w && isNothing ne && isNothing sw && isNothing se && isNothing ne = ws
             | isJust e && isJust s && isNothing ne && isNothing se = WallSection SingleOutCorner North
             | isJust e && isJust n && isNothing ne && isNothing nw = WallSection SingleOutCorner West
             | isJust w && isJust s && isNothing ne && isNothing nw = WallSection SingleOutCorner East
             | isJust w && isJust n && isNothing ne && isNothing se = WallSection SingleOutCorner South
             | otherwise = ws
 remapWallEdges ws@(WallSection StraightOne _) (n,e,s,w) (ne,sw,se,nw)
+            | isNothing nw && isNothing n && isNothing ne && isNothing sw && isJust s && isNothing se && isJust e && isJust w = WallSection DoubleCorner North
+            | isNothing ne && isNothing e && isNothing se && isNothing nw && isJust w && isNothing sw && isJust n && isJust s = WallSection DoubleCorner East
+            | isNothing sw && isNothing s && isNothing se && isNothing nw && isJust n && isNothing ne && isJust e && isJust w = WallSection DoubleCorner South
+            | isNothing nw && isNothing w && isNothing sw && isNothing ne && isJust e && isNothing se && isJust n && isJust s = WallSection DoubleCorner West
             | isNothing ne && isNothing e && isNothing se && isNothing nw && isJust w && isJust sw && isJust s && isJust n = WallSection SingleInVerCorner North
             | isNothing ne && isNothing e && isNothing se && isJust nw && isJust w && isNothing sw && isJust s && isJust n = WallSection SingleInHorCorner South
             | isNothing nw && isNothing w && isNothing sw && isNothing ne && isJust e && isJust se && isJust s && isJust n = WallSection SingleInHorCorner North
