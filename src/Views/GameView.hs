@@ -22,7 +22,7 @@ import FontContainer (FontContainer(..))
 import Map (wallSectionToPic, wallToSizedSection)
 
 gridSize :: GlobalState -> (Float,Float) --gridsize of level 
-gridSize GlobalState { assets = Assets { level = (LevelMap w h _) }} = (w,h)
+gridSize GlobalState { gameState = GameState { level = (LevelMap w h _) }} = (w,h)
 
 cellSize :: (Float,Float) -> Float -> Float -> (Float,Float) --cellsize in px
 cellSize (sx,sy) w h = (w/sx, h/sy)
@@ -56,7 +56,7 @@ debugGrid :: GlobalState -> Picture
 debugGrid s = let (w,h) = gridSizePx (gridSize s) s in drawGrid (gridSize s) w h green
 
 drawMap :: GlobalState -> Picture
-drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) (walls $ assets s)
+drawMap s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) (walls $ gameState s)
     where
         m = mazeMargin $ settings s
         t = lineThickness $ settings s

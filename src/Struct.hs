@@ -73,9 +73,9 @@ data LevelMap = LevelMap Float Float [Cell]
 
 instance Show LevelMap where
     show :: LevelMap -> String
-    show m@(LevelMap w h l) = intercalate "\n" (map unwords cells)
+    show m@(LevelMap w h l) = intercalate "\n" $ reverse (map (unwords . reverse) cells)
         where
-            indeces = map (\y -> map (`Vec2` y) [0 .. w]) [0 .. h]
+            indeces = map (\y -> map (`Vec2` y) [0 .. w-1]) [0 .. h-1]
             cells = map (map (maybe "E" (\(Cell t _) -> show t) . getCell m)) indeces
 
 setCell :: LevelMap -> Cell -> LevelMap

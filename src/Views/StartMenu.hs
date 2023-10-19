@@ -1,7 +1,7 @@
 module Views.StartMenu where
 
 import State (GlobalState(..), MenuRoute (GameView, EditorView, StartMenu), GameState (..), Settings (..), Prompt (..), defaultPrompt)
-import Assets(Assets(Assets,pacFont, emuFont), level)
+import Assets(Assets(Assets,pacFont, emuFont))
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), completeButton, defaultButton)
 import Graphics.Gloss ( Picture (..), blue, red, white, pictures, makeColor, translate, circleSolid, black )
@@ -18,6 +18,7 @@ import Prompt (errorPrompt)
 import System.Directory (getCurrentDirectory)
 import Graphics.UI.TinyFileDialogs (saveFileDialog, openFileDialog)
 import Data.Text (pack, unpack)
+import System.FilePath ((</>))
 
 startButton :: Rectangle
 startButton = Rectangle (0,10) 500 100 10
@@ -115,14 +116,14 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
         } }
     | rectangleHovered (mousePos s) editMapButton = do
         ws <- getCurrentDirectory
-        file <- openFileDialog (pack "select level") (pack ws) [pack "*.txt"] (pack "level file") False
+        file <- openFileDialog (pack "select level") (pack $ ws </> "maps") [pack "*.txt"] (pack "level file") False
         map@(LevelMap w h _) <- maybe (do return $ emptyMap 25 25) (readLevel . head) $ (Just . map unpack) =<< file
         return $ if isJust file then s { editorLevel = map, route = EditorView, settings = (settings s) { editorGridDimensions = Vec2 w h} } else s
     | rectangleHovered (mousePos s) quitButton = do exitSuccess
     where
         gs = gameState s
         ps = player gs
-        spawnLoc = gridToScreenPos s (getSpawnPoint (level $ assets s))
+        spawnLoc = gridToScreenPos s (getSpawnPoint (level $ gameState s))
 handleInputStartMenu _ s = do return s
 
 handleUpdateStartMenu :: Float -> GlobalState -> IO GlobalState

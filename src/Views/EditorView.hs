@@ -1,7 +1,7 @@
 module Views.EditorView where
 
 import State (GlobalState(..), MenuRoute (..), MenuRoute(StartMenu), GameState (..), Settings (..), EditorTool (..))
-import Assets(Assets(Assets,pacFont, emuFont), walls)
+import Assets(Assets(Assets,pacFont, emuFont))
 import FontContainer(FontContainer(..))
 import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), renderString', renderStringTopLeft, defaultButton)
 import Graphics.Gloss
@@ -109,14 +109,14 @@ renderEditorView s = do
 
     instructionText <- renderStringTopLeft (-390,100) (FontContainer.s (emuFont (assets s))) white "Select tool\nUsing arrow keys\n \nThen select\nAny square \nin the maze\nusing the mouse\n  \nLeft click: place\nRight click: del.\n    \nThe keys:\nW,A,F and P \nalso activate \ntheir respective\ntools."
     debugString <- renderStringTopLeft (-400,400) (FontContainer.s (emuFont (assets s))) green
-                ("Hovered cell: " ++ show v ++ "\nCells occupied: " ++ show (length cells) ++ "\nMouse down: " ++ mouseDebugText ++ "\n Grids size: cells: " ++ show (editorGridDimensions $ settings s) ++ " pixels: " ++ show w ++ ", " ++ show h)
+                ("Hovered cell: " ++ show v ++ "\nCells occupied: " ++ show (length cells) ++ "\nMouse down: " ++ mouseDebugText ++ "\n Grids size: cells: " ++ (let (LevelMap lw lh _) = editorLevel s in show (Vec2 lw lh)) ++ " pixels: " ++ show w ++ ", " ++ show h)
     cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon s cw ch vx vy t) cells
 
     previewButton <- defaultButton (previewButton (mx/2) (-h/2-30)) (m (emuFont (assets s))) (previewText ++ " preview (V)") mPos
     let tools = pictures [toolsText,toolArrow,wallButton,wallToolText,spawnButton,spawnToolText,foodToolText,foodButton,appleToolText,appleButton,instructionText]
     wi <- editorToolToIcon s cw ch tool
     let hoveredCell = if x<c && x>=0 && y<r && y>=0 then translate (x*cw-(w/2)+cw/2) (y*ch-(h/2)+ch/2) wi else blank -- check if hovered cell is on the grid
-    let gridEditor = translate (mx/2) 0 $ pictures [pictures cs,hoveredCell,editorGrid s] -- give beter name
+    let gridEditor = translate (mx/2) 0 $ pictures [pictures cs,if not rightDown then hoveredCell else blank,editorGrid s]
     let gridPreview = translate (mx/2) 0 $ drawPreview s
     return (pictures [if previewEditor s then gridPreview else gridEditor,txt,tools,debugString,previewButton])
     where
@@ -134,9 +134,11 @@ renderEditorView s = do
             | tool == FoodTool = 180
             | tool == AppleTool = 140
             | otherwise = -1000 -- out of bounds
-        mouseDebugText | elem (MouseButton LeftButton) (keys s) && elem (MouseButton RightButton) (keys s) = "left + right"
-                       | elem (MouseButton LeftButton) $ keys s = "left"  -- crazy inneficient but it's only debug so eh
-                       | elem (MouseButton LeftButton) $ keys s = "right"
+        rightDown = MouseButton RightButton `elem` keys s
+        leftDown = MouseButton LeftButton `elem` keys s
+        mouseDebugText | leftDown && rightDown = "left + right"
+                       | leftDown = "left"
+                       | rightDown = "right"
                        | otherwise = "no"
 
 tools :: [EditorTool]
@@ -160,18 +162,19 @@ toolToCellType SpawnTool = Spawn
 toolToCellType FoodTool = Pellet
 toolToCellType AppleTool = Empty -- add powerup
 
-charToTool :: Char -> EditorTool
-charToTool 'w' = WallTool
-charToTool 'a' = AppleTool
-charToTool 'f' = FoodTool
-charToTool 'p' = SpawnTool
+charToTool :: EditorTool -> Char -> EditorTool
+charToTool _ 'w' = WallTool
+charToTool _ 'a' = AppleTool
+charToTool _ 'f' = FoodTool
+charToTool _ 'p' = SpawnTool
+charToTool e _ = e
 
 handleInputEditorView :: Event -> GlobalState -> IO GlobalState
 handleInputEditorView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu, lastRoute = EditorView}
 handleInputEditorView (EventKey (SpecialKey KeyUp) _ _ _) s@(GlobalState {editorTool = et}) = do return s {editorTool = prevTool et}
 handleInputEditorView (EventKey (SpecialKey KeyDown) _ _ _) s@(GlobalState {editorTool = et}) = do return s {editorTool = nextTool et}
 handleInputEditorView (EventKey (Char 'v') _ _ _ ) s = do return s {previewEditor = not $ previewEditor s}
-handleInputEditorView (EventKey (Char c) _ _ _ ) s = do return s { editorTool = charToTool c }
+handleInputEditorView (EventKey (Char c) _ _ _ ) s = do return s { editorTool = charToTool (editorTool s) c }
 handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) s
     | rectangleHovered (mousePos s) $ previewButton mx (-h/2-30) = do return s {previewEditor = not $ previewEditor s}
     where
@@ -197,6 +200,6 @@ handleUpdateEditorView _ s = do
 
         newCell = Cell (toolToCellType $ editorTool s) v
         newState | x>=c || x<0 || y>=r || y<0 = s
-                 | elem (MouseButton LeftButton) $ keys s = s { editorLevel = LevelMap w h $ newCell:editCells }
-                 | elem (MouseButton RightButton) $ keys s = s { editorLevel = LevelMap w h editCells }
+                 | elem (MouseButton LeftButton) $ keys s = s { editorLevel = LevelMap c r $ newCell:editCells }
+                 | elem (MouseButton RightButton) $ keys s = s { editorLevel = LevelMap c r editCells }
                  | otherwise = s

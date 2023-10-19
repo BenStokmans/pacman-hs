@@ -5,6 +5,7 @@ import Struct
 import Graphics.Gloss (Point, Color, blue)
 import Graphics.Gloss.Interface.IO.Game (Key (..), SpecialKey (..), MouseButton)
 import Data.Map (Map, empty)
+import Map (WallSection, processWalls)
 
 data Prompt = Prompt 
     {
@@ -55,6 +56,8 @@ data GameState = GameState
         lives :: Int,
         status :: GameStatus,
         prevClock :: Float,
+        level :: LevelMap,
+        walls :: [(Cell, WallSection)],
         -- level :: GameLevel, -- (if we decide to include multiple level options)
         score :: Int,
         player :: Player, -- the player character for pacman
@@ -84,6 +87,7 @@ data GlobalState = GlobalState
 initState :: IO GlobalState
 initState = do 
     assets <- loadAssets "assets"
+    level <- readLevel "maps/level.txt"
     return GlobalState {
         settings = Settings {
             windowSize = (800,800),
@@ -94,9 +98,12 @@ initState = do
             editorGridDimensions = Vec2 25 25
         },
         gameState = GameState {
+            score = 0,
             lives = 0,
             status = Paused,
             prevClock = 0,
+            level = level,
+            walls = processWalls level,
             player = Player {
                 pVelocity = 0,
                 pDirection = North,

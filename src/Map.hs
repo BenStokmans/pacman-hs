@@ -30,28 +30,10 @@ getIntersections l@(LevelMap _ _ m) = map (\(Cell _ v) -> v) (filter (\c -> leng
 calculateIntersections :: LevelMap -> LevelMap
 calculateIntersections l = setCells l (map (Cell Intersection) (getIntersections l))
 
-getGroup :: LevelMap -> Cell -> [Cell]
-getGroup (LevelMap _ _ []) _ = []
-getGroup l@(LevelMap w h m) c@(Cell t1 _) = adjacent ++ concatMap (getGroup l') adjacent
-                    where
-                        adjacent = filter (\(Cell t2 _) -> t1 == t2) (getAdjacent l c)
-                        l' = LevelMap w h (deleteMultiple m adjacent)
-
 deleteMultiple :: Eq a => [a] -> [a] -> [a] -- TODO: optimize
 deleteMultiple [] _ = []
 deleteMultiple (x:xs) ys | x `elem` ys = deleteMultiple xs ys
                          | otherwise = x : deleteMultiple xs ys
-
-getGroups :: LevelMap -> [[Cell]]
-getGroups (LevelMap _ _ []) = []
-getGroups l@(LevelMap w h (x:xs)) = group : getGroups (LevelMap w h (deleteMultiple xs group))
-            where group = x : getGroup l x
-
-getWallGroups :: LevelMap -> [[Cell]]
-getWallGroups (LevelMap w h m) = getGroups (LevelMap w h (filter (\(Cell t _) -> t == Wall) m))
-
-calculateWallGroups :: LevelMap -> LevelMap
-calculateWallGroups l@(LevelMap _ _ m) = setCells l (map (\(Cell _ v) -> Cell Intersection v) (concat (getWallGroups l)))
 
 data WallType = StraightOne | OutCorner | InCorner | SingleOutCorner | SingleInVerCorner | SingleInHorCorner | DoubleCorner | End | StraightTwo | Single | Misc deriving Eq
 data WallSection = WallSection WallType Direction

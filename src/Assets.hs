@@ -33,9 +33,7 @@ loadAnim path = do
 data Assets = Assets {
     pacFont :: FontContainer,
     emuFont :: FontContainer,
-    pacSprite :: PacManSprite,
-    level :: LevelMap,
-    walls :: [(Cell, WallSection)]
+    pacSprite :: PacManSprite
   }
 
 loadPacSprite :: String -> IO PacManSprite
@@ -57,11 +55,8 @@ loadAssets p = do
     pacFont <- loadFont (p </> "pacman.ttf")
     emuFont <- loadFont (p </> "emulogic.ttf")
     pacSprite <- loadPacSprite p
-    level <- readLevel (p </> "level.txt")
     return Assets {
         pacFont = pacFont,
         emuFont = emuFont,
-        pacSprite = pacSprite,
-        level = calculateIntersections level,
-        walls = processWalls level
+        pacSprite = pacSprite
     }
