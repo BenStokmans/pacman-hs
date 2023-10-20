@@ -16,10 +16,12 @@ import Graphics.Gloss
       Point, circleSolid, white )
 import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (..))
 import Assets (Assets(..), Anim (..), PacManSprite (..))
-import Struct (LevelMap(..), Player(..), Direction (..), Cell(..), CellType(..), Vec2(..))
+import Struct (LevelMap(..), Player(..), Direction (..), Cell(..), CellType(..), Vec2(..), getCell, dirToVec2, oppositeDirection)
 import Rendering (renderStringTopLeft)
 import FontContainer (FontContainer(..))
 import Map (wallSectionToPic, wallToSizedSection, processWalls)
+import Data.List (delete)
+import Data.Maybe (fromMaybe, isNothing)
 
 gameGridDimensions :: GlobalState -> (Float,Float) --gridsize of level 
 gameGridDimensions GlobalState { gameState = GameState { level = (LevelMap w h _) }} = (w,h)
@@ -114,13 +116,21 @@ keyToDirection _ (Char 's') = South
 keyToDirection _ (Char 'd') = East
 keyToDirection d _ = d
 
+
+
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
 handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) s = do return s {route = PauseMenu, lastRoute = GameView}
 handleInputGameView (EventKey (Char 'g') _ _ _) s@(GlobalState { settings = set }) = do return s {settings = set { enableDebugGrid = not (enableDebugGrid set) }}
-handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player = ps { pDirection = keyToDirection (pDirection ps) k } } }
+handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player = ps { pBufferedInput = bufferedInput, pDirection = direction } } }
                         where
                             gs = gameState s
                             ps = player gs
+                            newDir = keyToDirection oldDir k
+                            oldDir = pDirection ps
+                            bufferedInput | newDir == oldDir || newDir == oppositeDirection oldDir = pBufferedInput ps
+                                          | otherwise = Just newDir
+                            direction | newDir /= oldDir && newDir /= oppositeDirection oldDir = oldDir
+                                      | otherwise = newDir
 handleInputGameView _ s = do return s
 
 updatePlayerAnimState :: GlobalState -> IO GlobalState
@@ -139,5 +149,61 @@ updatePlayerAnimState s | c-p >= 0.1 = do return s { gameState = gs {
                 c = clock s
                 p = prevClock gs
 
+updatePlayerPosition :: Float -> GlobalState -> GlobalState
+updatePlayerPosition dt s | isPastCentre = s { gameState = gs 
+                                                {
+                                                    player = ps {
+                                                        pLocation = if dir /= newDir then pastCentreLocation else newLoc, 
+                                                        pDirection = newDir,
+                                                        pBufferedInput = if dir /= newDir then Nothing else bufferedInput
+                                                        },
+                                                    level = LevelMap lw lh newCells
+                                                }
+                                            }
+                          | otherwise = s { gameState = gs {player = ps {pLocation = newLoc }}}
+            where
+                gs = gameState s
+                m@(LevelMap lw lh cells) = level gs
+                ps = player gs
+                (wc,hc) = cellSize (c,r) w h
+                v = pVelocity ps
+                ((c,r),(w,h)) = gameGridInfo s
+                dir = pDirection ps
+                (px,py) = pLocation ps
+                distMoved = dt * v
+                (Cell ntype _) = fromMaybe (Cell Empty (Vec2 0 0)) (getCell m (gridpos + dirToVec2 dir))
+                (x,y)   | dir == North && abs py >= h/2 = (px,-h/2)
+                        | dir == South && abs py >= h/2 = (px,h/2)
+                        | dir == East &&  abs px >= w/2 = (-w/2, py)
+                        | dir == West &&  abs px >= w/2 = (w/2, py)
+                        | otherwise = (px,py)
+                newLoc@(nx,ny) | ntype == Wall && isPastCentre = (x,y)
+                               | dir == North = (x,y+distMoved) 
+                               | dir == East = (x + distMoved, y)
+                               | dir == South = (x, y - distMoved) 
+                               | dir == West = (x - distMoved, y)
+                gridpos = screenToGridPos s (c,r) (pLocation ps)
+                mbCell = getCell m gridpos 
+                (cx, cy) = gridToScreenPos s gridpos
+                isPastCentre | dir == North = cy <= y
+                             | dir == East = cx <= x 
+                             | dir == South = cy > y 
+                             | dir == West = cx > x
+                cell@(Cell ctype cLoc) = fromMaybe (Cell Empty (Vec2 0 0)) mbCell -- assume cell is not nothing TODO: nothing case 
+                bufferedInput = pBufferedInput ps
+                canTurn = maybe False (\d -> maybe False (\(Cell t _) -> t /= Wall) $ getCell m (gridpos + dirToVec2 d) ) bufferedInput
+                newDir | canTurn = fromMaybe North bufferedInput
+                       | otherwise = dir
+                pastCentreLocation | newDir == North || newDir == South = (cx, ny)
+                                   | otherwise = (nx, cy)
+                newCells | ctype == Pellet || ctype == PowerUp = Cell Empty cLoc : delete cell cells 
+                            -- TODO: handle other updates needed when pellet or powerup is eaten
+                         | otherwise = cells
+                
+
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
-handleUpdateGameView _ = updatePlayerAnimState
+handleUpdateGameView f gs = do 
+    ngs <- updatePlayerAnimState gs
+    return $ updatePlayerPosition f ngs
+
+

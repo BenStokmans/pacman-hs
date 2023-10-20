@@ -17,6 +17,12 @@ instance Show Direction where
 allDirections :: [Direction]
 allDirections = [North, South, West, East]
 
+oppositeDirection :: Direction -> Direction
+oppositeDirection North = South
+oppositeDirection East = West
+oppositeDirection South = North
+oppositeDirection West = East
+
 data Vec2 = Vec2 Float Float
 
 instance Show Vec2 where
