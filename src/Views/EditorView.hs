@@ -26,21 +26,21 @@ import Map (WallType, processWalls, wallToSizedSection)
 import Text.Printf
 import SDL.Font (Font(Font))
 
-generalIcon :: String -> Color -> Color -> GlobalState -> Float -> Float -> IO Picture
-generalIcon s tc bc gs w h = do
+generalIcon :: String -> Color -> Color -> GlobalState -> (Float,Float) -> Float -> Float -> IO Picture
+generalIcon s tc bc gs (x,y) w h = do
     ((_,_),l) <- renderString' (l $ emuFont $ assets gs) tc s
-    return $ pictures [Color bc $ rectangleSolid w h, scale (w/64) (h/64) l ]
+    return $ translate x y $ pictures [Color bc $ rectangleSolid w h, scale (w/64) (h/64) l ]
 
-wallIcon :: GlobalState -> Float -> Float -> IO Picture
+wallIcon :: GlobalState -> (Float,Float) -> Float -> Float -> IO Picture
 wallIcon = generalIcon "W" white blue
 
-spawnIcon :: GlobalState -> Float -> Float -> IO Picture
+spawnIcon :: GlobalState -> (Float,Float) -> Float -> Float -> IO Picture
 spawnIcon = generalIcon "P" black yellow
 
-foodIcon :: GlobalState -> Float -> Float -> IO Picture
+foodIcon :: GlobalState -> (Float,Float) -> Float -> Float -> IO Picture
 foodIcon = generalIcon "F" white green
 
-appleIcon :: GlobalState -> Float -> Float -> IO Picture
+appleIcon :: GlobalState -> (Float,Float) -> Float -> Float -> IO Picture
 appleIcon = generalIcon "A" white red
 
 editorGrid :: GlobalState -> Picture
@@ -57,19 +57,20 @@ windowMargin (c,r) s = let (gx,gy) = gridSizePx (c,r) s in (x-gx,y-gy)
 getEditorGridInfo :: GlobalState -> ((Float,Float),(Float,Float))
 getEditorGridInfo gs = let (Vec2 x y) = editorGridDimensions $ settings gs in ((x,y), gridSizePx (x,y) gs)
 
-editorToolToIcon :: GlobalState -> Float -> Float -> EditorTool -> IO Picture
-editorToolToIcon gs w h WallTool = wallIcon gs w h
-editorToolToIcon gs w h SpawnTool = spawnIcon gs w h
-editorToolToIcon gs w h FoodTool = foodIcon gs w h
-editorToolToIcon gs w h AppleTool = appleIcon gs w h
+editorToolToIcon :: GlobalState -> (Float,Float) -> Float -> Float -> EditorTool -> IO Picture
+editorToolToIcon gs (x,y) w h WallTool = wallIcon gs (x,y) w h
+editorToolToIcon gs (x,y) w h SpawnTool = spawnIcon gs (x,y) w h
+editorToolToIcon gs (x,y) w h FoodTool = foodIcon gs (x,y) w h
+editorToolToIcon gs (x,y) w h AppleTool = appleIcon gs (x,y) w h
 
 cellToIcon :: GlobalState -> Float -> Float -> Float -> Float -> CellType -> IO Picture
-cellToIcon gs w h x y ct = do translate (x*w-(gw/2)+w/2) (y*h-(gh/2)+h/2) <$> icon
-                where icon | ct == Wall = wallIcon gs w h
-                           | ct == Spawn = spawnIcon gs w h
-                           | ct == Pellet = foodIcon gs w h
-                           | ct == PowerUp = appleIcon gs w h
+cellToIcon gs w h x y ct = do icon
+                where icon | ct == Wall = wallIcon gs pos w h
+                           | ct == Spawn = spawnIcon gs pos w h
+                           | ct == Pellet = foodIcon gs pos w h
+                           | ct == PowerUp = appleIcon gs pos w h
                            | otherwise = do return blank
+                      pos = (x*w-(gw/2)+w/2,y*h-(gh/2)+h/2)
                       (_,(gw,gh)) = getEditorGridInfo gs
 
 previewButton :: Float -> Float -> Rectangle
@@ -82,20 +83,16 @@ renderEditorView s = do
     toolArrow <- renderString (-380, toolY) (m (emuFont (assets s))) white "->"
 
     wallToolText <- renderString (-300, 260) (m (emuFont (assets s))) white "wall"
-    wallButtonIO <- wallIcon s 25 25
-    let wallButton = translate (-350) 260 wallButtonIO
+    wallButton <- wallIcon s (-350,260) 25 25
 
     spawnToolText <- renderString (-290, 220) (m (emuFont (assets s))) white "spawn"
-    spawnButtonIO <- spawnIcon s 25 25
-    let spawnButton = translate (-350) 220 spawnButtonIO
+    spawnButton <- spawnIcon s (-350, 220) 25 25
 
     foodToolText <- renderString (-300, 180) (m (emuFont (assets s))) white "food"
-    foodButtonIO <- foodIcon s 25 25
-    let foodButton = translate (-350) 180 foodButtonIO
+    foodButton <- foodIcon s (-350, 180) 25 25
 
     appleToolText <- renderString (-290, 140) (m (emuFont (assets s))) white "apple"
-    appleButtonIO <- appleIcon s 25 25
-    let appleButton = translate (-350) 140 appleButtonIO
+    appleButton <- appleIcon s (-350, 140) 25 25
 
     instructionText <- renderStringTopLeft (-390,100) (FontContainer.s (emuFont (assets s))) white "Select tool\nUsing arrow keys\n \nThen select\nAny square \nin the maze\nusing the mouse\n  \nLeft click: place\nRight click: del.\n    \nThe keys:\nW,A,F and P \nalso activate \ntheir respective\ntools."
     debugString <- renderStringTopLeft (-400,400) (FontContainer.s (emuFont (assets s))) green
@@ -104,8 +101,9 @@ renderEditorView s = do
 
     previewButton <- defaultButton (previewButton (mx/2) (-h/2-30)) (m (emuFont (assets s))) (previewText ++ " preview (V)") mPos
     let tools = pictures [toolsText,toolArrow,wallButton,wallToolText,spawnButton,spawnToolText,foodToolText,foodButton,appleToolText,appleButton,instructionText]
-    wi <- editorToolToIcon s cw ch tool
-    let hoveredCell = if x<c && x>=0 && y<r && y>=0 then translate (x*cw-(w/2)+cw/2) (y*ch-(h/2)+ch/2) wi else blank -- check if hovered cell is on the grid
+    wi <- editorToolToIcon s (x*cw-(w/2)+cw/2, y*ch-(h/2)+ch/2) cw ch tool
+
+    let hoveredCell = if x<c && x>=0 && y<r && y>=0 then wi else blank -- check if hovered cell is on the grid
     let gridEditor = translate (mx/2) 0 $ pictures [pictures cs,if not rightDown then hoveredCell else blank,editorGrid s]
     let gridPreview = translate (mx/2) 0 $ drawMap s level (c,r) (w,h)
     return (pictures [if previewEditor s then gridPreview else gridEditor,txt,tools,debugString,previewButton])
@@ -167,6 +165,10 @@ handleInputEditorView (EventKey (Char 'v') _ _ _ ) s = do return s {previewEdito
 handleInputEditorView (EventKey (Char c) _ _ _ ) s = do return s { editorTool = charToTool (editorTool s) c }
 handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) s
     | rectangleHovered (mousePos s) $ previewButton mx (-h/2-30) = do return s {previewEditor = not $ previewEditor s}
+    | rectangleHovered (mousePos s) $ Rectangle (-350, 260) 25 25 0 = do return s {editorTool = WallTool}
+    | rectangleHovered (mousePos s) $ Rectangle (-350, 220) 25 25 0 = do return s {editorTool = SpawnTool}
+    | rectangleHovered (mousePos s) $ Rectangle (-350, 180) 25 25 0 = do return s {editorTool = FoodTool}
+    | rectangleHovered (mousePos s) $ Rectangle (-350, 140) 25 25 0 = do return s {editorTool = AppleTool}
     where
         (dim,(_,h)) = getEditorGridInfo s
         (mx,_) = windowMargin dim s

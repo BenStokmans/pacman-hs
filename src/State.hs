@@ -5,7 +5,7 @@ import Struct
 import Graphics.Gloss (Point, Color, blue)
 import Graphics.Gloss.Interface.IO.Game (Key (..), SpecialKey (..), MouseButton)
 import Data.Map (Map, empty)
-import Map (WallSection, processWalls)
+import Map (WallSection, processWalls, calculateIntersections)
 
 data Prompt = Prompt 
     {
@@ -102,7 +102,7 @@ initState = do
             lives = 0,
             status = Paused,
             prevClock = 0,
-            level = level,
+            level = calculateIntersections level,
             walls = processWalls level,
             player = Player {
                 pVelocity = 0,
