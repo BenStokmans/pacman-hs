@@ -10,10 +10,10 @@ import Graphics.Gloss.Interface.IO.Game
     ( Picture, Key(..), Event(EventMotion, EventKey, EventResize), SpecialKey (..), KeyState (..), Modifiers (..) )
 import System.Exit (exitSuccess)
 import Control.Exception (handle)
-import Views.GameView (renderGameView, handleInputGameView, handleUpdateGameView, gridSizePx, gridSize)
+import Views.GameView (renderGameView, handleInputGameView, handleUpdateGameView, gridSizePx)
 import SDL.Audio (PlaybackState(Pause))
 import Views.EditorView (renderEditorView, handleInputEditorView, handleUpdateEditorView)
-import Prompt (renderPrompt, handleInputPrompt, handleUpdatePrompt)
+import Prompt (renderPrompt, handleInputPrompt, handleUpdatePrompt, emptyPrompt)
 import Data.Maybe
 import Data.List (delete)
 
@@ -28,10 +28,10 @@ handleRender s@(GlobalState { route = r, prompt = p }) = do
                 | r == EditorView = renderEditorView s
                 | r == PauseMenu = renderPauseMenu s
                 | otherwise = error "Route not implemented"
-        pImage  | isJust p = renderPrompt s (fromMaybe Prompt{} p)
+        pImage  | isJust p = renderPrompt s (fromMaybe emptyPrompt p)
                 | otherwise = do return blank
         curtain | isJust p =
-                        if darkenBackground (fromMaybe Prompt{} p)
+                        if darkenBackground (fromMaybe emptyPrompt p)
                         then Color (makeColor 0 0 0 0.4) $ let (w,h) = windowSize $ settings s in rectangleSolid w h
                         else blank
                 | otherwise = blank
@@ -75,7 +75,7 @@ handleUpdate f s@(GlobalState { route = r, prompt = p }) = do
     newState pState
     where
         intState = s { clock = clock s + f }
-        promptState | isJust p = handleUpdatePrompt f intState (fromMaybe Prompt{} p)
+        promptState | isJust p = handleUpdatePrompt f intState (fromMaybe emptyPrompt p)
                     | otherwise = do return intState
         newState  | r == StartMenu = handleUpdateStartMenu f
                   | r == GameView = handleUpdateGameView f

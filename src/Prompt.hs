@@ -8,6 +8,8 @@ import FontContainer (FontContainer(..))
 import Data.Maybe (fromMaybe)
 import Data.List (intercalate)
 
+emptyPrompt :: Prompt
+emptyPrompt = Prompt{}
 
 errorPrompt :: String -> Maybe Prompt
 errorPrompt s = Just defaultPrompt {

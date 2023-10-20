@@ -91,7 +91,7 @@ initState = do
     return GlobalState {
         settings = Settings {
             windowSize = (800,800),
-            pacmanPadding = 0.1,
+            pacmanPadding = 0.15,
             mazeMargin = 0.35,
             lineThickness = 15,
             enableDebugGrid = False,

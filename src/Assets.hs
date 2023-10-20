@@ -4,12 +4,12 @@ import Struct (LevelMap,readLevel, Cell)
 import Map (calculateIntersections, WallSection, processWalls)
 import SDL.Font (Font, initialize, load)
 import FontContainer (FontContainer(..),loadFont)
-import Graphics.Gloss (Picture (Pictures))
+import Graphics.Gloss (Picture (Pictures), blank)
 import Graphics.Gloss.Juicy (loadJuicyPNG, loadJuicyJPG)
 import System.Directory (canonicalizePath, getDirectoryContents)
 import System.FilePath (joinPath, takeBaseName, (</>))
 import Data.List (isSuffixOf, sort)
-import Data.Maybe (mapMaybe,catMaybes)
+import Data.Maybe (mapMaybe,catMaybes, fromMaybe)
 import Text.Printf
 
 type Anim = [Picture]
@@ -20,6 +20,11 @@ data PacManSprite = PacManSprite {
     left :: Anim,
     right :: Anim
   }
+
+loadSprite :: String -> IO Picture
+loadSprite s = do
+  spriteMaybe <- loadJuicyPNG s
+  return (fromMaybe blank spriteMaybe)
 
 loadAnim :: String -> IO Anim
 loadAnim path = do
@@ -33,7 +38,8 @@ loadAnim path = do
 data Assets = Assets {
     pacFont :: FontContainer,
     emuFont :: FontContainer,
-    pacSprite :: PacManSprite
+    pacSprite :: PacManSprite,
+    appleSprite :: Picture
   }
 
 loadPacSprite :: String -> IO PacManSprite
@@ -55,8 +61,10 @@ loadAssets p = do
     pacFont <- loadFont (p </> "pacman.ttf")
     emuFont <- loadFont (p </> "emulogic.ttf")
     pacSprite <- loadPacSprite p
+    appleSprite <- loadSprite (p </> "other/apple.png")
     return Assets {
         pacFont = pacFont,
         emuFont = emuFont,
-        pacSprite = pacSprite
+        pacSprite = pacSprite,
+        appleSprite = appleSprite
     }

@@ -18,7 +18,7 @@ import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (..), MouseButton (..)
 import Graphics.Gloss.Data.Point ()
 import System.Exit (exitSuccess)
 import Views.StartMenu (drawParticles, updateParticles)
-import Views.GameView (debugGrid, screenToGridPos, gridSizePx, cellSize, gridSize, drawGrid)
+import Views.GameView (debugGrid, screenToGridPos, gridSizePx, cellSize, drawGrid, drawMap)
 import Struct (Vec2(..), getCell, Cell (..), CellType (..), LevelMap (LevelMap))
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.List
@@ -68,22 +68,12 @@ cellToIcon gs w h x y ct = do translate (x*w-(gw/2)+w/2) (y*h-(gh/2)+h/2) <$> ic
                 where icon | ct == Wall = wallIcon gs w h
                            | ct == Spawn = spawnIcon gs w h
                            | ct == Pellet = foodIcon gs w h
+                           | ct == PowerUp = appleIcon gs w h
                            | otherwise = do return blank
                       (_,(gw,gh)) = getEditorGridInfo gs
 
 previewButton :: Float -> Float -> Rectangle
 previewButton mx my = Rectangle (mx, my) 325 40 10
-
-drawPreview :: GlobalState -> Picture
-drawPreview s = Color blue $ pictures $ map (\(Cell _ (Vec2 x y),w) -> translate (x*wn-w2+wn/2) (y*hn-h2+hn/2) (wallToSizedSection m t wn hn w)) walls
-    where
-        m = mazeMargin $ settings s
-        t = lineThickness $ settings s
-        walls = processWalls $ editorLevel s
-        ((r,c),(w,h)) = getEditorGridInfo s
-        w2 = w/2
-        h2 = h/2
-        (wn,hn) = cellSize (r,c) w h
 
 renderEditorView :: GlobalState -> IO Picture
 renderEditorView s = do
@@ -117,11 +107,11 @@ renderEditorView s = do
     wi <- editorToolToIcon s cw ch tool
     let hoveredCell = if x<c && x>=0 && y<r && y>=0 then translate (x*cw-(w/2)+cw/2) (y*ch-(h/2)+ch/2) wi else blank -- check if hovered cell is on the grid
     let gridEditor = translate (mx/2) 0 $ pictures [pictures cs,if not rightDown then hoveredCell else blank,editorGrid s]
-    let gridPreview = translate (mx/2) 0 $ drawPreview s
+    let gridPreview = translate (mx/2) 0 $ drawMap s level (c,r) (w,h)
     return (pictures [if previewEditor s then gridPreview else gridEditor,txt,tools,debugString,previewButton])
     where
         ((c,r),(w,h)) = getEditorGridInfo s
-        (LevelMap _ _ cells) = editorLevel s
+        level@(LevelMap _ _ cells) = editorLevel s
         mPos@(mouseX,mouseY) = mousePos s
         v@(Vec2 x y) = screenToGridPos s (c,r) (mouseX - mx/2, mouseY)
         (cw,ch) = cellSize (c,r) w h
@@ -160,7 +150,7 @@ toolToCellType :: EditorTool -> CellType
 toolToCellType WallTool = Wall
 toolToCellType SpawnTool = Spawn
 toolToCellType FoodTool = Pellet
-toolToCellType AppleTool = Empty -- add powerup
+toolToCellType AppleTool = PowerUp
 
 charToTool :: EditorTool -> Char -> EditorTool
 charToTool _ 'w' = WallTool
