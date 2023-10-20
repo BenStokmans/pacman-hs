@@ -130,7 +130,7 @@ handleInputGameView (EventKey k _ _ _) s = do return s { gameState = gs { player
                             bufferedInput | newDir == oldDir || newDir == oppositeDirection oldDir = pBufferedInput ps
                                           | otherwise = Just newDir
                             direction | newDir /= oldDir && newDir /= oppositeDirection oldDir = oldDir
-                                      | otherwise = newDir
+                                      | otherwise = newDir -- technically not proper but it works
 handleInputGameView _ s = do return s
 
 updatePlayerAnimState :: GlobalState -> IO GlobalState
@@ -189,7 +189,7 @@ updatePlayerPosition dt s | isPastCentre = s { gameState = gs
                              | dir == East = cx <= x 
                              | dir == South = cy > y 
                              | dir == West = cx > x
-                cell@(Cell ctype cLoc) = fromMaybe (Cell Empty (Vec2 0 0)) mbCell -- assume cell is not nothing TODO: nothing case 
+                cell@(Cell ctype cLoc) = fromMaybe (Cell Empty (Vec2 0 0)) mbCell -- it is assumed that it is not nothing
                 bufferedInput = pBufferedInput ps
                 canTurn = maybe False (\d -> maybe False (\(Cell t _) -> t /= Wall) $ getCell m (gridpos + dirToVec2 d) ) bufferedInput
                 newDir | canTurn = fromMaybe North bufferedInput
