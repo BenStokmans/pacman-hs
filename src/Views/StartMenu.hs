@@ -54,13 +54,19 @@ updateParticles f s | c-p < 0.4 = do return s { particles = map (\((xp,yp),r) ->
 
 renderStartMenu :: GlobalState -> IO Picture
 renderStartMenu s = do
-    titleBg <- renderString (0,250) (xxl (pacFont (assets s))) black "pacman"
-    title <- renderString (0,250) (xxl (pacFont (assets s))) blue "PACMAN"
-    subTitle <- renderString (0,160) (m (emuFont (assets s))) red "By Ben Stokmans and Geerten Helmers"
+    let xxlEmu = xxl (pacFont (assets s))
+    titleBg <- renderString (0,250) xxlEmu black "pacman"
+    title <- renderString (0,250) xxlEmu blue "PACMAN"
+
+    let lEmu = l (emuFont (assets s))
     drawnStartButton <- defaultButton startButton (l (emuFont (assets s))) "Start new game" (mousePos s)
     drawnQuitButton <- defaultButton quitButton (l (emuFont (assets s))) "Quit game" (mousePos s)
-    drawnNewMapButton <- defaultButton newMapButton (m (emuFont (assets s))) "Create new map" (mousePos s)
-    drawnEditMapButton <- defaultButton editMapButton (m (emuFont (assets s))) "Edit existing map" (mousePos s)
+
+    let mEmu = m (emuFont (assets s))
+    subTitle <- renderString (0,160) mEmu red "By Ben Stokmans and Geerten Helmers"
+    drawnNewMapButton <- defaultButton newMapButton mEmu "Create new map" (mousePos s)
+    drawnEditMapButton <- defaultButton editMapButton mEmu "Edit existing map" (mousePos s)
+
     return (pictures [drawParticles s,titleBg,title,subTitle,drawnStartButton,drawnQuitButton,drawnNewMapButton,drawnEditMapButton])
 
 emptyMap :: Float -> Float -> LevelMap
@@ -105,7 +111,7 @@ handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do exitSuccess
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
     | rectangleHovered (mousePos s) startButton = do return s {
         route = GameView,
-        gameState = gs { player = ps { pLocation = spawnLoc } }
+        gameState = gs { player = ps { pLocation = gridToScreenPos s (getSpawnPoint (level gs)) } }
         }
     | rectangleHovered (mousePos s) newMapButton = do return s { prompt = Just
         defaultPrompt {
@@ -123,7 +129,6 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
     where
         gs = gameState s
         ps = player gs
-        spawnLoc = gridToScreenPos s (getSpawnPoint (level $ gameState s))
 handleInputStartMenu _ s = do return s
 
 handleUpdateStartMenu :: Float -> GlobalState -> IO GlobalState

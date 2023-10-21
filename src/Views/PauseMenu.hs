@@ -27,20 +27,24 @@ mainMenuButton :: Rectangle
 mainMenuButton = Rectangle (0,-280) 500 100 10
 
 renderPauseMenu :: GlobalState -> IO Picture
-renderPauseMenu s = do
-    title <- renderString (0,250) (xxl (pacFont (assets s))) blue "PAUSED"
-    drawnContinuButton <- defaultButton continueButton (l (emuFont (assets s))) "Continue" (mousePos s)
-    drawnSaveButton <- defaultButton saveButton (l (emuFont (assets s))) ("Save " ++ saveText) (mousePos s)
-    drawnMainMenuButton <- defaultButton mainMenuButton (l (emuFont (assets s))) "Main Menu" (mousePos s)
-    return (pictures [drawParticles s,title,drawnContinuButton,drawnSaveButton,drawnMainMenuButton])
-    where
-        saveText = if lastRoute s == GameView then "game" else "level"
+renderPauseMenu gs = do
+    title <- renderString (0,250) (xxl (pacFont (assets gs))) blue "PAUSED"
 
+    let lEmu = l (emuFont (assets gs))
+    let mPos = mousePos gs
+    drawnContinuButton <- defaultButton continueButton lEmu "Continue" mPos
+    drawnMainMenuButton <- defaultButton mainMenuButton lEmu "Main Menu" mPos
+
+    let saveText = if lastRoute gs == GameView then "game" else "level"
+    drawnSaveButton <- defaultButton saveButton lEmu ("Save " ++ saveText) mPos
+
+    return (pictures [drawParticles gs,title,drawnContinuButton,drawnSaveButton,drawnMainMenuButton])
 
 saveEditorLevel :: GlobalState -> IO ()
 saveEditorLevel s = do
     ws <- getCurrentDirectory
     file <- saveFileDialog (pack "select level") (pack $ ws </> "maps/newlevel.txt") [pack "*.txt"] (pack "level file")
+    
     let fName = maybe "" unpack file
     when (isJust file) $ writeFile fName (show $ editorLevel s)
 

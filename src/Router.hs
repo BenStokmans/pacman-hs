@@ -23,13 +23,15 @@ handleRender s@(GlobalState { route = r, prompt = p }) = do
     renderedPrompt <- pImage
     return $ pictures [renderedMain, curtain, renderedPrompt]
     where
-        image   | r == StartMenu = renderStartMenu s
-                | r == GameView = renderGameView s
+        image   | r == StartMenu  = renderStartMenu s
+                | r == GameView   = renderGameView s
                 | r == EditorView = renderEditorView s
-                | r == PauseMenu = renderPauseMenu s
-                | otherwise = error "Route not implemented"
+                | r == PauseMenu  = renderPauseMenu s
+                | otherwise       = error "Route not implemented"
+
         pImage  | isJust p = renderPrompt s (fromMaybe emptyPrompt p)
                 | otherwise = do return blank
+
         curtain | isJust p =
                         if darkenBackground (fromMaybe emptyPrompt p)
                         then Color (makeColor 0 0 0 0.4) $ let (w,h) = windowSize $ settings s in rectangleSolid w h
@@ -45,21 +47,21 @@ handleInput (EventResize (w, h)) s = do return s { settings = set { windowSize =
         where
           set = settings s
 handleInput (EventMotion p) s = do return s { mousePos = p }
-handleInput e@(EventKey k Down _ _) s = if cp then do
+handleInput e@(EventKey k Down _ _) s = if k `notElem` keys s then do
     let ps = promptState s
     ns <- newState ps
     return ns { keys = k : keys s }
     else do return s
         where
-            cp = k `notElem` keys s
             r = route s
             (promptEvent,promptState) | isJust $ prompt s = (dummyEvent,handleInputPrompt e)
                                       | otherwise = (e, const s)
-            newState | r == StartMenu = handleInputStartMenu promptEvent
-                     | r == GameView = handleInputGameView promptEvent
+
+            newState | r == StartMenu  = handleInputStartMenu promptEvent
+                     | r == GameView   = handleInputGameView promptEvent
                      | r == EditorView = handleInputEditorView promptEvent
-                     | r == PauseMenu = handleInputPauseMenu promptEvent
-                     | otherwise = error "Route not implemented"
+                     | r == PauseMenu  = handleInputPauseMenu promptEvent
+                     | otherwise       = error "Route not implemented"
 handleInput e@(EventKey (SpecialKey KeyUnknown) Up _ _) s = do -- for some reason when the user lets go of a number key its reported as unknown
     return s { keys = filter (not . checkSpecialUnknown) $ keys s } -- so we have to implement this workaround
     where
@@ -77,8 +79,9 @@ handleUpdate f s@(GlobalState { route = r, prompt = p }) = do
         intState = s { clock = clock s + f }
         promptState | isJust p = handleUpdatePrompt f intState (fromMaybe emptyPrompt p)
                     | otherwise = do return intState
-        newState  | r == StartMenu = handleUpdateStartMenu f
-                  | r == GameView = handleUpdateGameView f
+                    
+        newState  | r == StartMenu  = handleUpdateStartMenu f
+                  | r == GameView   = handleUpdateGameView f
                   | r == EditorView = handleUpdateEditorView f
-                  | r == PauseMenu = handleUpdatePauseMenu f
-                  | otherwise = error "Route not implemented"
+                  | r == PauseMenu  = handleUpdatePauseMenu f
+                  | otherwise       = error "Route not implemented"

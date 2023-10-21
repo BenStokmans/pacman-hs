@@ -38,6 +38,14 @@ thickRectangle w h t fg bg = let t2 = t/2 in pictures [Color fg (rectangleSolid 
 colorToV4 :: Color -> V4 Word8
 colorToV4 c = let (r,g,b,a) = rgbaOfColor c in V4 (floor r * 255) (floor g * 255) (floor b * 255) (floor a * 255)
 
+renderStringTopRight :: Point -> Font -> Color -> String -> IO Picture
+renderStringTopRight _ _ _ "" = do return blank
+renderStringTopRight (x,y) f c txt = do
+    sections <- mapM (renderString' f c) (reverse $ lines txt)
+    let width = foldr (\((w,_),_) mw -> max w mw) 0 sections
+    let (height, imgs) = foldr (\((w,h),pic) (ch,pics) -> (ch+h,translate ((width-w)/2) (-ch-(h/2)) pic:pics)) (0,[]) sections
+    do return (translate (-width/2 + x) y (pictures imgs))
+
 renderStringTopLeft :: Point -> Font -> Color -> String -> IO Picture
 renderStringTopLeft _ _ _ "" = do return blank
 renderStringTopLeft (x,y) f c txt = do

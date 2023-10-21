@@ -69,6 +69,9 @@ stringToCellType _ = Empty
 
 data Cell = Cell CellType Vec2
 
+dummyCell :: Cell
+dummyCell = Cell Empty (Vec2 0 0)
+
 instance Eq Cell where
     (==) :: Cell -> Cell -> Bool
     (Cell t1 v1) == (Cell t2 v2) = t1 == t2 && v1 == v2
@@ -135,7 +138,8 @@ data Player = Player
         pDirection :: Direction,
         pLocation :: Point, -- point on screen
         pFrame :: Int,
-        pBufferedInput :: Maybe Direction
+        pBufferedInput :: Maybe Direction,
+        pMoving :: Bool
     }
 
 data Ghost = Pinky | Inky | Blinky | Clyde deriving Eq

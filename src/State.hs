@@ -107,6 +107,7 @@ initState = do
             player = Player {
                 pVelocity = 75,
                 pDirection = East,
+                pMoving = False,
                 pLocation = (0, 0),
                 pFrame = 0,
                 pBufferedInput = Nothing

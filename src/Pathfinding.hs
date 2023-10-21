@@ -11,10 +11,10 @@ instance Eq AStarCell where
   a == b = pos a == pos b
 
 getTraveledDirection :: Vec2 -> Vec2 -> Direction
-getTraveledDirection (Vec2 x1 y1) (Vec2 x2 y2) | x1 == x2 && y1 - 1 == y2 = North
-                                               | x1 == x2 && y1 + 1 == y2 = South
-                                               | x1 - 1 == x2 && y1 == y2 = West
-                                               | x1 + 1 == x2 && y1 == y2 = East
+getTraveledDirection (Vec2 x1 y1) (Vec2 x2 y2) | x1 == x2     && y1 - 1 == y2 = North
+                                               | x1 == x2     && y1 + 1 == y2 = South
+                                               | x1 - 1 == x2 && y1 == y2     = West
+                                               | x1 + 1 == x2 && y1 == y2     = East
 
 newCell :: (Vec2 -> Float) -> AStarCell -> Vec2 -> AStarCell
 newCell h from p = AStarCell {
