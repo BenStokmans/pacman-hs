@@ -22,20 +22,6 @@ packages:
       size: 482
   original:
     hackage: tinyfiledialogs-0.2.1.0
-- completed:
-    hackage: ghc-lib-parser-9.6.3.20231014@sha256:4b37fb0467e936c7dd466aa0031e51aeb2f73231958595cab575a1f0d1ca7129,15831
-    pantry-tree:
-      sha256: d894484b518d9e4dd307cf7b748ff5d045fdf909b7f358e628425649ff4f04b1
-      size: 33893
-  original:
-    hackage: ghc-lib-parser-9.6.3.20231014@sha256:4b37fb0467e936c7dd466aa0031e51aeb2f73231958595cab575a1f0d1ca7129,15831
-- completed:
-    hackage: ghc-lib-parser-ex-9.6.0.2@sha256:73fbe5a9817767f2a417c5adfc734f02d0e842ca86fe68bb75a10b5ebbce1741,3493
-    pantry-tree:
-      sha256: a9e63e5f1f6dde1b82731aec75672ed2f4a2006d82236a90ba35e3dbbdf2feab
-      size: 1956
-  original:
-    hackage: ghc-lib-parser-ex-9.6.0.2@sha256:73fbe5a9817767f2a417c5adfc734f02d0e842ca86fe68bb75a10b5ebbce1741,3493
 snapshots:
 - completed:
     sha256: 1d663bec402f77fa09fa3e8cf288c3c7eb18a1f28a5e0c331ac47adeacd21346

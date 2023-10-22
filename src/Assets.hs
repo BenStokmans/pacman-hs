@@ -1,25 +1,24 @@
 module Assets where
 
-import           Data.List            (isSuffixOf, sort)
-import           Data.Maybe           (catMaybes, fromMaybe, mapMaybe)
-import           FontContainer        (FontContainer (..), loadFont)
-import           Graphics.Gloss       (Picture (Pictures), blank)
-import           Graphics.Gloss.Juicy (loadJuicyJPG, loadJuicyPNG)
-import           Map                  (WallSection, calculateIntersections,
-                                       processWalls)
-import           SDL.Font             (Font, initialize, load)
-import           Struct               (Cell, LevelMap, readLevel)
-import           System.Directory     (canonicalizePath, getDirectoryContents)
-import           System.FilePath      (joinPath, takeBaseName, (</>))
-import           Text.Printf
+import Data.List (isSuffixOf, sort)
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import FontContainer (FontContainer(..), loadFont)
+import Graphics.Gloss (Picture(Pictures), blank)
+import Graphics.Gloss.Juicy (loadJuicyJPG, loadJuicyPNG)
+import Map (WallSection, calculateIntersections, processWalls)
+import SDL.Font (Font, initialize, load)
+import Struct (Cell, LevelMap, readLevel)
+import System.Directory (canonicalizePath, getDirectoryContents)
+import System.FilePath ((</>), joinPath, takeBaseName)
+import Text.Printf
 
 type Anim = [Picture]
 
-data PacManSprite = PacManSprite {
-    up    :: Anim,
-    down  :: Anim,
-    left  :: Anim,
-    right :: Anim
+data PacManSprite = PacManSprite
+  { up :: Anim
+  , down :: Anim
+  , left :: Anim
+  , right :: Anim
   }
 
 loadSprite :: String -> IO Picture
@@ -30,22 +29,22 @@ loadSprite s = do
 loadAnim :: String -> IO Anim
 loadAnim path = do
   files <- getDirectoryContents path
-  let filtered = sort $ map (path </>) (filter (\f -> ".png" `isSuffixOf` f) files)
+  let filtered =
+        sort $ map (path </>) (filter (\f -> ".png" `isSuffixOf` f) files)
   framesMaybe <- mapM loadJuicyPNG filtered
   let frames = catMaybes framesMaybe
   return (frames ++ tail (init frames))
 
-
-data Assets = Assets {
-    pacFont         :: FontContainer,
-    emuFont         :: FontContainer,
-    pacSprite       :: PacManSprite,
-    appleSprite     :: Picture,
-    blinkySprite    :: Picture,
-    pinkySprite     :: Picture,
-    inkySprite      :: Picture,
-    clydeSprite     :: Picture,
-    blueGhostSprite :: Picture
+data Assets = Assets
+  { pacFont :: FontContainer
+  , emuFont :: FontContainer
+  , pacSprite :: PacManSprite
+  , appleSprite :: Picture
+  , blinkySprite :: Picture
+  , pinkySprite :: Picture
+  , inkySprite :: Picture
+  , clydeSprite :: Picture
+  , blueGhostSprite :: Picture
   }
 
 loadPacSprite :: String -> IO PacManSprite
@@ -54,33 +53,29 @@ loadPacSprite p = do
   down <- loadAnim (p </> "pacman-down")
   left <- loadAnim (p </> "pacman-left")
   right <- loadAnim (p </> "pacman-right")
-  return PacManSprite {
-    up = up,
-    down = down,
-    left = left,
-    right = right
-  }
+  return PacManSprite {up = up, down = down, left = left, right = right}
 
 loadAssets :: String -> IO Assets
 loadAssets p = do
-    initialize
-    pacFont <- loadFont (p </> "pacman.ttf")
-    emuFont <- loadFont (p </> "emulogic.ttf")
-    pacSprite <- loadPacSprite p
-    appleSprite <- loadSprite (p </> "ghosts/apple.png")
-    blinkySprite <- loadSprite (p </> "ghosts/blinky.png")
-    pinkySprite <- loadSprite (p </> "ghosts/pinky.png")
-    inkySprite <- loadSprite (p </> "ghosts/inky.png")
-    clydeSprite <- loadSprite (p </> "ghosts/clyde.png")
-    blueGhostSprite <- loadSprite (p </> "other/blue_ghost.png")
-    return Assets {
-        pacFont = pacFont,
-        emuFont = emuFont,
-        pacSprite = pacSprite,
-        appleSprite = appleSprite,
-        blinkySprite = blinkySprite,
-        pinkySprite = pinkySprite,
-        inkySprite = inkySprite,
-        clydeSprite = clydeSprite,
-        blueGhostSprite = blueGhostSprite
-    }
+  initialize
+  pacFont <- loadFont (p </> "pacman.ttf")
+  emuFont <- loadFont (p </> "emulogic.ttf")
+  pacSprite <- loadPacSprite p
+  appleSprite <- loadSprite (p </> "ghosts/apple.png")
+  blinkySprite <- loadSprite (p </> "ghosts/blinky.png")
+  pinkySprite <- loadSprite (p </> "ghosts/pinky.png")
+  inkySprite <- loadSprite (p </> "ghosts/inky.png")
+  clydeSprite <- loadSprite (p </> "ghosts/clyde.png")
+  blueGhostSprite <- loadSprite (p </> "other/blue_ghost.png")
+  return
+    Assets
+      { pacFont = pacFont
+      , emuFont = emuFont
+      , pacSprite = pacSprite
+      , appleSprite = appleSprite
+      , blinkySprite = blinkySprite
+      , pinkySprite = pinkySprite
+      , inkySprite = inkySprite
+      , clydeSprite = clydeSprite
+      , blueGhostSprite = blueGhostSprite
+      }
