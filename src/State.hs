@@ -1,11 +1,14 @@
 module State where
 
-import Assets (Assets (Assets), loadAssets)
-import Data.Map (Map, empty)
-import Graphics.Gloss (Color, Point, blue)
-import Graphics.Gloss.Interface.IO.Game (Key (..), MouseButton, SpecialKey (..))
-import Map (WallSection, calculateIntersections, processWalls)
-import Struct
+import           Assets                           (Assets (Assets), loadAssets)
+import           Data.Map                         (Map, empty)
+import           Graphics.Gloss                   (Color, Point, blue)
+import           Graphics.Gloss.Interface.IO.Game (Key (..), MouseButton,
+                                                   SpecialKey (..))
+import           Map                              (WallSection,
+                                                   calculateIntersections,
+                                                   processWalls)
+import           Struct
 
 data Prompt = Prompt
     {
@@ -42,6 +45,7 @@ defaultPrompt = Prompt {
 data Settings = Settings
     {
         windowSize           :: (Float,Float),
+        ghostPadding         :: Float,
         pacmanPadding        :: Float,
         mazeMargin           :: Float,
         lineThickness        :: Float,
@@ -57,14 +61,13 @@ data GameState = GameState
         status :: GameStatus,
         prevClock :: Float,
         level :: LevelMap,
-        walls :: [(Cell, WallSection)],
         -- level :: GameLevel, -- (if we decide to include multiple level options)
         score :: Int,
         player :: Player, -- the player character for pacman
         pinky :: GhostActor, inky :: GhostActor, blinky :: GhostActor, clyde :: GhostActor -- the four ghost
     }
 
-data EditorTool = WallTool | SpawnTool | FoodTool | AppleTool deriving Eq
+data EditorTool = WallTool | SpawnTool | FoodTool | AppleTool | GhostTool deriving Eq
 
 data GlobalState = GlobalState
     {
@@ -80,8 +83,10 @@ data GlobalState = GlobalState
         lastRoute     :: MenuRoute,
         editorLevel   :: LevelMap,
         editorTool    :: EditorTool,
+        editorGhost   :: GhostType,
+        previewEditor :: Bool,
         mouseDown     :: Maybe MouseButton,
-        previewEditor :: Bool
+        cachedWalls   :: [(Cell, WallSection)]
     }
 
 initState :: IO GlobalState
@@ -91,6 +96,7 @@ initState = do
     return GlobalState {
         settings = Settings {
             windowSize = (800,800),
+            ghostPadding = 0.20,
             pacmanPadding = 0.15,
             mazeMargin = 0.35,
             lineThickness = 15,
@@ -103,7 +109,6 @@ initState = do
             status = Paused,
             prevClock = 0,
             level = level,
-            walls = processWalls level,
             player = Player {
                 pVelocity = 75,
                 pDirection = East,
@@ -115,6 +120,7 @@ initState = do
             -- todo init ghosts
         },
         editorLevel = LevelMap 25 25 [],
+        cachedWalls = [],
         route = StartMenu,
         lastRoute = StartMenu,
         assets = assets,
@@ -124,6 +130,7 @@ initState = do
         prompt = Nothing,
         clock = 0,
         editorTool = WallTool,
+        editorGhost = Blinky,
         mouseDown = Nothing,
         previewEditor = False
     }

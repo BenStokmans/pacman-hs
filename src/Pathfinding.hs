@@ -1,10 +1,12 @@
 module Pathfinding where
 
-import Data.List (delete)
-import Data.Maybe (isJust)
-import Struct (Cell (Cell), CellType (Empty, Intersection, Wall),
-               Direction (East, North, South, West), LevelMap (LevelMap), Vec2 (Vec2),
-               allDirections, dirToVec2, getCell, mapHeight, mapWidth, setCells, stringToCellType)
+import           Data.List  (delete)
+import           Data.Maybe (isJust)
+import           Struct     (Cell (Cell), CellType (Empty, Intersection, Wall),
+                             Direction (East, North, South, West),
+                             LevelMap (LevelMap), Vec2 (Vec2), allDirections,
+                             dirToVec2, getCell, mapHeight, mapWidth, setCells,
+                             stringToCellType)
 
 data AStarCell = AStarCell { pos :: Vec2, fCost :: Float, gCost :: Float, hCost :: Float, prev :: AStarCell, dir :: Direction }
 

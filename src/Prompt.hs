@@ -1,15 +1,24 @@
 module Prompt where
-import Assets (Assets (..))
-import Data.List (intercalate)
-import Data.Maybe (fromMaybe)
-import FontContainer (FontContainer (..))
-import Graphics.Gloss (Picture (..), black, blank, blue, green, pictures, rectangleSolid, red,
-                       translate, white)
-import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (LeftButton),
-                                         SpecialKey (..))
-import Rendering (Rectangle (..), defaultButton, rectangleHovered, renderString, stringSize,
-                  thickRectangle)
-import State (GameState (..), GlobalState (..), MenuRoute (..), Prompt (..), defaultPrompt)
+import           Assets                           (Assets (..))
+import           Data.List                        (intercalate)
+import           Data.Maybe                       (fromMaybe)
+import           FontContainer                    (FontContainer (..))
+import           Graphics.Gloss                   (Picture (..), black, blank,
+                                                   blue, green, pictures,
+                                                   rectangleSolid, red,
+                                                   translate, white)
+import           Graphics.Gloss.Interface.IO.Game (Event (..), Key (..),
+                                                   MouseButton (LeftButton),
+                                                   SpecialKey (..))
+import           Rendering                        (Rectangle (..),
+                                                   defaultButton,
+                                                   rectangleHovered,
+                                                   renderString, stringSize,
+                                                   thickRectangle)
+import           State                            (GameState (..),
+                                                   GlobalState (..),
+                                                   MenuRoute (..), Prompt (..),
+                                                   defaultPrompt)
 
 emptyPrompt :: Prompt
 emptyPrompt = Prompt{}
@@ -74,5 +83,6 @@ handleInputPrompt (EventKey (MouseButton LeftButton) _ _ _)  s@(GlobalState { pr
 handleInputPrompt _ s = s
 
 handleUpdatePrompt :: Float -> GlobalState -> Prompt -> IO GlobalState
-handleUpdatePrompt f s p | not $ showTextField p || clock s - lastBlink p <= blinkInterval p = do return s
-                         | otherwise = do return s { prompt = Just p { blink = not $ blink p, lastBlink = clock s } }
+handleUpdatePrompt f s p | not $ showTextField p = do return s
+                         | clock s - lastBlink p > blinkInterval p = do return s { prompt = Just p { blink = not $ blink p, lastBlink = clock s } }
+                         | otherwise = do return s

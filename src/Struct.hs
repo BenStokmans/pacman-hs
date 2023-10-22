@@ -1,8 +1,10 @@
 module Struct where
 
-import Data.List (intercalate)
-import Data.Maybe (mapMaybe)
-import Graphics.Gloss (Point)
+import           Data.List      (intercalate)
+import           Data.Maybe     (mapMaybe)
+import           Graphics.Gloss (Point)
+
+type GridInfo = ((Float,Float),(Float,Float))
 
 data OriginPoint = OriginTopLeft | OriginCenter deriving (Show, Eq)
 
@@ -24,6 +26,8 @@ oppositeDirection South = North
 oppositeDirection West  = East
 
 data Vec2 = Vec2 Float Float
+outOfBounds :: Vec2
+outOfBounds = Vec2 (-1) (-1)
 
 instance Show Vec2 where
     show :: Vec2 -> String
@@ -49,22 +53,30 @@ dirToVec2 South = Vec2 0 (-1)
 dirToVec2 West  = Vec2 (-1) 0
 dirToVec2 East  = Vec2 1 0
 
-data CellType = Empty | Pellet | PowerUp | Wall | Intersection | Spawn deriving Eq
+data CellType = Empty | Pellet | PowerUp | Wall | Intersection | Spawn | GhostSpawn GhostType deriving Eq
 instance Show CellType where
     show :: CellType -> String
-    show Empty        = "E"
-    show Pellet       = "P"
-    show Wall         = "W"
-    show Intersection = "X"
-    show Spawn        = "S"
-    show PowerUp      = "A"
+    show Empty               = "E"
+    show Pellet              = "F"
+    show Wall                = "W"
+    show Intersection        = "X"
+    show Spawn               = "S"
+    show PowerUp             = "A"
+    show (GhostSpawn Blinky) = "B"
+    show (GhostSpawn Pinky)  = "P"
+    show (GhostSpawn Inky)   = "I"
+    show (GhostSpawn Clyde)  = "C"
 
 stringToCellType :: String -> CellType
-stringToCellType "P" = Pellet
+stringToCellType "F" = Pellet
 stringToCellType "W" = Wall
 stringToCellType "X" = Intersection
 stringToCellType "S" = Spawn
 stringToCellType "A" = PowerUp
+stringToCellType "B" = GhostSpawn Blinky
+stringToCellType "P" = GhostSpawn Pinky
+stringToCellType "I" = GhostSpawn Inky
+stringToCellType "C" = GhostSpawn Clyde
 stringToCellType _   = Empty
 
 data Cell = Cell CellType Vec2
@@ -79,6 +91,11 @@ instance Eq Cell where
 instance Show Cell where
     show :: Cell -> String
     show (Cell t v) = show t ++ ":" ++ show v
+
+data GhostType = Blinky | Pinky | Inky | Clyde deriving Eq
+
+ghosts :: [GhostType]
+ghosts = [Blinky,Pinky,Inky,Clyde]
 
 data LevelMap = LevelMap Float Float [Cell]
 
@@ -142,12 +159,11 @@ data Player = Player
         pMoving        :: Bool
     }
 
-data Ghost = Pinky | Inky | Blinky | Clyde deriving Eq
 data GhostBehaviour = Scatter | Chase | Frightened deriving Eq
 
 data GhostActor = GhostActor
     {
-        ghost             :: Ghost,
+        ghost             :: GhostType,
         gVelocity         :: Float,
         gDirection        :: Direction,
         gLocation         :: Vec2,

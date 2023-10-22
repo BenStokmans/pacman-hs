@@ -1,22 +1,35 @@
+{-# LANGUAGE LambdaCase #-}
 module Map where
 
-import Codec.Picture.Metadata (Keys (Source), Value (Double))
-import Data.List (intercalate)
-import Data.Maybe (isJust, isNothing)
-import Graphics.Gloss (Picture (..), blank, circleSolid, pictures, rotate, thickArc, thickCircle,
-                       translate)
-import Graphics.Gloss.Data.Color (green, red, white, yellow)
-import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
-import Rendering (resize)
-import Struct (Cell (Cell), CellType (..), Direction (East, North, South, West),
-               LevelMap (LevelMap), Vec2 (Vec2), allDirections, dirToVec2, getCell, getCells,
-               mapHeight, mapWidth, scaleVec2, setCells)
+import           Codec.Picture.Metadata      (Keys (Source), Value (Double))
+import           Data.List                   (intercalate)
+import           Data.Maybe                  (isJust, isNothing)
+import           Graphics.Gloss              (Picture (..), blank, circleSolid,
+                                              pictures, rotate, thickArc,
+                                              thickCircle, translate)
+import           Graphics.Gloss.Data.Color   (green, red, white, yellow)
+import           Graphics.Gloss.Data.Picture (rectangleSolid, scale)
+import           Rendering                   (resize)
+import           Struct                      (Cell (Cell), CellType (..),
+                                              Direction (East, North, South, West),
+                                              GhostType (..),
+                                              LevelMap (LevelMap), Vec2 (Vec2),
+                                              allDirections, dirToVec2, getCell,
+                                              getCells, mapHeight, mapWidth,
+                                              outOfBounds, scaleVec2, setCells)
+
+getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
+getSpawnPoint' (LevelMap w h cs) f | null ss = outOfBounds
+                                   | otherwise = foldr (\x c -> c + scaleVec2 x sc) (Vec2 0 0) ss
+    where
+        ss = map (\(Cell _ v) -> v) (filter f cs)
+        sc = 1 / fromIntegral (length ss) :: Float
 
 getSpawnPoint :: LevelMap -> Vec2
-getSpawnPoint (LevelMap w h cs) = foldr (\x c -> c + scaleVec2 x sc) (Vec2 0 0) ss
-    where
-        ss = map (\(Cell _ v) -> v) (filter (\(Cell t _) -> t == Spawn) cs)
-        sc = 1 / fromIntegral (length ss) :: Float
+getSpawnPoint l = getSpawnPoint' l (\(Cell t _) -> t == Spawn)
+
+getGhostSpawnPoint :: LevelMap -> GhostType -> Vec2
+getGhostSpawnPoint l gt = getSpawnPoint' l (\case (Cell (GhostSpawn t) _) -> t == gt; _ -> False)
 
 getDiags :: LevelMap -> Cell -> [Cell]
 getDiags l c@(Cell t pos) = getCells l (map (pos +) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1])

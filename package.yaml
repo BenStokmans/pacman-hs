@@ -27,6 +27,7 @@ default-extensions:
   - BangPatterns
   - OverloadedStrings
   - InstanceSigs
+  - LambdaCase
 
 library:
   source-dirs: src

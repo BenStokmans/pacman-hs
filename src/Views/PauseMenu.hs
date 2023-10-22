@@ -1,23 +1,32 @@
 module Views.PauseMenu where
 
-import Assets (Assets (Assets, emuFont, pacFont))
-import Control.Monad (when)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Text (pack, unpack)
-import FontContainer (FontContainer (..))
-import Graphics.Gloss (Picture, blue, pictures, red, white)
-import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game (Event (..), Key (MouseButton), MouseButton (..),
-                                         SpecialKey (KeyEsc))
-import Graphics.Gloss.Interface.IO.Interact (Key (..))
-import Graphics.UI.TinyFileDialogs (saveFileDialog)
-import Rendering (Rectangle (Rectangle), defaultButton, rectangleHovered, renderButton,
-                  renderString)
-import State (GameState (..), GlobalState (..), MenuRoute (..))
-import System.Directory (getCurrentDirectory)
-import System.Exit (exitSuccess)
-import System.FilePath ((</>))
-import Views.StartMenu (drawParticles, updateParticles)
+import           Assets                               (Assets (Assets, emuFont, pacFont))
+import           Control.Monad                        (when)
+import           Data.Maybe                           (fromMaybe, isJust)
+import           Data.Text                            (pack, unpack)
+import           FontContainer                        (FontContainer (..))
+import           Graphics.Gloss                       (Picture, blue, pictures,
+                                                       red, white)
+import           Graphics.Gloss.Data.Point            ()
+import           Graphics.Gloss.Interface.IO.Game     (Event (..),
+                                                       Key (MouseButton),
+                                                       MouseButton (..),
+                                                       SpecialKey (KeyEsc))
+import           Graphics.Gloss.Interface.IO.Interact (Key (..))
+import           Graphics.UI.TinyFileDialogs          (saveFileDialog)
+import           Rendering                            (Rectangle (Rectangle),
+                                                       defaultButton,
+                                                       rectangleHovered,
+                                                       renderButton,
+                                                       renderString)
+import           State                                (GameState (..),
+                                                       GlobalState (..),
+                                                       MenuRoute (..))
+import           System.Directory                     (getCurrentDirectory)
+import           System.Exit                          (exitSuccess)
+import           System.FilePath                      ((</>))
+import           Views.StartMenu                      (drawParticles,
+                                                       updateParticles)
 
 continueButton :: Rectangle
 continueButton = Rectangle (0,0) 400 100 10
@@ -34,13 +43,13 @@ renderPauseMenu gs = do
 
     let lEmu = l (emuFont (assets gs))
     let mPos = mousePos gs
-    drawnContinuButton <- defaultButton continueButton lEmu "Continue" mPos
+    drawnContinueButton <- defaultButton continueButton lEmu "Continue" mPos
     drawnMainMenuButton <- defaultButton mainMenuButton lEmu "Main Menu" mPos
 
     let saveText = if lastRoute gs == GameView then "game" else "level"
     drawnSaveButton <- defaultButton saveButton lEmu ("Save " ++ saveText) mPos
 
-    return (pictures [drawParticles gs,title,drawnContinuButton,drawnSaveButton,drawnMainMenuButton])
+    return (pictures [drawParticles gs,title,drawnContinueButton,drawnSaveButton,drawnMainMenuButton])
 
 saveEditorLevel :: GlobalState -> IO ()
 saveEditorLevel s = do
@@ -56,7 +65,7 @@ handleInputPauseMenu (EventKey (MouseButton LeftButton) _ _ _) s
     | continueButtonHover = do return s {route = lastRoute s}
     | saveButtonHover = do
         when (lastRoute s == EditorView) $ saveEditorLevel s
-        return s                                 --TODO implement saving of gamestate
+        return s                                 --TODO implement saving of game state
     | mainMenuButtonHover = do return s {route = StartMenu}
     where
         continueButtonHover = rectangleHovered (mousePos s) continueButton

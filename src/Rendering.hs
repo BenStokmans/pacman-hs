@@ -1,15 +1,20 @@
 module Rendering where
 
-import Data.Text (intercalate, pack)
-import Data.Word (Word8)
-import Graphics.Gloss (Color, Picture (Bitmap, Color), Point, black, blank, blue, pictures,
-                       rectangleSolid, rectangleWire, rgbaOfColor, scale, translate, white)
-import Graphics.Gloss.Data.Point (Point, pointInBox)
-import Graphics.Gloss.SDL.Surface (CacheTexture (..), bitmapDataOfSurface, bitmapOfSurface)
-import SDL.Font (Font, blended)
-import SDL.Vect (V4 (..))
-import SDL.Video.Renderer (Surface)
-import Text.Printf (printf)
+import           Data.Text                  (intercalate, pack)
+import           Data.Word                  (Word8)
+import           Graphics.Gloss             (Color, Picture (Bitmap, Color),
+                                             Point, black, blank, blue,
+                                             pictures, rectangleSolid,
+                                             rectangleWire, rgbaOfColor, scale,
+                                             translate, white)
+import           Graphics.Gloss.Data.Point  (Point, pointInBox)
+import           Graphics.Gloss.SDL.Surface (CacheTexture (..),
+                                             bitmapDataOfSurface,
+                                             bitmapOfSurface)
+import           SDL.Font                   (Font, blended)
+import           SDL.Vect                   (V4 (..))
+import           SDL.Video.Renderer         (Surface)
+import           Text.Printf                (printf)
 
 data Rectangle = Rectangle Point Float Float Float --Centre point, width, height, borderthickness
 

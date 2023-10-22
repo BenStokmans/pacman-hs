@@ -1,29 +1,43 @@
 module Views.StartMenu where
 
-import Assets (Assets (Assets, emuFont, pacFont))
-import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Text (pack, unpack)
-import FontContainer (FontContainer (..))
-import Graphics.Gloss (Picture (..), black, blue, circleSolid, makeColor, pictures, red, translate,
-                       white)
-import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..),
-                                         SpecialKey (KeyEsc))
-import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
-import Map (getSpawnPoint)
-import Prompt (errorPrompt)
-import Rendering (Rectangle (Rectangle), completeButton, defaultButton, rectangleHovered,
-                  renderButton, renderString)
-import State (GameState (..), GlobalState (..), MenuRoute (EditorView, GameView, StartMenu),
-              Prompt (..), Settings (..), defaultPrompt)
-import Struct (Cell (..), CellType (..), LevelMap (LevelMap), Player (pLocation), Vec2 (..),
-               readLevel)
-import System.Directory (getCurrentDirectory)
-import System.Exit (exitSuccess)
-import System.FilePath ((</>))
-import Text.Read (readMaybe)
-import Views.GameView (gridToScreenPos)
+import           Assets                           (Assets (Assets, emuFont, pacFont))
+import           Control.Monad.Random             (MonadRandom (getRandomR),
+                                                   Rand, RandomGen)
+import           Data.Maybe                       (fromMaybe, isJust)
+import           Data.Text                        (pack, unpack)
+import           FontContainer                    (FontContainer (..))
+import           Graphics.Gloss                   (Picture (..), black, blue,
+                                                   circleSolid, makeColor,
+                                                   pictures, red, translate,
+                                                   white)
+import           Graphics.Gloss.Data.Point        ()
+import           Graphics.Gloss.Interface.IO.Game (Event (..), Key (..),
+                                                   MouseButton (..),
+                                                   SpecialKey (KeyEsc))
+import           Graphics.UI.TinyFileDialogs      (openFileDialog,
+                                                   saveFileDialog)
+import           Map                              (getSpawnPoint, processWalls)
+import           Prompt                           (errorPrompt)
+import           Rendering                        (Rectangle (Rectangle),
+                                                   completeButton,
+                                                   defaultButton,
+                                                   rectangleHovered,
+                                                   renderButton, renderString)
+import           State                            (GameState (..),
+                                                   GlobalState (..),
+                                                   MenuRoute (EditorView, GameView, StartMenu),
+                                                   Prompt (..), Settings (..),
+                                                   defaultPrompt)
+import           Struct                           (Cell (..), CellType (..),
+                                                   LevelMap (LevelMap),
+                                                   Player (pLocation),
+                                                   Vec2 (..), readLevel)
+import           System.Directory                 (getCurrentDirectory)
+import           System.Exit                      (exitSuccess)
+import           System.FilePath                  ((</>))
+import           Text.Read                        (readMaybe)
+import           Views.GameView                   (gameGridInfo,
+                                                   gridToScreenPos)
 
 startButton :: Rectangle
 startButton = Rectangle (0,10) 500 100 10
@@ -116,7 +130,8 @@ handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do exitSuccess
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
     | rectangleHovered (mousePos s) startButton = do return s {
         route = GameView,
-        gameState = gs { player = ps { pLocation = gridToScreenPos s (getSpawnPoint (level gs)) } }
+        gameState = gs { player = ps { pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (level gs)) } },
+        cachedWalls = processWalls $ level gs
         }
     | rectangleHovered (mousePos s) newMapButton = do return s { prompt = Just
         defaultPrompt {

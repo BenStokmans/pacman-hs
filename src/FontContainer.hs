@@ -1,6 +1,6 @@
 module FontContainer where
 
-import SDL.Font (Font, load)
+import           SDL.Font (Font, load)
 
 data FontContainer = FontContainer
     {

@@ -1,19 +1,37 @@
 module Router where
 
-import Control.Exception (handle)
-import Data.List (delete)
-import Data.Maybe
-import Graphics.Gloss (Picture (..), blank, makeColor, pictures, rectangleSolid)
-import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize), Key (..),
-                                         KeyState (..), Modifiers (..), Picture, SpecialKey (..))
-import Prompt (emptyPrompt, handleInputPrompt, handleUpdatePrompt, renderPrompt)
-import SDL.Audio (PlaybackState (Pause))
-import State (GlobalState (..), MenuRoute (..), Prompt (..), Settings (..), windowSize)
-import System.Exit (exitSuccess)
-import Views.EditorView (handleInputEditorView, handleUpdateEditorView, renderEditorView)
-import Views.GameView (gridSizePx, handleInputGameView, handleUpdateGameView, renderGameView)
-import Views.PauseMenu (handleInputPauseMenu, handleUpdatePauseMenu, renderPauseMenu)
-import Views.StartMenu (handleInputStartMenu, handleUpdateStartMenu, renderStartMenu)
+import           Control.Exception                (handle)
+import           Data.List                        (delete)
+import           Data.Maybe
+import           Graphics.Gloss                   (Picture (..), blank,
+                                                   makeColor, pictures,
+                                                   rectangleSolid)
+import           Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
+                                                   Key (..), KeyState (..),
+                                                   Modifiers (..), Picture,
+                                                   SpecialKey (..))
+import           Prompt                           (emptyPrompt,
+                                                   handleInputPrompt,
+                                                   handleUpdatePrompt,
+                                                   renderPrompt)
+import           SDL.Audio                        (PlaybackState (Pause))
+import           State                            (GlobalState (..),
+                                                   MenuRoute (..), Prompt (..),
+                                                   Settings (..), windowSize)
+import           System.Exit                      (exitSuccess)
+import           Views.EditorView                 (handleInputEditorView,
+                                                   handleUpdateEditorView,
+                                                   renderEditorView)
+import           Views.GameView                   (gridSizePx,
+                                                   handleInputGameView,
+                                                   handleUpdateGameView,
+                                                   renderGameView)
+import           Views.PauseMenu                  (handleInputPauseMenu,
+                                                   handleUpdatePauseMenu,
+                                                   renderPauseMenu)
+import           Views.StartMenu                  (handleInputStartMenu,
+                                                   handleUpdateStartMenu,
+                                                   renderStartMenu)
 
 handleRender :: GlobalState -> IO Picture
 handleRender s@(GlobalState { route = r, prompt = p }) = do
