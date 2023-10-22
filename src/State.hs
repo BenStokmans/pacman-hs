@@ -128,15 +128,7 @@ initState = do
             , status = Paused
             , prevClock = 0
             , level = level
-            , player =
-                Player
-                  { pVelocity = 75
-                  , pDirection = East
-                  , pMoving = False
-                  , pLocation = (0, 0)
-                  , pFrame = 0
-                  , pBufferedInput = Nothing
-                  }
+            , player = Player {pVelocity = 75, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
             -- todo init ghosts
             }
       , editorLevel = LevelMap 25 25 []

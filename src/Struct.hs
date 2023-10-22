@@ -129,15 +129,13 @@ data LevelMap =
 
 instance Show LevelMap where
   show :: LevelMap -> String
-  show m@(LevelMap w h l) =
-    intercalate "\n" $ reverse (map (unwords . reverse) cells)
+  show m@(LevelMap w h l) = intercalate "\n" $ reverse (map (unwords . reverse) cells)
     where
       indeces = map (\y -> map (`Vec2` y) [0 .. w - 1]) [0 .. h - 1]
       cells = map (map (maybe "E" (\(Cell t _) -> show t) . getCell m)) indeces
 
 setCell :: LevelMap -> Cell -> LevelMap
-setCell (LevelMap w h m) c@(Cell _ v1) =
-  LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
+setCell (LevelMap w h m) c@(Cell _ v1) = LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
 
 setCells :: LevelMap -> [Cell] -> LevelMap
 setCells = foldl setCell
@@ -170,16 +168,9 @@ parseLevel s = LevelMap (mapWidth cells + 1) (mapHeight cells + 1) cells
   where
     cells = parseAll (map words (reverse (lines s)))
     parseAll :: [[String]] -> [Cell]
-    parseAll rows =
-      concatMap
-        (\(y, row) -> parseRow row (fromInteger y :: Float))
-        (zip [0 ..] rows)
+    parseAll rows = concatMap (\(y, row) -> parseRow row (fromInteger y :: Float)) (zip [0 ..] rows)
     parseRow :: [String] -> Float -> [Cell]
-    parseRow r y =
-      zipWith
-        (\x t -> Cell (stringToCellType t) (Vec2 (fromInteger x :: Float) y))
-        [0 ..]
-        r
+    parseRow r y = zipWith (\x t -> Cell (stringToCellType t) (Vec2 (fromInteger x :: Float) y)) [0 ..] r
 
 readLevel :: String -> IO LevelMap
 readLevel f = do

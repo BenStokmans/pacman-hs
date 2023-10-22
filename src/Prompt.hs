@@ -4,39 +4,10 @@ import Assets (Assets(..))
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import FontContainer (FontContainer(..))
-import Graphics.Gloss
-  ( Picture(..)
-  , black
-  , blank
-  , blue
-  , green
-  , pictures
-  , rectangleSolid
-  , red
-  , translate
-  , white
-  )
-import Graphics.Gloss.Interface.IO.Game
-  ( Event(..)
-  , Key(..)
-  , MouseButton(LeftButton)
-  , SpecialKey(..)
-  )
-import Rendering
-  ( Rectangle(..)
-  , defaultButton
-  , rectangleHovered
-  , renderString
-  , stringSize
-  , thickRectangle
-  )
-import State
-  ( GameState(..)
-  , GlobalState(..)
-  , MenuRoute(..)
-  , Prompt(..)
-  , defaultPrompt
-  )
+import Graphics.Gloss (Picture(..), black, blank, blue, green, pictures, rectangleSolid, red, translate, white)
+import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(LeftButton), SpecialKey(..))
+import Rendering (Rectangle(..), defaultButton, rectangleHovered, renderString, stringSize, thickRectangle)
+import State (GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), defaultPrompt)
 
 emptyPrompt :: Prompt
 emptyPrompt = Prompt {}
@@ -111,9 +82,7 @@ renderPrompt s p = do
     c = clock s
 
 handleInputPrompt :: Event -> GlobalState -> GlobalState
-handleInputPrompt (EventKey (SpecialKey KeyEsc) _ _ _) s@(GlobalState {prompt = Just p@(Prompt { promptValue = value
-                                                                                               , closeAction = close
-                                                                                               })}) =
+handleInputPrompt (EventKey (SpecialKey KeyEsc) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = value, closeAction = close})}) =
   close s value
 handleInputPrompt (EventKey (SpecialKey KeyBackspace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
   s
@@ -141,6 +110,5 @@ handleInputPrompt _ s = s
 handleUpdatePrompt :: Float -> GlobalState -> Prompt -> IO GlobalState
 handleUpdatePrompt f s p
   | not $ showTextField p = do return s
-  | clock s - lastBlink p > blinkInterval p = do
-    return s {prompt = Just p {blink = not $ blink p, lastBlink = clock s}}
+  | clock s - lastBlink p > blinkInterval p = do return s {prompt = Just p {blink = not $ blink p, lastBlink = clock s}}
   | otherwise = do return s

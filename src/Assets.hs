@@ -29,8 +29,7 @@ loadSprite s = do
 loadAnim :: String -> IO Anim
 loadAnim path = do
   files <- getDirectoryContents path
-  let filtered =
-        sort $ map (path </>) (filter (\f -> ".png" `isSuffixOf` f) files)
+  let filtered = sort $ map (path </>) (filter (\f -> ".png" `isSuffixOf` f) files)
   framesMaybe <- mapM loadJuicyPNG filtered
   let frames = catMaybes framesMaybe
   return (frames ++ tail (init frames))

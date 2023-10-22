@@ -6,25 +6,8 @@ import Assets (Anim(..), Assets(..), PacManSprite(..))
 import Data.List (delete)
 import Data.Maybe (fromMaybe, isNothing)
 import FontContainer (FontContainer(..))
-import Graphics.Gloss
-  ( Color
-  , Picture(Color, Line)
-  , Point
-  , blank
-  , blue
-  , circleSolid
-  , green
-  , pictures
-  , scale
-  , translate
-  , white
-  )
-import Graphics.Gloss.Interface.IO.Game
-  ( Event(..)
-  , Key(..)
-  , MouseButton(..)
-  , SpecialKey(..)
-  )
+import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, pictures, scale, translate, white)
+import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
 import Map (processWalls, wallSectionToPic, wallToSizedSection)
 import Rendering (renderStringTopLeft, renderStringTopRight)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
@@ -44,8 +27,7 @@ import Struct
   )
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of level
-gameGridDimensions GlobalState {gameState = GameState {level = (LevelMap w h _)}} =
-  (w, h)
+gameGridDimensions GlobalState {gameState = GameState {level = (LevelMap w h _)}} = (w, h)
 
 cellSize :: (Float, Float) -> Float -> Float -> (Float, Float) --cell size in px
 cellSize (sx, sy) w h = (w / sx, h / sy)
@@ -80,10 +62,7 @@ gridToScreenPos (dim, (w, h)) (Vec2 x y) =
    in (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2)
 
 screenToGridPos :: GlobalState -> GridInfo -> Point -> Vec2 -- get position on grid from screen position
-screenToGridPos gs ((c, r), _) (x, y) =
-  Vec2
-    (fromIntegral (floor ((pw / 2 + x) / cw)))
-    (fromIntegral (floor ((ph / 2 + y) / ch)))
+screenToGridPos gs ((c, r), _) (x, y) = Vec2 (fromIntegral (floor ((pw / 2 + x) / cw))) (fromIntegral (floor ((ph / 2 + y) / ch)))
   where
     (pw, ph) = gridSizePx (c, r) gs
     (cw, ch) = cellSize (c, r) pw ph
@@ -93,31 +72,18 @@ debugGrid s =
   let (dim, (w, h)) = gameGridInfo s
    in drawGrid dim w h green
 
-drawMap ::
-     GlobalState -> LevelMap -> (Float, Float) -> (Float, Float) -> Picture
+drawMap :: GlobalState -> LevelMap -> (Float, Float) -> (Float, Float) -> Picture
 drawMap gs m@(LevelMap _ _ cells) (c, r) (w, h) =
   Color blue $
   pictures $
+  map (\(Cell _ (Vec2 x y), ws) -> translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) (wallToSizedSection margin t cw ch ws)) (cachedWalls gs) ++
   map
-    (\(Cell _ (Vec2 x y), ws) ->
-       translate
-         (x * cw - w2 + cw / 2)
-         (y * ch - h2 + ch / 2)
-         (wallToSizedSection margin t cw ch ws))
-    (cachedWalls gs) ++
-  map
-    (\(Cell t (Vec2 x y)) ->
-       Color white $
-       translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) $
-       scale 1 (ch / cw) $ circleSolid (cw / 16))
+    (\(Cell t (Vec2 x y)) -> Color white $ translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) $ scale 1 (ch / cw) $ circleSolid (cw / 16))
     (filter (\(Cell t _) -> t == Pellet) cells) ++
   map
     (\(Cell t (Vec2 x y)) ->
        translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) $
-       scale
-         ((ch / 32) * (1 + margin * 2) * (c / r))
-         ((cw / 32) * (1 + margin * 2) * (r / c)) $
-       appleSprite ass)
+       scale ((ch / 32) * (1 + margin * 2) * (c / r)) ((cw / 32) * (1 + margin * 2) * (r / c)) $ appleSprite ass)
     (filter (\(Cell t _) -> t == PowerUp) cells)
   where
     ass = assets gs
@@ -148,8 +114,7 @@ ghostToSprite gs Inky = inkySprite $ assets gs
 ghostToSprite gs Clyde = clydeSprite $ assets gs
 
 drawGhost :: GlobalState -> GhostType -> GridInfo -> Point -> Picture
-drawGhost gs gt ((c, r), (w, h)) (px, py) =
-  translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
+drawGhost gs gt ((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
   where
     (cw, ch) = cellSize (c, r) w h
     margin = mazeMargin $ settings gs
@@ -159,8 +124,7 @@ drawGhost gs gt ((c, r), (w, h)) (px, py) =
     scalarY = (ch / 16) * ghostScalar * (r / c)
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
-drawPlayer gs ((c, r), (w, h)) (px, py) =
-  translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
+drawPlayer gs ((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
   where
     frame = pFrame $ player $ gameState gs
     (cw, ch) = cellSize (c, r) w h
@@ -177,15 +141,8 @@ renderGameView gs = do
       (400, 400)
       (s (emuFont (assets gs)))
       green
-      ("Maze margin: " ++
-       show (mazeMargin $ settings gs) ++
-       "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs))
-  scoreString <-
-    renderStringTopLeft
-      (-400, 400)
-      (FontContainer.m (emuFont (assets gs)))
-      white $
-    "Score: " ++ show (score $ gameState gs)
+      ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs))
+  scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let (dims, gridS) = gameGridInfo gs
   let currentLevel = level $ gameState gs
   let drawnMap = drawMap gs currentLevel dims gridS
@@ -193,14 +150,7 @@ renderGameView gs = do
         if enableDebugGrid $ settings gs
           then debugGrid gs
           else blank
-  return
-    (pictures
-       [ grid
-       , drawnMap
-       , drawPlayer gs (dims, gridS) (pLocation $ player $ gameState gs)
-       , debugString
-       , scoreString
-       ])
+  return (pictures [grid, drawnMap, drawPlayer gs (dims, gridS) (pLocation $ player $ gameState gs), debugString, scoreString])
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North
@@ -219,22 +169,14 @@ handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) gs = do
 handleInputGameView (EventKey (Char 'g') _ _ _) gs@(GlobalState {settings = set}) = do
   return gs {settings = set {enableDebugGrid = not (enableDebugGrid set)}}
 handleInputGameView (EventKey k _ _ _) s = do
-  return
-    s
-      { gameState =
-          gs
-            { player =
-                ps {pBufferedInput = bufferedInput, pDirection = direction}
-            }
-      }
+  return s {gameState = gs {player = ps {pBufferedInput = bufferedInput, pDirection = direction}}}
   where
     gs = gameState s
     ps = player gs
     newDir = keyToDirection oldDir k
     oldDir = pDirection ps
     bufferedInput
-      | newDir == oldDir || newDir == oppositeDirection oldDir =
-        pBufferedInput ps
+      | newDir == oldDir || newDir == oppositeDirection oldDir = pBufferedInput ps
       | otherwise = Just newDir
     direction
       | newDir /= oldDir && newDir /= oppositeDirection oldDir = oldDir
@@ -289,11 +231,7 @@ updatePlayerPosition dt s
             , level = LevelMap lw lh newCells
             }
       }
-  | otherwise =
-    s
-      { gameState =
-          gs {player = ps {pLocation = newLoc, pMoving = newLoc /= (px, py)}}
-      }
+  | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= (px, py)}}}
   where
     gs = gameState s
     dims@((c, r), (w, h)) = gameGridInfo s
@@ -305,10 +243,7 @@ updatePlayerPosition dt s
     (px, py) = pLocation ps
     currentGridPos = screenToGridPos s dims (px, py)
     distMoved = dt * v
-    (Cell nextCellType _) =
-      fromMaybe
-        dummyCell
-        (getCell m (currentGridPos + dirToVec2 currentDirection))
+    (Cell nextCellType _) = fromMaybe dummyCell (getCell m (currentGridPos + dirToVec2 currentDirection))
     (x, y)
       | currentDirection == North && py >= h / 2 = (px, -h / 2)
       | currentDirection == South && py <= -h / 2 = (px, h / 2)
@@ -329,13 +264,7 @@ updatePlayerPosition dt s
       | currentDirection == West = cx >= x
     cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     bufferedInput = pBufferedInput ps
-    canTurn =
-      maybe
-        False
-        (\d ->
-           maybe False (\(Cell t _) -> t /= Wall) $
-           getCell m (currentGridPos + dirToVec2 d))
-        bufferedInput
+    canTurn = maybe False (\d -> maybe False (\(Cell t _) -> t /= Wall) $ getCell m (currentGridPos + dirToVec2 d)) bufferedInput
     newDir
       | canTurn = fromMaybe North bufferedInput
       | otherwise = currentDirection
@@ -344,8 +273,7 @@ updatePlayerPosition dt s
       | otherwise = (nx, cy)
     oldScore = score gs
     (newScore, newCells)
-      | ctype == Pellet || ctype == PowerUp =
-        (oldScore + 1, Cell Empty cLoc : delete cell cells)
+      | ctype == Pellet || ctype == PowerUp = (oldScore + 1, Cell Empty cLoc : delete cell cells)
       | otherwise = (oldScore, cells)
     finalLocation
       | currentDirection /= newDir = pastCentreLocation

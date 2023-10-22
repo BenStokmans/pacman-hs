@@ -7,21 +7,10 @@ import Data.Text (pack, unpack)
 import FontContainer (FontContainer(..))
 import Graphics.Gloss (Picture, blue, pictures, red, white)
 import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game
-  ( Event(..)
-  , Key(MouseButton)
-  , MouseButton(..)
-  , SpecialKey(KeyEsc)
-  )
+import Graphics.Gloss.Interface.IO.Game (Event(..), Key(MouseButton), MouseButton(..), SpecialKey(KeyEsc))
 import Graphics.Gloss.Interface.IO.Interact (Key(..))
 import Graphics.UI.TinyFileDialogs (saveFileDialog)
-import Rendering
-  ( Rectangle(Rectangle)
-  , defaultButton
-  , rectangleHovered
-  , renderButton
-  , renderString
-  )
+import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString)
 import State (GameState(..), GlobalState(..), MenuRoute(..))
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
@@ -49,24 +38,12 @@ renderPauseMenu gs = do
           then "game"
           else "level"
   drawnSaveButton <- defaultButton saveButton lEmu ("Save " ++ saveText) mPos
-  return
-    (pictures
-       [ drawParticles gs
-       , title
-       , drawnContinueButton
-       , drawnSaveButton
-       , drawnMainMenuButton
-       ])
+  return (pictures [drawParticles gs, title, drawnContinueButton, drawnSaveButton, drawnMainMenuButton])
 
 saveEditorLevel :: GlobalState -> IO ()
 saveEditorLevel s = do
   ws <- getCurrentDirectory
-  file <-
-    saveFileDialog
-      (pack "select level")
-      (pack $ ws </> "maps/newlevel.txt")
-      [pack "*.txt"]
-      (pack "level file")
+  file <- saveFileDialog (pack "select level") (pack $ ws </> "maps/newlevel.txt") [pack "*.txt"] (pack "level file")
   let fName = maybe "" unpack file
   when (isJust file) $ writeFile fName (show $ editorLevel s)
 

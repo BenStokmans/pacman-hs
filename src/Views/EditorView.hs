@@ -4,96 +4,23 @@ import Assets (Assets(Assets, emuFont, pacFont))
 import Data.List
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import FontContainer (FontContainer(..))
-import Graphics.Gloss
-  ( Color
-  , Picture(..)
-  , black
-  , blank
-  , blue
-  , green
-  , makeColor
-  , pictures
-  , rectangleSolid
-  , red
-  , scale
-  , translate
-  , white
-  , yellow
-  )
+import Graphics.Gloss (Color, Picture(..), black, blank, blue, green, makeColor, pictures, rectangleSolid, red, scale, translate, white, yellow)
 import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game
-  ( Event(..)
-  , Key(..)
-  , KeyState(..)
-  , MouseButton(..)
-  , SpecialKey(..)
-  )
-import Map
-  ( WallType
-  , getGhostSpawnPoint
-  , getSpawnPoint
-  , processWalls
-  , wallToSizedSection
-  )
-import Rendering
-  ( Rectangle(Rectangle)
-  , defaultButton
-  , rectangleHovered
-  , renderButton
-  , renderString
-  , renderString'
-  , renderStringTopLeft
-  )
+import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
+import Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection)
+import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, renderString', renderStringTopLeft)
 import SDL.Font (Font(Font))
-import State
-  ( EditorTool(..)
-  , GameState(..)
-  , GlobalState(..)
-  , MenuRoute(..)
-  , Prompt(blink)
-  , Settings(..)
-  )
-import Struct
-  ( Cell(..)
-  , CellType(..)
-  , GhostBehaviour
-  , GhostType(..)
-  , GridInfo
-  , LevelMap(LevelMap)
-  , Vec2(..)
-  , getCell
-  , ghosts
-  , outOfBounds
-  )
+import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
+import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView
-  ( cellSize
-  , debugGrid
-  , drawGhost
-  , drawGrid
-  , drawMap
-  , drawPlayer
-  , gridSizePx
-  , gridToScreenPos
-  , screenToGridPos
-  )
+import Views.GameView (cellSize, debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, gridToScreenPos, screenToGridPos)
 import Views.StartMenu (drawParticles, updateParticles)
 
-generalIcon ::
-     String
-  -> Color
-  -> Color
-  -> GlobalState
-  -> (Float, Float)
-  -> Float
-  -> Float
-  -> IO Picture
+generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x, y) w h = do
   ((_, _), l) <- renderString' (l $ emuFont $ assets gs) tc s
-  return $
-    translate x y $
-    pictures [Color bc $ rectangleSolid w h, scale (w / 64) (h / 64) l]
+  return $ translate x y $ pictures [Color bc $ rectangleSolid w h, scale (w / 64) (h / 64) l]
 
 wallIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 wallIcon = generalIcon "W" white blue
@@ -140,16 +67,14 @@ getEditorGridInfo gs =
   let (Vec2 x y) = editorGridDimensions $ settings gs
    in ((x, y), gridSizePx (x, y) gs)
 
-editorToolToIcon ::
-     GlobalState -> (Float, Float) -> Float -> Float -> EditorTool -> IO Picture
+editorToolToIcon :: GlobalState -> (Float, Float) -> Float -> Float -> EditorTool -> IO Picture
 editorToolToIcon gs pos w h WallTool = wallIcon gs pos w h
 editorToolToIcon gs pos w h SpawnTool = spawnIcon gs pos w h
 editorToolToIcon gs pos w h FoodTool = foodIcon gs pos w h
 editorToolToIcon gs pos w h AppleTool = appleIcon gs pos w h
 editorToolToIcon gs pos w h GhostTool = ghostToIcon gs pos w h (editorGhost gs)
 
-cellToIcon ::
-     GlobalState -> Float -> Float -> Float -> Float -> CellType -> IO Picture
+cellToIcon :: GlobalState -> Float -> Float -> Float -> Float -> CellType -> IO Picture
 cellToIcon gs w h x y ct = do
   icon
   where
@@ -163,8 +88,7 @@ cellToIcon gs w h x y ct = do
     pos = (x * w - (gw / 2) + w / 2, y * h - (gh / 2) + h / 2)
     (_, (gw, gh)) = getEditorGridInfo gs
 
-ghostToIcon ::
-     GlobalState -> (Float, Float) -> Float -> Float -> GhostType -> IO Picture
+ghostToIcon :: GlobalState -> (Float, Float) -> Float -> Float -> GhostType -> IO Picture
 ghostToIcon gs pos w h Blinky = blinkyIcon gs pos w h
 ghostToIcon gs pos w h Pinky = pinkyIcon gs pos w h
 ghostToIcon gs pos w h Inky = inkyIcon gs pos w h
@@ -212,12 +136,7 @@ renderEditorView gs = do
          in show (Vec2 lw lh)) ++
        " pixels: " ++ show w ++ ", " ++ show h)
   cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon gs cw ch vx vy t) cells
-  previewButton <-
-    defaultButton
-      (previewButton (mx / 2) (-h / 2 - 30))
-      mEmu
-      (previewText ++ " preview (V)")
-      mPos
+  previewButton <- defaultButton (previewButton (mx / 2) (-h / 2 - 30)) mEmu (previewText ++ " preview (V)") mPos
   let tools =
         pictures
           [ toolsText
@@ -234,13 +153,7 @@ renderEditorView gs = do
           , ghostButton
           , instructionText
           ]
-  wi <-
-    editorToolToIcon
-      gs
-      (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2)
-      cw
-      ch
-      tool
+  wi <- editorToolToIcon gs (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2) cw ch tool
   let hoveredCell =
         if x < c && x >= 0 && y < r && y >= 0
           then wi
@@ -253,8 +166,7 @@ renderEditorView gs = do
               else blank
           , editorGrid gs
           ]
-  let wallsPreview =
-        drawMap gs {cachedWalls = processWalls level} level (c, r) (w, h)
+  let wallsPreview = drawMap gs {cachedWalls = processWalls level} level (c, r) (w, h)
   let pacmanPreview =
         if v == outOfBounds
           then blank
@@ -343,27 +255,19 @@ handleInputEditorView (EventKey (SpecialKey KeyUp) _ _ _) gs@(GlobalState {edito
   return gs {editorTool = prevTool et}
 handleInputEditorView (EventKey (SpecialKey KeyDown) _ _ _) gs@(GlobalState {editorTool = et}) = do
   return gs {editorTool = nextTool et}
-handleInputEditorView (EventKey (SpecialKey KeySpace) _ _ _) gs@(GlobalState { editorGhost = et
-                                                                             , editorTool = GhostTool
-                                                                             }) = do
+handleInputEditorView (EventKey (SpecialKey KeySpace) _ _ _) gs@(GlobalState {editorGhost = et, editorTool = GhostTool}) = do
   return gs {editorGhost = nextGhost et}
 handleInputEditorView (EventKey (Char 'v') _ _ _) gs = do
   return gs {previewEditor = not $ previewEditor gs}
 handleInputEditorView (EventKey (Char c) _ _ _) gs = do
   return gs {editorTool = charToTool (editorTool gs) c}
 handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) gs
-  | rectangleHovered (mousePos gs) $ previewButton mx (-h / 2 - 30) = do
-    return gs {previewEditor = not $ previewEditor gs}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 260) 25 25 0 = do
-    return gs {editorTool = WallTool}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 220) 25 25 0 = do
-    return gs {editorTool = SpawnTool}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 180) 25 25 0 = do
-    return gs {editorTool = FoodTool}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 140) 25 25 0 = do
-    return gs {editorTool = AppleTool}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 100) 25 25 0 = do
-    return gs {editorTool = GhostTool}
+  | rectangleHovered (mousePos gs) $ previewButton mx (-h / 2 - 30) = do return gs {previewEditor = not $ previewEditor gs}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 260) 25 25 0 = do return gs {editorTool = WallTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 220) 25 25 0 = do return gs {editorTool = SpawnTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 180) 25 25 0 = do return gs {editorTool = FoodTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 140) 25 25 0 = do return gs {editorTool = AppleTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 100) 25 25 0 = do return gs {editorTool = GhostTool}
   where
     (dim, (_, h)) = getEditorGridInfo gs
     (mx, _) = windowMargin dim gs
@@ -387,8 +291,6 @@ handleUpdateEditorView _ s = do
     newCell = Cell (toolToCellType (editorTool s) (editorGhost s)) v
     newState
       | x >= c || x < 0 || y >= r || y < 0 = s
-      | elem (MouseButton LeftButton) $ keys s =
-        s {editorLevel = LevelMap c r $ newCell : editCells}
-      | elem (MouseButton RightButton) $ keys s =
-        s {editorLevel = LevelMap c r editCells}
+      | elem (MouseButton LeftButton) $ keys s = s {editorLevel = LevelMap c r $ newCell : editCells}
+      | elem (MouseButton RightButton) $ keys s = s {editorLevel = LevelMap c r editCells}
       | otherwise = s

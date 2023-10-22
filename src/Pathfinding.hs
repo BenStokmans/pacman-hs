@@ -38,29 +38,17 @@ getTraveledDirection (Vec2 x1 y1) (Vec2 x2 y2)
   | x1 + 1 == x2 && y1 == y2 = East
 
 newCell :: (Vec2 -> Float) -> AStarCell -> Vec2 -> AStarCell
-newCell h from p =
-  AStarCell
-    { pos = p
-    , gCost = gCost'
-    , hCost = hCost'
-    , fCost = gCost' + hCost'
-    , prev = from
-    , dir = dir'
-    }
+newCell h from p = AStarCell {pos = p, gCost = gCost', hCost = hCost', fCost = gCost' + hCost', prev = from, dir = dir'}
   where
     gCost' = gCost from + 1
     hCost' = h p
     dir' = getTraveledDirection (pos from) p
 
 isValidPos :: LevelMap -> Vec2 -> Bool
-isValidPos m p =
-  isJust (getCell m p) && maybe False (\(Cell t _) -> t /= Wall) (getCell m p)
+isValidPos m p = isJust (getCell m p) && maybe False (\(Cell t _) -> t /= Wall) (getCell m p)
 
 getAdjacent :: LevelMap -> (Vec2 -> Float) -> AStarCell -> [AStarCell]
-getAdjacent m h t@(AStarCell {pos = pos}) =
-  map
-    (newCell h t)
-    (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
+getAdjacent m h t@(AStarCell {pos = pos}) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
 
 vec2Dist :: Vec2 -> Vec2 -> Float
 vec2Dist (Vec2 x1 y1) (Vec2 x2 y2) = abs ((x1 - x2) + (y1 - y2))
@@ -93,13 +81,5 @@ astar map end open closed
 getShortestPath :: LevelMap -> Vec2 -> Vec2 -> Maybe [Vec2]
 getShortestPath map start end = astar map end [startCell] []
   where
-    startCell =
-      AStarCell
-        { pos = start
-        , fCost = startCost
-        , gCost = 0
-        , hCost = startCost
-        , prev = startCell
-        , dir = North
-        }
+    startCell = AStarCell {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
