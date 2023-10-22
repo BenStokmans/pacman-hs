@@ -1,24 +1,29 @@
 module Views.StartMenu where
 
-import State (GlobalState(..), MenuRoute (GameView, EditorView, StartMenu), GameState (..), Settings (..), Prompt (..), defaultPrompt)
-import Assets(Assets(Assets,pacFont, emuFont))
-import FontContainer(FontContainer(..))
-import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), completeButton, defaultButton)
-import Graphics.Gloss ( Picture (..), blue, red, white, pictures, makeColor, translate, circleSolid, black )
-import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (..), MouseButton (..), SpecialKey (KeyEsc) )
-import Graphics.Gloss.Data.Point ()
+import Assets (Assets (Assets, emuFont, pacFont))
 import Control.Monad.Random (MonadRandom (getRandomR), Rand, RandomGen)
-import System.Exit (exitSuccess)
-import Struct (Player(pLocation), Vec2 (..), LevelMap (LevelMap), CellType (..), Cell (..), readLevel)
-import Map (getSpawnPoint)
-import Views.GameView (gridToScreenPos)
-import Text.Read (readMaybe)
-import Data.Maybe (isJust, fromMaybe)
-import Prompt (errorPrompt)
-import System.Directory (getCurrentDirectory)
-import Graphics.UI.TinyFileDialogs (saveFileDialog, openFileDialog)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
+import FontContainer (FontContainer (..))
+import Graphics.Gloss (Picture (..), black, blue, circleSolid, makeColor, pictures, red, translate,
+                       white)
+import Graphics.Gloss.Data.Point ()
+import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..),
+                                         SpecialKey (KeyEsc))
+import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
+import Map (getSpawnPoint)
+import Prompt (errorPrompt)
+import Rendering (Rectangle (Rectangle), completeButton, defaultButton, rectangleHovered,
+                  renderButton, renderString)
+import State (GameState (..), GlobalState (..), MenuRoute (EditorView, GameView, StartMenu),
+              Prompt (..), Settings (..), defaultPrompt)
+import Struct (Cell (..), CellType (..), LevelMap (LevelMap), Player (pLocation), Vec2 (..),
+               readLevel)
+import System.Directory (getCurrentDirectory)
+import System.Exit (exitSuccess)
 import System.FilePath ((</>))
+import Text.Read (readMaybe)
+import Views.GameView (gridToScreenPos)
 
 startButton :: Rectangle
 startButton = Rectangle (0,10) 500 100 10

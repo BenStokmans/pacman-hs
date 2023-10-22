@@ -1,23 +1,23 @@
 module Assets where
 
-import Struct (LevelMap,readLevel, Cell)
-import Map (calculateIntersections, WallSection, processWalls)
-import SDL.Font (Font, initialize, load)
-import FontContainer (FontContainer(..),loadFont)
+import Data.List (isSuffixOf, sort)
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import FontContainer (FontContainer (..), loadFont)
 import Graphics.Gloss (Picture (Pictures), blank)
-import Graphics.Gloss.Juicy (loadJuicyPNG, loadJuicyJPG)
+import Graphics.Gloss.Juicy (loadJuicyJPG, loadJuicyPNG)
+import Map (WallSection, calculateIntersections, processWalls)
+import SDL.Font (Font, initialize, load)
+import Struct (Cell, LevelMap, readLevel)
 import System.Directory (canonicalizePath, getDirectoryContents)
 import System.FilePath (joinPath, takeBaseName, (</>))
-import Data.List (isSuffixOf, sort)
-import Data.Maybe (mapMaybe,catMaybes, fromMaybe)
 import Text.Printf
 
 type Anim = [Picture]
 
 data PacManSprite = PacManSprite {
-    up :: Anim,
-    down :: Anim,
-    left :: Anim,
+    up    :: Anim,
+    down  :: Anim,
+    left  :: Anim,
     right :: Anim
   }
 
@@ -36,9 +36,9 @@ loadAnim path = do
 
 
 data Assets = Assets {
-    pacFont :: FontContainer,
-    emuFont :: FontContainer,
-    pacSprite :: PacManSprite,
+    pacFont     :: FontContainer,
+    emuFont     :: FontContainer,
+    pacSprite   :: PacManSprite,
     appleSprite :: Picture
   }
 

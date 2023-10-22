@@ -1,26 +1,26 @@
 module State where
 
-import Assets(Assets(Assets),loadAssets)
-import Struct
-import Graphics.Gloss (Point, Color, blue)
-import Graphics.Gloss.Interface.IO.Game (Key (..), SpecialKey (..), MouseButton)
+import Assets (Assets (Assets), loadAssets)
 import Data.Map (Map, empty)
-import Map (WallSection, processWalls, calculateIntersections)
+import Graphics.Gloss (Color, Point, blue)
+import Graphics.Gloss.Interface.IO.Game (Key (..), MouseButton, SpecialKey (..))
+import Map (WallSection, calculateIntersections, processWalls)
+import Struct
 
-data Prompt = Prompt 
+data Prompt = Prompt
     {
-        accentColor :: Color,
-        promptText :: String,
-        promptValue :: String,
-        showTextField :: Bool,
-        showCloseButton :: Bool,
+        accentColor       :: Color,
+        promptText        :: String,
+        promptValue       :: String,
+        showTextField     :: Bool,
+        showCloseButton   :: Bool,
         showConfirmButton :: Bool,
-        blinkInterval :: Float,
-        lastBlink :: Float,
-        blink :: Bool,
-        confirmAction :: GlobalState -> String -> GlobalState,
-        closeAction :: GlobalState -> String -> GlobalState,
-        darkenBackground :: Bool
+        blinkInterval     :: Float,
+        lastBlink         :: Float,
+        blink             :: Bool,
+        confirmAction     :: GlobalState -> String -> GlobalState,
+        closeAction       :: GlobalState -> String -> GlobalState,
+        darkenBackground  :: Bool
     }
 
 defaultPrompt :: Prompt
@@ -39,13 +39,13 @@ defaultPrompt = Prompt {
             darkenBackground = True
         }
 
-data Settings = Settings 
+data Settings = Settings
     {
-        windowSize :: (Float,Float),
-        pacmanPadding :: Float,
-        mazeMargin :: Float,
-        lineThickness :: Float,
-        enableDebugGrid :: Bool,
+        windowSize           :: (Float,Float),
+        pacmanPadding        :: Float,
+        mazeMargin           :: Float,
+        lineThickness        :: Float,
+        enableDebugGrid      :: Bool,
         editorGridDimensions :: Vec2
     }
 
@@ -66,26 +66,26 @@ data GameState = GameState
 
 data EditorTool = WallTool | SpawnTool | FoodTool | AppleTool deriving Eq
 
-data GlobalState = GlobalState 
+data GlobalState = GlobalState
     {
-        settings :: Settings,
-        keys :: [Key],
-        gameState :: GameState,
-        route :: MenuRoute,
-        assets :: Assets,
-        mousePos :: Point,
-        particles :: [(Point,Float)],
-        prompt :: Maybe Prompt,
-        clock :: Float,
-        lastRoute :: MenuRoute,
-        editorLevel :: LevelMap,
-        editorTool :: EditorTool,
-        mouseDown :: Maybe MouseButton,
+        settings      :: Settings,
+        keys          :: [Key],
+        gameState     :: GameState,
+        route         :: MenuRoute,
+        assets        :: Assets,
+        mousePos      :: Point,
+        particles     :: [(Point,Float)],
+        prompt        :: Maybe Prompt,
+        clock         :: Float,
+        lastRoute     :: MenuRoute,
+        editorLevel   :: LevelMap,
+        editorTool    :: EditorTool,
+        mouseDown     :: Maybe MouseButton,
         previewEditor :: Bool
     }
 
 initState :: IO GlobalState
-initState = do 
+initState = do
     assets <- loadAssets "assets"
     level <- readLevel "maps/level.txt"
     return GlobalState {

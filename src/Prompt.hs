@@ -1,12 +1,15 @@
 module Prompt where
-import State (GlobalState (..), Prompt (..), GameState (..), defaultPrompt, MenuRoute (..))
-import Graphics.Gloss (Picture (..), blank, pictures, black, blue,red, rectangleSolid, white, translate, green)
-import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), SpecialKey (..), MouseButton (LeftButton))
-import Rendering (thickRectangle,renderString, stringSize, Rectangle(..), defaultButton, rectangleHovered)
-import Assets (Assets(..))
-import FontContainer (FontContainer(..))
-import Data.Maybe (fromMaybe)
+import Assets (Assets (..))
 import Data.List (intercalate)
+import Data.Maybe (fromMaybe)
+import FontContainer (FontContainer (..))
+import Graphics.Gloss (Picture (..), black, blank, blue, green, pictures, rectangleSolid, red,
+                       translate, white)
+import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (LeftButton),
+                                         SpecialKey (..))
+import Rendering (Rectangle (..), defaultButton, rectangleHovered, renderString, stringSize,
+                  thickRectangle)
+import State (GameState (..), GlobalState (..), MenuRoute (..), Prompt (..), defaultPrompt)
 
 emptyPrompt :: Prompt
 emptyPrompt = Prompt{}
@@ -19,14 +22,14 @@ errorPrompt s = Just defaultPrompt {
             showConfirmButton = False,
             closeAction = \state _ -> state { route = StartMenu, prompt = Nothing }
         }
-            
+
 okayButton :: Prompt -> Rectangle
 okayButton Prompt { showCloseButton = False } = Rectangle (0,-75) 100 50 10
-okayButton _ = Rectangle (75,-75) 75 50 10
+okayButton _                                  = Rectangle (75,-75) 75 50 10
 
 closeButton :: Prompt -> Rectangle
 closeButton Prompt { showConfirmButton = False } = Rectangle (0,-75) 100 50 10
-closeButton _ = Rectangle (-75,-75) 100 50 10
+closeButton _                                    = Rectangle (-75,-75) 100 50 10
 
 keysString :: GlobalState -> String
 keysString s = intercalate "," $ map (\(Char k) -> [k]) $ filter f $ keys s
@@ -34,7 +37,7 @@ keysString s = intercalate "," $ map (\(Char k) -> [k]) $ filter f $ keys s
         f :: Key -> Bool
         f k = case k of
             (Char _) -> True
-            _ -> False
+            _        -> False
 
 renderPrompt :: GlobalState -> Prompt -> IO Picture
 renderPrompt s p = do
@@ -53,7 +56,7 @@ renderPrompt s p = do
     drawnCloseButton<- defaultButton (closeButton p) mEmu "CLOSE" mPos
 
     let box = thickRectangle 350 250 10 (accentColor p) black
-    return $ pictures ([box,t,ks,if showConfirmButton p then drawnOkayButton else blank,if showCloseButton p then drawnCloseButton else blank] 
+    return $ pictures ([box,t,ks,if showConfirmButton p then drawnOkayButton else blank,if showCloseButton p then drawnCloseButton else blank]
         ++ if showTextField p then [v,blinker,underline] else [blank])
     where
         text = promptText p

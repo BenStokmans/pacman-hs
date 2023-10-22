@@ -1,21 +1,23 @@
 module Views.PauseMenu where
 
-import State (GlobalState(..), MenuRoute (..), MenuRoute(StartMenu), GameState (..))
-import Assets(Assets(Assets,pacFont, emuFont))
-import FontContainer(FontContainer(..))
-import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), defaultButton)
-import Graphics.Gloss ( Picture, blue, red, white, pictures)
-import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (MouseButton), MouseButton (..), SpecialKey (KeyEsc) )
-import Graphics.Gloss.Data.Point ()
-import System.Exit (exitSuccess)
-import Views.StartMenu (drawParticles, updateParticles)
-import Graphics.Gloss.Interface.IO.Interact (Key(..))
-import System.Directory (getCurrentDirectory)
-import Data.Text (pack, unpack)
-import System.FilePath ((</>))
-import Graphics.UI.TinyFileDialogs (saveFileDialog)
-import Data.Maybe (fromMaybe, isJust)
+import Assets (Assets (Assets, emuFont, pacFont))
 import Control.Monad (when)
+import Data.Maybe (fromMaybe, isJust)
+import Data.Text (pack, unpack)
+import FontContainer (FontContainer (..))
+import Graphics.Gloss (Picture, blue, pictures, red, white)
+import Graphics.Gloss.Data.Point ()
+import Graphics.Gloss.Interface.IO.Game (Event (..), Key (MouseButton), MouseButton (..),
+                                         SpecialKey (KeyEsc))
+import Graphics.Gloss.Interface.IO.Interact (Key (..))
+import Graphics.UI.TinyFileDialogs (saveFileDialog)
+import Rendering (Rectangle (Rectangle), defaultButton, rectangleHovered, renderButton,
+                  renderString)
+import State (GameState (..), GlobalState (..), MenuRoute (..))
+import System.Directory (getCurrentDirectory)
+import System.Exit (exitSuccess)
+import System.FilePath ((</>))
+import Views.StartMenu (drawParticles, updateParticles)
 
 continueButton :: Rectangle
 continueButton = Rectangle (0,0) 400 100 10
@@ -44,7 +46,7 @@ saveEditorLevel :: GlobalState -> IO ()
 saveEditorLevel s = do
     ws <- getCurrentDirectory
     file <- saveFileDialog (pack "select level") (pack $ ws </> "maps/newlevel.txt") [pack "*.txt"] (pack "level file")
-    
+
     let fName = maybe "" unpack file
     when (isJust file) $ writeFile fName (show $ editorLevel s)
 

@@ -1,21 +1,19 @@
 module Router where
 
-import State(GlobalState(..),MenuRoute(..), windowSize, Settings (..), Prompt (..))
-import Views.StartMenu
-    ( renderStartMenu, handleInputStartMenu, handleUpdateStartMenu )
-import Views.PauseMenu
-    ( renderPauseMenu, handleInputPauseMenu, handleUpdatePauseMenu )
-import Graphics.Gloss ( Picture (..), pictures, blank, rectangleSolid, makeColor )
-import Graphics.Gloss.Interface.IO.Game
-    ( Picture, Key(..), Event(EventMotion, EventKey, EventResize), SpecialKey (..), KeyState (..), Modifiers (..) )
-import System.Exit (exitSuccess)
 import Control.Exception (handle)
-import Views.GameView (renderGameView, handleInputGameView, handleUpdateGameView, gridSizePx)
-import SDL.Audio (PlaybackState(Pause))
-import Views.EditorView (renderEditorView, handleInputEditorView, handleUpdateEditorView)
-import Prompt (renderPrompt, handleInputPrompt, handleUpdatePrompt, emptyPrompt)
-import Data.Maybe
 import Data.List (delete)
+import Data.Maybe
+import Graphics.Gloss (Picture (..), blank, makeColor, pictures, rectangleSolid)
+import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize), Key (..),
+                                         KeyState (..), Modifiers (..), Picture, SpecialKey (..))
+import Prompt (emptyPrompt, handleInputPrompt, handleUpdatePrompt, renderPrompt)
+import SDL.Audio (PlaybackState (Pause))
+import State (GlobalState (..), MenuRoute (..), Prompt (..), Settings (..), windowSize)
+import System.Exit (exitSuccess)
+import Views.EditorView (handleInputEditorView, handleUpdateEditorView, renderEditorView)
+import Views.GameView (gridSizePx, handleInputGameView, handleUpdateGameView, renderGameView)
+import Views.PauseMenu (handleInputPauseMenu, handleUpdatePauseMenu, renderPauseMenu)
+import Views.StartMenu (handleInputStartMenu, handleUpdateStartMenu, renderStartMenu)
 
 handleRender :: GlobalState -> IO Picture
 handleRender s@(GlobalState { route = r, prompt = p }) = do
@@ -79,7 +77,7 @@ handleUpdate f s@(GlobalState { route = r, prompt = p }) = do
         intState = s { clock = clock s + f }
         promptState | isJust p = handleUpdatePrompt f intState (fromMaybe emptyPrompt p)
                     | otherwise = do return intState
-                    
+
         newState  | r == StartMenu  = handleUpdateStartMenu f
                   | r == GameView   = handleUpdateGameView f
                   | r == EditorView = handleUpdateEditorView f

@@ -1,14 +1,15 @@
 module Rendering where
 
-import Graphics.Gloss.SDL.Surface (CacheTexture (..), bitmapOfSurface, bitmapDataOfSurface)
-import SDL.Video.Renderer (Surface)
+import Data.Text (intercalate, pack)
+import Data.Word (Word8)
+import Graphics.Gloss (Color, Picture (Bitmap, Color), Point, black, blank, blue, pictures,
+                       rectangleSolid, rectangleWire, rgbaOfColor, scale, translate, white)
+import Graphics.Gloss.Data.Point (Point, pointInBox)
+import Graphics.Gloss.SDL.Surface (CacheTexture (..), bitmapDataOfSurface, bitmapOfSurface)
 import SDL.Font (Font, blended)
 import SDL.Vect (V4 (..))
+import SDL.Video.Renderer (Surface)
 import Text.Printf (printf)
-import Data.Word (Word8)
-import Graphics.Gloss( Color, Picture(Bitmap, Color), rgbaOfColor, translate, scale, rectangleWire, rectangleSolid, pictures, black, Point, blue, white, blank)
-import Data.Text (pack, intercalate)
-import Graphics.Gloss.Data.Point ( Point, pointInBox )
 
 data Rectangle = Rectangle Point Float Float Float --Centre point, width, height, borderthickness
 
@@ -62,7 +63,7 @@ renderString (x,y) f c txt = do
     do return $ translate x y (translate 0 (height/2) (pictures imgs))
 
 stringSize :: Font -> String -> IO (Float, Float)
-stringSize f  "" = do 
+stringSize f  "" = do
     (_,h) <- stringSize f "f"
     return (0,h)
 stringSize f s = do

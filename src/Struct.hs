@@ -1,7 +1,7 @@
 module Struct where
 
 import Data.List (intercalate)
-import Data.Maybe ( mapMaybe )
+import Data.Maybe (mapMaybe)
 import Graphics.Gloss (Point)
 
 data OriginPoint = OriginTopLeft | OriginCenter deriving (Show, Eq)
@@ -11,17 +11,17 @@ instance Show Direction where
     show :: Direction -> String
     show North = "North"
     show South = "South"
-    show West = "West"
-    show East = "East"
+    show West  = "West"
+    show East  = "East"
 
 allDirections :: [Direction]
 allDirections = [North, South, West, East]
 
 oppositeDirection :: Direction -> Direction
 oppositeDirection North = South
-oppositeDirection East = West
+oppositeDirection East  = West
 oppositeDirection South = North
-oppositeDirection West = East
+oppositeDirection West  = East
 
 data Vec2 = Vec2 Float Float
 
@@ -46,18 +46,18 @@ scaleVec2 (Vec2 x y) scalar = Vec2 (x*scalar) (y*scalar)
 dirToVec2 :: Direction -> Vec2
 dirToVec2 North = Vec2 0 1
 dirToVec2 South = Vec2 0 (-1)
-dirToVec2 West = Vec2 (-1) 0
-dirToVec2 East = Vec2 1 0
+dirToVec2 West  = Vec2 (-1) 0
+dirToVec2 East  = Vec2 1 0
 
 data CellType = Empty | Pellet | PowerUp | Wall | Intersection | Spawn deriving Eq
 instance Show CellType where
     show :: CellType -> String
-    show Empty = "E"
-    show Pellet = "P"
-    show Wall = "W"
+    show Empty        = "E"
+    show Pellet       = "P"
+    show Wall         = "W"
     show Intersection = "X"
-    show Spawn = "S"
-    show PowerUp = "A"
+    show Spawn        = "S"
+    show PowerUp      = "A"
 
 stringToCellType :: String -> CellType
 stringToCellType "P" = Pellet
@@ -65,7 +65,7 @@ stringToCellType "W" = Wall
 stringToCellType "X" = Intersection
 stringToCellType "S" = Spawn
 stringToCellType "A" = PowerUp
-stringToCellType _ = Empty
+stringToCellType _   = Empty
 
 data Cell = Cell CellType Vec2
 
@@ -134,12 +134,12 @@ data PowerUp = Cherry | Apple | PowerPellet deriving Eq
 
 data Player = Player
     {
-        pVelocity :: Float,
-        pDirection :: Direction,
-        pLocation :: Point, -- point on screen
-        pFrame :: Int,
+        pVelocity      :: Float,
+        pDirection     :: Direction,
+        pLocation      :: Point, -- point on screen
+        pFrame         :: Int,
         pBufferedInput :: Maybe Direction,
-        pMoving :: Bool
+        pMoving        :: Bool
     }
 
 data Ghost = Pinky | Inky | Blinky | Clyde deriving Eq
@@ -147,12 +147,12 @@ data GhostBehaviour = Scatter | Chase | Frightened deriving Eq
 
 data GhostActor = GhostActor
     {
-        ghost :: Ghost,
-        gVelocity :: Float,
-        gDirection :: Direction,
-        gLocation :: Vec2,
-        gTarget :: Vec2,
-        gBehaviourTimer :: Int,
+        ghost             :: Ghost,
+        gVelocity         :: Float,
+        gDirection        :: Direction,
+        gLocation         :: Vec2,
+        gTarget           :: Vec2,
+        gBehaviourTimer   :: Int,
         gCurrentBehaviour :: GhostBehaviour
     }
 

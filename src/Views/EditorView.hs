@@ -1,30 +1,24 @@
 module Views.EditorView where
 
-import State (GlobalState(..), MenuRoute (..), MenuRoute(StartMenu), GameState (..), Settings (..), EditorTool (..))
-import Assets(Assets(Assets,pacFont, emuFont))
-import FontContainer(FontContainer(..))
-import Rendering(renderString,renderButton, rectangleHovered, Rectangle (Rectangle), renderString', renderStringTopLeft, defaultButton)
-import Graphics.Gloss
-    ( Picture,
-      blue,
-      red,
-      white,
-      pictures,
-      scale,
-      rectangleSolid,
-      translate,
-      Picture(..), green, yellow, Color, black, blank )
-import Graphics.Gloss.Interface.IO.Game ( Event (..), Key (..), MouseButton (..), SpecialKey (..), KeyState (..) )
-import Graphics.Gloss.Data.Point ()
-import System.Exit (exitSuccess)
-import Views.StartMenu (drawParticles, updateParticles)
-import Views.GameView (debugGrid, screenToGridPos, gridSizePx, cellSize, drawGrid, drawMap)
-import Struct (Vec2(..), getCell, Cell (..), CellType (..), LevelMap (LevelMap))
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Assets (Assets (Assets, emuFont, pacFont))
 import Data.List
+import Data.Maybe (fromMaybe, isJust, isNothing)
+import FontContainer (FontContainer (..))
+import Graphics.Gloss (Color, Picture (..), black, blank, blue, green, pictures, rectangleSolid,
+                       red, scale, translate, white, yellow)
+import Graphics.Gloss.Data.Point ()
+import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), KeyState (..), MouseButton (..),
+                                         SpecialKey (..))
 import Map (WallType, processWalls, wallToSizedSection)
+import Rendering (Rectangle (Rectangle), defaultButton, rectangleHovered, renderButton,
+                  renderString, renderString', renderStringTopLeft)
+import SDL.Font (Font (Font))
+import State (EditorTool (..), GameState (..), GlobalState (..), MenuRoute (..), Settings (..))
+import Struct (Cell (..), CellType (..), LevelMap (LevelMap), Vec2 (..), getCell)
+import System.Exit (exitSuccess)
 import Text.Printf
-import SDL.Font (Font(Font))
+import Views.GameView (cellSize, debugGrid, drawGrid, drawMap, gridSizePx, screenToGridPos)
+import Views.StartMenu (drawParticles, updateParticles)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float,Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x,y) w h = do
@@ -58,9 +52,9 @@ getEditorGridInfo :: GlobalState -> ((Float,Float),(Float,Float))
 getEditorGridInfo gs = let (Vec2 x y) = editorGridDimensions $ settings gs in ((x,y), gridSizePx (x,y) gs)
 
 editorToolToIcon :: GlobalState -> (Float,Float) -> Float -> Float -> EditorTool -> IO Picture
-editorToolToIcon gs (x,y) w h WallTool = wallIcon gs (x,y) w h
+editorToolToIcon gs (x,y) w h WallTool  = wallIcon gs (x,y) w h
 editorToolToIcon gs (x,y) w h SpawnTool = spawnIcon gs (x,y) w h
-editorToolToIcon gs (x,y) w h FoodTool = foodIcon gs (x,y) w h
+editorToolToIcon gs (x,y) w h FoodTool  = foodIcon gs (x,y) w h
 editorToolToIcon gs (x,y) w h AppleTool = appleIcon gs (x,y) w h
 
 cellToIcon :: GlobalState -> Float -> Float -> Float -> Float -> CellType -> IO Picture
@@ -147,9 +141,9 @@ prevTool :: EditorTool -> EditorTool
 prevTool t = toolRec' t (reverse tools)
 
 toolToCellType :: EditorTool -> CellType
-toolToCellType WallTool = Wall
+toolToCellType WallTool  = Wall
 toolToCellType SpawnTool = Spawn
-toolToCellType FoodTool = Pellet
+toolToCellType FoodTool  = Pellet
 toolToCellType AppleTool = PowerUp
 
 charToTool :: EditorTool -> Char -> EditorTool
@@ -157,7 +151,7 @@ charToTool _ 'w' = WallTool
 charToTool _ 'a' = AppleTool
 charToTool _ 'f' = FoodTool
 charToTool _ 'p' = SpawnTool
-charToTool e _ = e
+charToTool e _   = e
 
 handleInputEditorView :: Event -> GlobalState -> IO GlobalState
 handleInputEditorView (EventKey (SpecialKey KeyEsc) _ _ _) gs = do return gs {route = PauseMenu, lastRoute = EditorView}

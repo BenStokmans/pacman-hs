@@ -1,29 +1,19 @@
 {-# LANGUAGE BlockArguments #-}
 module Views.GameView where
-import State
-    ( GlobalState(..),
-      Settings(..),
-      GameState(..), MenuRoute (..) )
-import Graphics.Gloss
-    ( Picture(Color, Line),
-      pictures,
-      blank,
-      blue,
-      green,
-      scale,
-      translate,
-      Color,
-      Point, circleSolid, white )
-import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (..))
-import Assets (Assets(..), Anim (..), PacManSprite (..))
-import Struct (LevelMap(..), Player(..), Direction (..), Cell(..), CellType(..), Vec2(..), getCell, dirToVec2, oppositeDirection, dummyCell)
-import Rendering (renderStringTopLeft, renderStringTopRight)
-import FontContainer (FontContainer(..))
-import Map (wallSectionToPic, wallToSizedSection, processWalls)
+import Assets (Anim (..), Assets (..), PacManSprite (..))
 import Data.List (delete)
 import Data.Maybe (fromMaybe, isNothing)
+import FontContainer (FontContainer (..))
+import Graphics.Gloss (Color, Picture (Color, Line), Point, blank, blue, circleSolid, green,
+                       pictures, scale, translate, white)
+import Graphics.Gloss.Interface.IO.Game (Event (..), Key (..), MouseButton (..), SpecialKey (..))
+import Map (processWalls, wallSectionToPic, wallToSizedSection)
+import Rendering (renderStringTopLeft, renderStringTopRight)
+import State (GameState (..), GlobalState (..), MenuRoute (..), Settings (..))
+import Struct (Cell (..), CellType (..), Direction (..), LevelMap (..), Player (..), Vec2 (..),
+               dirToVec2, dummyCell, getCell, oppositeDirection)
 
-gameGridDimensions :: GlobalState -> (Float,Float) --gridsize of level 
+gameGridDimensions :: GlobalState -> (Float,Float) --gridsize of level
 gameGridDimensions GlobalState { gameState = GameState { level = (LevelMap w h _) }} = (w,h)
 
 cellSize :: (Float,Float) -> Float -> Float -> (Float,Float) --cellsize in px
@@ -39,7 +29,7 @@ drawGrid (c,r) w h col = Color col $ pictures $ map (\i -> let hc = -w2 + cw*i i
 gridSizePx :: (Float,Float) -> GlobalState -> (Float, Float) --gridsize in pixels onscreen
 gridSizePx (c,r) gs = let (x,y) = windowSize (settings gs) in (x*0.8*(c/r),y*0.8*(r/c))
 
-gridToScreenPos :: GlobalState -> Vec2 -> Point -- get position screen from grid position 
+gridToScreenPos :: GlobalState -> Vec2 -> Point -- get position screen from grid position
 gridToScreenPos gs (Vec2 x y) = (x*cw-(w/2)+cw/2, y*ch-(h/2)+ch/2)
     where
         (dim,(w,h)) = gameGridInfo gs
@@ -106,15 +96,15 @@ renderGameView gs = do
     return (pictures [grid, dracwMap, drawPlayer gs, debugString,scoreString])
 
 keyToDirection :: Direction -> Key -> Direction
-keyToDirection _ (SpecialKey KeyUp) = North
-keyToDirection _ (SpecialKey KeyDown) = South
-keyToDirection _ (SpecialKey KeyLeft) = West
+keyToDirection _ (SpecialKey KeyUp)    = North
+keyToDirection _ (SpecialKey KeyDown)  = South
+keyToDirection _ (SpecialKey KeyLeft)  = West
 keyToDirection _ (SpecialKey KeyRight) = East
-keyToDirection _ (Char 'w') = North
-keyToDirection _ (Char 'a') = West
-keyToDirection _ (Char 's') = South
-keyToDirection _ (Char 'd') = East
-keyToDirection d _ = d
+keyToDirection _ (Char 'w')            = North
+keyToDirection _ (Char 'a')            = West
+keyToDirection _ (Char 's')            = South
+keyToDirection _ (Char 'd')            = East
+keyToDirection d _                     = d
 
 
 
@@ -155,7 +145,7 @@ updatePlayerPosition dt s
                 | isPastCentre = s { gameState = gs {
                         score = newScore,
                         player = ps {
-                            pLocation = finalLocation, 
+                            pLocation = finalLocation,
                             pDirection = newDir,
                             pBufferedInput = if currentDirection /= newDir then Nothing else bufferedInput,
                             pMoving = finalLocation /= (px,py)
@@ -185,13 +175,13 @@ updatePlayerPosition dt s
                       | currentDirection == East  && px >=  w/2 = (-w/2, py )
                       | currentDirection == West  && px <= -w/2 = ( w/2, py )
                       | otherwise =                               ( px,  py )
-                      
+
                 newLoc@(nx,ny) | nextCellType == Wall && isPastCentre = (x,y)
                                | currentDirection == North = (x, y+distMoved)
                                | currentDirection == East  = (x+distMoved, y)
                                | currentDirection == South = (x, y-distMoved)
                                | currentDirection == West  = (x-distMoved, y)
-                               
+
                 (cx, cy) = gridToScreenPos s currentGridPos
                 isPastCentre | currentDirection == North = cy <= y
                              | currentDirection == East  = cx <= x

@@ -1,17 +1,20 @@
 module Map where
 
-import Struct ( Vec2(Vec2), LevelMap(LevelMap), CellType (..), Cell (Cell), Direction(North, East, South, West), allDirections, getCell, getCells, mapWidth, mapHeight, dirToVec2, setCells, scaleVec2 )
-import Data.Maybe ( isJust, isNothing )
-import Data.List ( intercalate )
-import Graphics.Gloss (Picture (..), translate, pictures, circleSolid, thickArc, rotate, blank, thickCircle)
-import Codec.Picture.Metadata (Keys(Source), Value (Double))
+import Codec.Picture.Metadata (Keys (Source), Value (Double))
+import Data.List (intercalate)
+import Data.Maybe (isJust, isNothing)
+import Graphics.Gloss (Picture (..), blank, circleSolid, pictures, rotate, thickArc, thickCircle,
+                       translate)
+import Graphics.Gloss.Data.Color (green, red, white, yellow)
+import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
 import Rendering (resize)
-import Graphics.Gloss.Data.Picture (scale,rectangleSolid)
-import Graphics.Gloss.Data.Color ( green, red, white, yellow )
- 
+import Struct (Cell (Cell), CellType (..), Direction (East, North, South, West),
+               LevelMap (LevelMap), Vec2 (Vec2), allDirections, dirToVec2, getCell, getCells,
+               mapHeight, mapWidth, scaleVec2, setCells)
+
 getSpawnPoint :: LevelMap -> Vec2
 getSpawnPoint (LevelMap w h cs) = foldr (\x c -> c + scaleVec2 x sc) (Vec2 0 0) ss
-    where 
+    where
         ss = map (\(Cell _ v) -> v) (filter (\(Cell t _) -> t == Spawn) cs)
         sc = 1 / fromIntegral (length ss) :: Float
 
@@ -51,9 +54,9 @@ defaultSize = (100, 100)
 
 dirToAngle :: Direction -> Float
 dirToAngle North = 0
-dirToAngle East = 90
+dirToAngle East  = 90
 dirToAngle South = 180
-dirToAngle West = 270
+dirToAngle West  = 270
 
 wallTypeToPic :: WallType -> Float -> Float -> Float -> Float -> Picture
 wallTypeToPic StraightOne       m t w h = translate 0 ((h/2)-h*m) (rectangleSolid w t)
@@ -140,7 +143,7 @@ remapWallEdges ws@(WallSection StraightOne _) (n,e,s,w) (ne,sw,se,nw)
 remapWallEdges ws _ _ = ws
 
 mapWallEdges :: LevelMap -> (Cell,WallSection) -> (Cell,WallSection)
-mapWallEdges (LevelMap w h cs) x@(c, ws@(WallSection s _)) 
+mapWallEdges (LevelMap w h cs) x@(c, ws@(WallSection s _))
         | s == Single || s == StraightOne = let (a,b) = (getAdjacentTuple (LevelMap w h cs) c, getDiagsTuple (LevelMap w h cs) c) in (c, remapWallEdges ws a b)
         | otherwise = x
 
