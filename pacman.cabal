@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -54,7 +54,8 @@ library
     , filepath
     , gloss
     , gloss-juicy
-    , gloss-sdl2-surface
+    , gloss-rendering
+    , linear
     , sdl2
     , sdl2-ttf
     , text
@@ -84,7 +85,8 @@ executable pacman
     , filepath
     , gloss
     , gloss-juicy
-    , gloss-sdl2-surface
+    , gloss-rendering
+    , linear
     , pacman
     , sdl2
     , sdl2-ttf

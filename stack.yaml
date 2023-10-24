@@ -5,12 +5,10 @@ packages:
 - .
 
 extra-deps:
-  - git: https://gitlab.com/dpwiz/gloss-sdl2-surface.git
-    commit: f677f6b6c7cb0fb11b638c44613e29448f447312
   - git: https://github.com/hpacheco/gloss-juicy.git
     commit: acbdfd864b7e574dfbe1595fbdcd154563b2a0ef 
   - tinyfiledialogs-0.2.1.0
+  - GLFW-b-1.4.8.4@sha256:b35242b401ac3235753f2bdfdfd07981f531e1d0457928caafb1db3801df40bc,2284
 
 allow-newer-deps: 
-  - stylish-haskell
   - hindent

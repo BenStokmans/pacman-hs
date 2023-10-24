@@ -39,6 +39,6 @@ window s = let (w,h) = windowSize s in InWindow "Pacman" (round w,round h) (10, 
 
 main :: IO ()
 main = do
-        GLFW.windowHint (WindowHint'Samples (Just 4)) -- enable multi sample buffer
+        GLFW.windowHint (WindowHint'Samples 4) -- enable multi sample buffer
         state <- initState
         playIO (window (settings state)) black 60 state handleRender handleInput handleUpdate

@@ -1,7 +1,11 @@
 module Rendering where
 
+import Control.Exception (bracket, bracket_)
+import Control.Monad.IO.Class (MonadIO(..))
 import Data.Text (intercalate, pack)
 import Data.Word (Word8)
+import Foreign (castPtr, copyBytes, mallocForeignPtrBytes, withForeignPtr)
+import Foreign.C.Types (CInt(..))
 import Graphics.Gloss
   ( Color
   , Picture(Bitmap, Color)
@@ -18,10 +22,21 @@ import Graphics.Gloss
   , white
   )
 import Graphics.Gloss.Data.Point (Point, pointInBox)
-import Graphics.Gloss.SDL.Surface (CacheTexture(..), bitmapDataOfSurface, bitmapOfSurface)
+import Graphics.Gloss.Rendering (BitmapData(..), BitmapFormat(..), PixelFormat(..), RowOrder(..), bitmapDataOfForeignPtr, bitmapSize)
+import Linear.V2 (V2(..))
 import SDL.Font (Font, blended)
 import SDL.Vect (V4(..))
-import SDL.Video.Renderer (Surface)
+import SDL.Video.Renderer
+  ( PixelFormat(RGBA8888)
+  , Surface
+  , createRGBSurface
+  , freeSurface
+  , lockSurface
+  , surfaceBlit
+  , surfaceDimensions
+  , surfacePixels
+  , unlockSurface
+  )
 import Text.Printf (printf)
 
 data Rectangle =
@@ -96,13 +111,35 @@ stringSize f "" = do
   return (0, h)
 stringSize f s = do
   surface <- blended f (V4 0 0 0 0) (pack s)
-  (s, _) <- bitmapOfSurface NoCache surface
+  (s, _) <- surfaceToPicture surface
   return s
 
 renderString' :: Font -> Color -> String -> IO ((Float, Float), Picture)
 renderString' f c s = do
   surface <- renderStringSurface f c s
-  bitmapOfSurface NoCache surface
+  surfaceToPicture surface
+
+surfaceToPicture :: Surface -> IO ((Float, Float), Picture)
+surfaceToPicture surface = do
+  bmData <- copySDLToBitmap surface
+  let (w, h) = bitmapSize bmData
+  return ((fromIntegral w, fromIntegral h), Bitmap bmData)
+
+copySDLToBitmap :: Surface -> IO BitmapData
+copySDLToBitmap surface = do
+  dims <- surfaceDimensions surface
+  copy <- createRGBSurface (fromIntegral <$> dims) RGBA8888 -- create copy with same dimensions
+  surfaceBlit surface Nothing copy Nothing -- copy pixels from surface to new surface in RGBA8888 format
+  lockSurface copy -- aquire lock on the copy
+  pixels <- surfacePixels copy -- get pointer to pixels
+  let V2 (CInt w) (CInt h) = dims
+  let cpSize = fromIntegral $ w * h * 4
+  dest <- mallocForeignPtrBytes cpSize -- alloc bitmap
+  withForeignPtr dest $ \destPtr -> copyBytes destPtr (castPtr pixels) cpSize -- copy pixel data to bitmap
+  unlockSurface copy
+  let bitmap = bitmapDataOfForeignPtr (fromIntegral w) (fromIntegral h) (BitmapFormat TopToBottom PxABGR) dest False -- convert foreign bitmap to gloss bitmapp
+  freeSurface copy
+  return bitmap
 
 renderStringSurface :: Font -> Color -> String -> IO Surface
 renderStringSurface f c s = blended f (colorToV4 c) (pack s)
