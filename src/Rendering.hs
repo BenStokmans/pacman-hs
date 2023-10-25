@@ -4,7 +4,7 @@ import Control.Exception (bracket, bracket_)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Text (intercalate, pack)
 import Data.Word (Word8)
-import Foreign (castPtr, copyBytes, mallocForeignPtrBytes, withForeignPtr)
+import Foreign (castPtr, copyBytes, mallocForeignPtrBytes, withForeignPtr, finalizeForeignPtr)
 import Foreign.C.Types (CInt(..))
 import Graphics.Gloss
   ( Color
@@ -24,7 +24,7 @@ import Graphics.Gloss
 import Graphics.Gloss.Data.Point (Point, pointInBox)
 import Graphics.Gloss.Rendering (BitmapData(..), BitmapFormat(..), PixelFormat(..), RowOrder(..), bitmapDataOfForeignPtr, bitmapSize)
 import Linear.V2 (V2(..))
-import SDL.Font (Font, blended)
+import SDL.Font (Font, blended, size)
 import SDL.Vect (V4(..))
 import SDL.Video.Renderer
   ( PixelFormat(RGBA8888)
@@ -120,14 +120,15 @@ stringSize f "" = do
   (_, h) <- stringSize f "f"
   return (0, h)
 stringSize f s = do
-  surface <- blended f (V4 0 0 0 0) (pack s)
-  (s, _) <- surfaceToPicture surface
-  return s
+  (w,h) <- size f (pack s)
+  return (fromIntegral w :: Float, fromIntegral h :: Float)
 
 renderString' :: Font -> Color -> String -> IO ((Float, Float), Picture)
 renderString' f c s = do
   surface <- renderStringSurface f c s
-  surfaceToPicture surface
+  pic <- surfaceToPicture surface
+  freeSurface surface -- if we don't free this surface we leak memory
+  return pic
 
 surfaceToPicture :: Surface -> IO ((Float, Float), Picture)
 surfaceToPicture surface = do
@@ -138,6 +139,7 @@ surfaceToPicture surface = do
 copySDLToBitmap :: Surface -> IO BitmapData
 copySDLToBitmap surface = do
   dims <- surfaceDimensions surface
+
   copy <- createRGBSurface (fromIntegral <$> dims) RGBA8888 -- create copy with same dimensions
   surfaceBlit surface Nothing copy Nothing -- copy pixels from surface to new surface in RGBA8888 format
   lockSurface copy -- aquire lock on the copy
@@ -147,8 +149,10 @@ copySDLToBitmap surface = do
   dest <- mallocForeignPtrBytes cpSize -- alloc bitmap
   withForeignPtr dest $ \destPtr -> copyBytes destPtr (castPtr pixels) cpSize -- copy pixel data to bitmap
   unlockSurface copy
-  let bitmap = bitmapDataOfForeignPtr (fromIntegral w) (fromIntegral h) (BitmapFormat TopToBottom PxABGR) dest False -- convert foreign bitmap to gloss bitmapp
+  let bitmap = bitmapDataOfForeignPtr (fromIntegral w) (fromIntegral h) (BitmapFormat TopToBottom PxABGR) dest False -- convert foreign bitmap to gloss bitmap
+  finalizeForeignPtr dest
   freeSurface copy
+  
   return bitmap
 
 renderStringSurface :: Font -> Color -> String -> IO Surface

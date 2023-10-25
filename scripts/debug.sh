@@ -1,0 +1,1 @@
+stack build --flag gloss:glfw --flag gloss:-glut --profile --ghc-options '-O2 -rtsopts -fforce-recomp -ddump-stg-final -dsuppress-all' --no-strip --copy-bins --local-bin-path "."
