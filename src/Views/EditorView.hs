@@ -151,9 +151,10 @@ renderEditorView gs = do
         if x < c && x >= 0 && y < r && y >= 0
           then wi
           else blank -- check if hovered cell is on the grid
+  cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon gs cw ch vx vy t) cells
   let gridEditor =
         pictures
-          [ pictures $ editorCache gs
+          [ pictures cs
           , if not rightDown
               then hoveredCell
               else blank
@@ -269,19 +270,9 @@ handleInputEditorView _ gs = do
 
 handleUpdateEditorView :: Float -> GlobalState -> IO GlobalState
 handleUpdateEditorView _ s = do
-  let (newCells,change) | previewEditor s = (cells, False)
-                        | x >= c || x < 0 || y >= r || y < 0 = (cells, False)
-                        | MouseButton LeftButton `elem` keys s = (newCell : editCells, True)
-                        | MouseButton RightButton `elem` keys s = (editCells, True)
-                        | otherwise = (cells, False)
-
-  cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon s cw ch vx vy t) newCells
-  let newState | change = s {editorLevel = LevelMap c r newCells, editorCache = cs, cachedWalls = processWalls $ LevelMap c r newCells}
-               | otherwise = s
   return newState
   where
     dims@((c, r), (w, h)) = getEditorGridInfo s
-    (cw,ch) = cellSize dims
     (mx, _) = windowMargin (c, r) s
     (mouseX, mouseY) = mousePos s
     v@(Vec2 x y) = screenToGridPos s dims (mouseX - mx / 2, mouseY)
@@ -292,3 +283,8 @@ handleUpdateEditorView _ s = do
       | isJust mCell = delete cell cells
       | otherwise = cells
     newCell = Cell (toolToCellType (editorTool s) (editorGhost s)) v
+    newState
+      | x >= c || x < 0 || y >= r || y < 0 = s
+      | elem (MouseButton LeftButton) $ keys s = s {editorLevel = LevelMap c r $ newCell : editCells}
+      | elem (MouseButton RightButton) $ keys s = s {editorLevel = LevelMap c r editCells}
+      | otherwise = s
