@@ -1,6 +1,6 @@
 indent-size: 2
 line-length: 150
 force-trailing-newline: true
-extensions:
-  - TypeApplications
-  - PatternSynonyms
+sort-imports: true
+line-breaks: []
+extensions: []

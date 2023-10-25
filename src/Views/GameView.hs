@@ -9,7 +9,7 @@ import FontContainer (FontContainer(..))
 import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, pictures, scale, translate, white)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
 import Map (processWalls, wallSectionToPic, wallToSizedSection)
-import Rendering (renderStringTopLeft, renderStringTopRight)
+import Rendering (renderStringTopLeft, renderStringTopRight, cellSize, translateCell, gridToScreenPos)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
 import Struct
   ( Cell(..)
@@ -23,74 +23,44 @@ import Struct
   , dirToVec2
   , dummyCell
   , getCell
-  , oppositeDirection
+  , oppositeDirection, cellHasType
   )
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of level
 gameGridDimensions GlobalState {gameState = GameState {level = (LevelMap w h _)}} = (w, h)
 
-cellSize :: (Float, Float) -> Float -> Float -> (Float, Float) --cell size in px
-cellSize (sx, sy) w h = (w / sx, h / sy)
+drawGrid :: GridInfo -> Color -> Picture
+drawGrid gi@((c,r),(w,h)) col = Color col $ pictures $ 
+                    [let hc = -w2 + cw*i in Line [(hc, -h2),(hc,h2)] | i <- [0..c]] ++
+                    [let hr = -h2 + ch*i in Line [(-w2, hr),(w2,hr)] | i <- [0..r]] 
+    where
+        w2 = w/2
+        h2 = h/2
+        (cw,ch) = cellSize gi
 
-drawGrid :: (Float, Float) -> Float -> Float -> Color -> Picture
-drawGrid (c, r) w h col =
-  Color col $
-  pictures $
-  map
-    (\i ->
-       let hc = -w2 + cw * i
-        in Line [(hc, -h2), (hc, h2)])
-    [0 .. c] ++
-  map
-    (\i ->
-       let hr = -h2 + ch * i
-        in Line [(-w2, hr), (w2, hr)])
-    [0 .. r]
-  where
-    w2 = w / 2
-    h2 = h / 2
-    (cw, ch) = cellSize (c, r) w h
-
-gridSizePx :: (Float, Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
-gridSizePx (c, r) gs =
-  let (x, y) = windowSize (settings gs)
-   in (x * 0.8 * (c / r), y * 0.8 * (r / c))
-
-gridToScreenPos :: GridInfo -> Vec2 -> Point -- get position screen from grid position
-gridToScreenPos (dim, (w, h)) (Vec2 x y) =
-  let (cw, ch) = cellSize dim w h
-   in (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2)
+gridSizePx :: (Float,Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
+gridSizePx (c,r) gs = let (x,y) = windowSize (settings gs) in (x*0.8*(c/r),y*0.8*(r/c))
 
 screenToGridPos :: GlobalState -> GridInfo -> Point -> Vec2 -- get position on grid from screen position
-screenToGridPos gs ((c, r), _) (x, y) = Vec2 (fromIntegral (floor ((pw / 2 + x) / cw))) (fromIntegral (floor ((ph / 2 + y) / ch)))
-  where
-    (pw, ph) = gridSizePx (c, r) gs
-    (cw, ch) = cellSize (c, r) pw ph
+screenToGridPos gs gi@(_,(pw,ph)) (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
+    where
+        (cw,ch) = cellSize gi
 
 debugGrid :: GlobalState -> Picture
-debugGrid s =
-  let (dim, (w, h)) = gameGridInfo s
-   in drawGrid dim w h green
+debugGrid s = drawGrid (gameGridInfo s) green
 
-drawMap :: GlobalState -> LevelMap -> (Float, Float) -> (Float, Float) -> Picture
-drawMap gs m@(LevelMap _ _ cells) (c, r) (w, h) =
-  Color blue $
-  pictures $
-  map (\(Cell _ (Vec2 x y), ws) -> translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) (wallToSizedSection margin t cw ch ws)) (cachedWalls gs) ++
-  map
-    (\(Cell t (Vec2 x y)) -> Color white $ translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) $ scale 1 (ch / cw) $ circleSolid (cw / 16))
-    (filter (\(Cell t _) -> t == Pellet) cells) ++
-  map
-    (\(Cell t (Vec2 x y)) ->
-       translate (x * cw - w2 + cw / 2) (y * ch - h2 + ch / 2) $
-       scale ((ch / 32) * (1 + margin * 2) * (c / r)) ((cw / 32) * (1 + margin * 2) * (r / c)) $ appleSprite ass)
-    (filter (\(Cell t _) -> t == PowerUp) cells)
-  where
-    ass = assets gs
-    margin = mazeMargin $ settings gs
-    t = lineThickness $ settings gs
-    (w2, h2) = (w / 2, h / 2)
-    (cw, ch) = cellSize (c, r) w h
+drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
+drawMap gs m@(LevelMap _ _ cells) gi@((col,row),(w,h)) = Color blue $ pictures $
+        map (\(c,ws) -> translateCell c gi (wallToSizedSection margin t cw ch ws)) (cachedWalls gs) ++
+        map (\c -> Color white $ translateCell c gi $ scale 1 (ch/cw) $ circleSolid (cw/16)) (filter (`cellHasType` Pellet) cells) ++
+        map (\c -> translateCell c gi $ scale ((ch/32)*(1+margin*2)*(col/row)) ((cw/32)*(1+margin*2)*(row/col)) $ appleSprite ass) (filter (`cellHasType` PowerUp) cells)
+    where
+        ass = assets gs
+        margin = mazeMargin $ settings gs
+        t = lineThickness $ settings gs
+        (w2,h2) = (w/2,h/2)
+        (cw,ch) = cellSize gi
+
 
 getPlayerAnimation :: GlobalState -> Anim
 getPlayerAnimation gs
@@ -114,9 +84,9 @@ ghostToSprite gs Inky = inkySprite $ assets gs
 ghostToSprite gs Clyde = clydeSprite $ assets gs
 
 drawGhost :: GlobalState -> GhostType -> GridInfo -> Point -> Picture
-drawGhost gs gt ((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
+drawGhost gs gt gi@((c,r),(w,h)) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
   where
-    (cw, ch) = cellSize (c, r) w h
+    (cw, ch) = cellSize gi
     margin = mazeMargin $ settings gs
     padding = ghostPadding $ settings gs
     ghostScalar = (1 + margin * 2) * (1 - padding * 2)
@@ -124,10 +94,10 @@ drawGhost gs gt ((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scal
     scalarY = (ch / 16) * ghostScalar * (r / c)
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
-drawPlayer gs ((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
+drawPlayer gs gi@((c,r),(w,h)) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
   where
     frame = pFrame $ player $ gameState gs
-    (cw, ch) = cellSize (c, r) w h
+    (cw, ch) = cellSize gi
     margin = mazeMargin $ settings gs
     padding = pacmanPadding $ settings gs
     pacmanScalar = (1 + margin * 2) * (1 - padding * 2)
@@ -143,14 +113,14 @@ renderGameView gs = do
       green
       ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs))
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
-  let (dims, gridS) = gameGridInfo gs
+  let gi = gameGridInfo gs
   let currentLevel = level $ gameState gs
-  let drawnMap = drawMap gs currentLevel dims gridS
+  let drawnMap = drawMap gs currentLevel gi
   let grid =
         if enableDebugGrid $ settings gs
           then debugGrid gs
           else blank
-  return (pictures [grid, drawnMap, drawPlayer gs (dims, gridS) (pLocation $ player $ gameState gs), debugString, scoreString])
+  return (pictures [grid, drawnMap, drawPlayer gs gi (pLocation $ player $ gameState gs), debugString, scoreString])
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North
@@ -235,7 +205,7 @@ updatePlayerPosition dt s
   where
     gs = gameState s
     dims@((c, r), (w, h)) = gameGridInfo s
-    (wc, hc) = cellSize (c, r) w h
+    (wc, hc) = cellSize dims
     m@(LevelMap lw lh cells) = level gs
     ps = player gs
     v = pVelocity ps

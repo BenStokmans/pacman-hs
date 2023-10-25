@@ -11,14 +11,14 @@ import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), Sp
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getSpawnPoint, processWalls)
 import Prompt (errorPrompt)
-import Rendering (Rectangle(Rectangle), completeButton, defaultButton, rectangleHovered, renderButton, renderString)
+import Rendering (Rectangle(Rectangle), completeButton, defaultButton, rectangleHovered, renderButton, renderString, gridToScreenPos)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt)
 import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Text.Read (readMaybe)
-import Views.GameView (gameGridInfo, gridToScreenPos)
+import Views.GameView (gameGridInfo)
 
 startButton :: Rectangle
 startButton = Rectangle (0, 10) 500 100 10

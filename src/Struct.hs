@@ -106,6 +106,9 @@ data Cell =
 dummyCell :: Cell
 dummyCell = Cell Empty (Vec2 0 0)
 
+cellHasType :: Cell -> CellType -> Bool
+cellHasType (Cell t _) ct = t == ct
+
 instance Eq Cell where
   (==) :: Cell -> Cell -> Bool
   (Cell t1 v1) == (Cell t2 v2) = t1 == t2 && v1 == v2

@@ -8,13 +8,13 @@ import Graphics.Gloss (Color, Picture(..), black, blank, blue, green, makeColor,
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
 import Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection)
-import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, renderString', renderStringTopLeft)
+import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, renderString', renderStringTopLeft, gridToScreenPos, cellSize)
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView (cellSize, debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, gridToScreenPos, screenToGridPos)
+import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, screenToGridPos)
 import Views.StartMenu (drawParticles, updateParticles)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
@@ -47,13 +47,7 @@ clydeIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 clydeIcon = generalIcon "C" white (makeColor 1 0.72 0.32 1)
 
 editorGrid :: GlobalState -> Picture
-editorGrid s =
-  let (w, h) = gridSizePx dim s
-   in drawGrid dim w h green
-  where
-    dim =
-      let (Vec2 x y) = editorGridDimensions $ settings s
-       in (x, y)
+editorGrid s = drawGrid (getEditorGridInfo s) green
 
 windowMargin :: (Float, Float) -> GlobalState -> (Float, Float)
 windowMargin (c, r) s =
@@ -166,7 +160,7 @@ renderEditorView gs = do
               else blank
           , editorGrid gs
           ]
-  let wallsPreview = drawMap gs {cachedWalls = processWalls level} level (c, r) (w, h)
+  let wallsPreview = drawMap gs {cachedWalls = processWalls level} level dims
   let pacmanPreview =
         if v == outOfBounds
           then blank
@@ -192,7 +186,7 @@ renderEditorView gs = do
     level@(LevelMap _ _ cells) = editorLevel gs
     mPos@(mouseX, mouseY) = mousePos gs
     v@(Vec2 x y) = screenToGridPos gs dims (mouseX - mx / 2, mouseY)
-    (cw, ch) = cellSize (c, r) w h
+    (cw, ch) = cellSize dims
     (mx, _) = windowMargin (c, r) gs
     tool = editorTool gs
     previewText =

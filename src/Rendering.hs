@@ -38,9 +38,19 @@ import SDL.Video.Renderer
   , unlockSurface
   )
 import Text.Printf (printf)
+import Struct (GridInfo, Vec2 (..), Cell (..))
 
 data Rectangle =
-  Rectangle Point Float Float Float --Centre point, width, height, borderthickness
+  Rectangle Point Float Float Float --Centre point, width, height, border thickness
+
+cellSize :: GridInfo -> (Float,Float) --cell size in px
+cellSize ((c,r),(w,h)) = (w/c, h/r)
+
+gridToScreenPos :: GridInfo -> Vec2 -> Point -- get position screen from grid position
+gridToScreenPos gi@(dim,(w,h)) (Vec2 x y) = let (cw,ch) = cellSize gi in (x*cw-(w/2)+cw/2, y*ch-(h/2)+ch/2)
+
+translateCell :: Cell -> ((Float, Float), (Float, Float)) -> Picture -> Picture
+translateCell (Cell _ v) gi = let (x,y) = gridToScreenPos gi v in translate x y
 
 resize :: Float -> Float -> Float -> Float -> Picture -> Picture
 resize ow oh nw nh = scale (nw / ow) (nh / oh)
