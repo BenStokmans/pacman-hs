@@ -23,7 +23,7 @@ import Struct
   , dirToVec2
   , dummyCell
   , getCell
-  , oppositeDirection, cellHasType
+  , oppositeDirection, cellHasType, cellsWithType
   )
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of level
@@ -52,8 +52,8 @@ debugGrid s = drawGrid (gameGridInfo s) green
 drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
 drawMap gs m@(LevelMap _ _ cells) gi@((col,row),(w,h)) = Color blue $ pictures $
         map (\(c,ws) -> translateCell c gi (wallToSizedSection margin t cw ch ws)) (cachedWalls gs) ++
-        map (\c -> Color white $ translateCell c gi $ scale 1 (ch/cw) $ circleSolid (cw/16)) (filter (`cellHasType` Pellet) cells) ++
-        map (\c -> translateCell c gi $ scale ((ch/32)*(1+margin*2)*(col/row)) ((cw/32)*(1+margin*2)*(row/col)) $ appleSprite ass) (filter (`cellHasType` PowerUp) cells)
+        map (\c -> Color white $ translateCell c gi $ scale 1 (ch/cw) $ circleSolid (cw/16)) (cellsWithType Pellet cells) ++
+        map (\c -> translateCell c gi $ scale ((ch/32)*(1+margin*2)*(col/row)) ((cw/32)*(1+margin*2)*(row/col)) $ appleSprite ass) (cellsWithType PowerUp cells)
     where
         ass = assets gs
         margin = mazeMargin $ settings gs
@@ -234,7 +234,7 @@ updatePlayerPosition dt s
       | currentDirection == West = cx >= x
     cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     bufferedInput = pBufferedInput ps
-    canTurn = maybe False (\d -> maybe False (\(Cell t _) -> t /= Wall) $ getCell m (currentGridPos + dirToVec2 d)) bufferedInput
+    canTurn = maybe False (\d -> maybe False (cellHasType Wall) $ getCell m (currentGridPos + dirToVec2 d)) bufferedInput
     newDir
       | canTurn = fromMaybe North bufferedInput
       | otherwise = currentDirection

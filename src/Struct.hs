@@ -106,8 +106,11 @@ data Cell =
 dummyCell :: Cell
 dummyCell = Cell Empty (Vec2 0 0)
 
-cellHasType :: Cell -> CellType -> Bool
-cellHasType (Cell t _) ct = t == ct
+cellsWithType :: CellType -> [Cell] -> [Cell]
+cellsWithType ct = filter (cellHasType ct)
+
+cellHasType :: CellType -> Cell -> Bool
+cellHasType ct (Cell t _) = t == ct
 
 instance Eq Cell where
   (==) :: Cell -> Cell -> Bool
@@ -213,19 +216,3 @@ data GhostActor = GhostActor
   , gBehaviourTimer :: Int
   , gCurrentBehaviour :: GhostBehaviour
   }
--- nextPlayerPosition :: GameState -> Int -> GameState
--- nextPlayerPosition game dTime = game
---                         {
---                             player = currPlayer
---                             {
---                                 pLocation = currLocation +
---                                 scaleVec2 dirVec timeScalar
---                             }
---                         }
---                 where
---                     timeScalar = fromIntegral dTime :: Float
---                     currPlayer = player game
---                     currLocation = pLocation currPlayer
---                     currVelocity = pVelocity currPlayer
---                     currDirection = pDirection currPlayer
---                     dirVec = scaleVec2 (dirToVec2 currDirection) currVelocity

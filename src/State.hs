@@ -2,7 +2,7 @@ module State where
 
 import Assets (Assets(Assets), loadAssets)
 import Data.Map (Map, empty)
-import Graphics.Gloss (Color, Point, blue)
+import Graphics.Gloss (Color, Point, blue, Picture)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
 import Map (WallSection, calculateIntersections, processWalls)
 import Struct
@@ -98,6 +98,7 @@ data GlobalState = GlobalState
   , clock :: Float
   , lastRoute :: MenuRoute
   , editorLevel :: LevelMap
+  , editorCache :: [Picture]
   , editorTool :: EditorTool
   , editorGhost :: GhostType
   , previewEditor :: Bool
@@ -145,4 +146,5 @@ initState = do
       , editorGhost = Blinky
       , mouseDown = Nothing
       , previewEditor = False
+      , editorCache = []
       }

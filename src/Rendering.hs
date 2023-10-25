@@ -150,7 +150,6 @@ copySDLToBitmap surface = do
   withForeignPtr dest $ \destPtr -> copyBytes destPtr (castPtr pixels) cpSize -- copy pixel data to bitmap
   unlockSurface copy
   let bitmap = bitmapDataOfForeignPtr (fromIntegral w) (fromIntegral h) (BitmapFormat TopToBottom PxABGR) dest False -- convert foreign bitmap to gloss bitmap
-  finalizeForeignPtr dest
   freeSurface copy
   
   return bitmap

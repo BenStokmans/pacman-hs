@@ -24,7 +24,7 @@ import Struct
   , mapWidth
   , outOfBounds
   , scaleVec2
-  , setCells
+  , setCells, cellHasType, cellsWithType
   )
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
@@ -36,7 +36,7 @@ getSpawnPoint' (LevelMap w h cs) f
     sc = 1 / fromIntegral (length ss) :: Float
 
 getSpawnPoint :: LevelMap -> Vec2
-getSpawnPoint l = getSpawnPoint' l (\(Cell t _) -> t == Spawn)
+getSpawnPoint l = getSpawnPoint' l (cellHasType Spawn)
 
 getGhostSpawnPoint :: LevelMap -> GhostType -> Vec2
 getGhostSpawnPoint l gt =
@@ -232,4 +232,4 @@ processWallGroup (LevelMap width height _) cs = mappedCorners ++ mappedWallsEdge
     mappedWallsEdges = map (mapWallEdges (LevelMap width height cs)) mappedWalls
 
 processWalls :: LevelMap -> [(Cell, WallSection)]
-processWalls m@(LevelMap _ _ l) = processWallGroup m (filter (\(Cell t _) -> t == Wall) l)
+processWalls m@(LevelMap _ _ l) = processWallGroup m (cellsWithType Wall l)

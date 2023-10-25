@@ -120,7 +120,7 @@ renderEditorView gs = do
       sEmu
       green
       ("Hovered cell: " ++
-       show v ++
+       show mouseCell ++
        "\nCells occupied: " ++
        show (length cells) ++
        "\nMouse down: " ++
@@ -129,7 +129,6 @@ renderEditorView gs = do
        (let (LevelMap lw lh _) = editorLevel gs
          in show (Vec2 lw lh)) ++
        " pixels: " ++ show w ++ ", " ++ show h)
-  cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon gs cw ch vx vy t) cells
   previewButton <- defaultButton (previewButton (mx / 2) (-h / 2 - 30)) mEmu (previewText ++ " preview (V)") mPos
   let tools =
         pictures
@@ -154,17 +153,17 @@ renderEditorView gs = do
           else blank -- check if hovered cell is on the grid
   let gridEditor =
         pictures
-          [ pictures cs
+          [ pictures $ editorCache gs
           , if not rightDown
               then hoveredCell
               else blank
           , editorGrid gs
           ]
   let wallsPreview = drawMap gs {cachedWalls = processWalls level} level dims
-  let pacmanPreview =
-        if v == outOfBounds
-          then blank
-          else drawPlayer gs dims $ gridToScreenPos dims (getSpawnPoint level)
+  let pacmanPreview = let pacSpawn = getSpawnPoint level in
+            if pacSpawn == outOfBounds
+              then blank
+              else drawPlayer gs dims $ gridToScreenPos dims pacSpawn
   let ghostPreviews =
         pictures $
         map
@@ -185,7 +184,7 @@ renderEditorView gs = do
     dims@((c, r), (w, h)) = getEditorGridInfo gs
     level@(LevelMap _ _ cells) = editorLevel gs
     mPos@(mouseX, mouseY) = mousePos gs
-    v@(Vec2 x y) = screenToGridPos gs dims (mouseX - mx / 2, mouseY)
+    mouseCell@(Vec2 x y) = screenToGridPos gs dims (mouseX - mx / 2, mouseY)
     (cw, ch) = cellSize dims
     (mx, _) = windowMargin (c, r) gs
     tool = editorTool gs
@@ -270,9 +269,19 @@ handleInputEditorView _ gs = do
 
 handleUpdateEditorView :: Float -> GlobalState -> IO GlobalState
 handleUpdateEditorView _ s = do
+  let (newCells,change) | previewEditor s = (cells, False)
+                        | x >= c || x < 0 || y >= r || y < 0 = (cells, False)
+                        | MouseButton LeftButton `elem` keys s = (newCell : editCells, True)
+                        | MouseButton RightButton `elem` keys s = (editCells, True)
+                        | otherwise = (cells, False)
+
+  cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon s cw ch vx vy t) newCells
+  let newState | change = s {editorLevel = LevelMap c r newCells, editorCache = cs, cachedWalls = processWalls $ LevelMap c r newCells}
+               | otherwise = s
   return newState
   where
     dims@((c, r), (w, h)) = getEditorGridInfo s
+    (cw,ch) = cellSize dims
     (mx, _) = windowMargin (c, r) s
     (mouseX, mouseY) = mousePos s
     v@(Vec2 x y) = screenToGridPos s dims (mouseX - mx / 2, mouseY)
@@ -283,8 +292,3 @@ handleUpdateEditorView _ s = do
       | isJust mCell = delete cell cells
       | otherwise = cells
     newCell = Cell (toolToCellType (editorTool s) (editorGhost s)) v
-    newState
-      | x >= c || x < 0 || y >= r || y < 0 = s
-      | elem (MouseButton LeftButton) $ keys s = s {editorLevel = LevelMap c r $ newCell : editCells}
-      | elem (MouseButton RightButton) $ keys s = s {editorLevel = LevelMap c r editCells}
-      | otherwise = s
