@@ -3,4 +3,9 @@ line-length: 150
 force-trailing-newline: true
 sort-imports: true
 line-breaks: []
-extensions: []
+extensions:
+  - TupleSections
+  - BangPatterns
+  - OverloadedStrings
+  - InstanceSigs
+  - LambdaCase

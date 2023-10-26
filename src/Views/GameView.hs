@@ -6,10 +6,10 @@ import Assets (Anim(..), Assets(..), PacManSprite(..))
 import Data.List (delete)
 import Data.Maybe (fromMaybe, isNothing)
 import FontContainer (FontContainer(..))
-import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, pictures, scale, translate, white)
+import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, orange, pictures, scale, translate, white, makeColor)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
 import Map (processWalls, wallSectionToPic, wallToSizedSection)
-import Rendering (renderStringTopLeft, renderStringTopRight, cellSize, translateCell, gridToScreenPos)
+import Rendering (cellSize, gridToScreenPos, renderStringTopLeft, renderStringTopRight, translateCell)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
 import Struct
   ( Cell(..)
@@ -20,47 +20,65 @@ import Struct
   , LevelMap(..)
   , Player(..)
   , Vec2(..)
+  , cellHasType
+  , cellsWithType
   , dirToVec2
   , dummyCell
   , getCell
-  , oppositeDirection, cellHasType, cellsWithType
+  , oppositeDirection
   )
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of level
 gameGridDimensions GlobalState {gameState = GameState {level = (LevelMap w h _)}} = (w, h)
 
 drawGrid :: GridInfo -> Color -> Picture
-drawGrid gi@((c,r),(w,h)) col = Color col $ pictures $ 
-                    [let hc = -w2 + cw*i in Line [(hc, -h2),(hc,h2)] | i <- [0..c]] ++
-                    [let hr = -h2 + ch*i in Line [(-w2, hr),(w2,hr)] | i <- [0..r]] 
-    where
-        w2 = w/2
-        h2 = h/2
-        (cw,ch) = cellSize gi
+drawGrid gi@((c, r), (w, h)) col =
+  Color col $
+  pictures $
+  [ let hc = -w2 + cw * i
+   in Line [(hc, -h2), (hc, h2)]
+  | i <- [0 .. c]
+  ] ++
+  [ let hr = -h2 + ch * i
+   in Line [(-w2, hr), (w2, hr)]
+  | i <- [0 .. r]
+  ]
+  where
+    w2 = w / 2
+    h2 = h / 2
+    (cw, ch) = cellSize gi
 
-gridSizePx :: (Float,Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
-gridSizePx (c,r) gs = let (x,y) = windowSize (settings gs) in (x*0.8*(c/r),y*0.8*(r/c))
+gridSizePx :: (Float, Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
+gridSizePx (c, r) gs =
+  let (x, y) = windowSize (settings gs)
+   in (x * 0.8 * (c / r), y * 0.8 * (r / c))
 
 screenToGridPos :: GlobalState -> GridInfo -> Point -> Vec2 -- get position on grid from screen position
-screenToGridPos gs gi@(_,(pw,ph)) (x, y) = Vec2 (fromIntegral (floor ((pw/2+x)/cw))) (fromIntegral (floor ((ph/2+y)/ch)))
-    where
-        (cw,ch) = cellSize gi
+screenToGridPos gs gi@(_, (pw, ph)) (x, y) = Vec2 (fromIntegral (floor ((pw / 2 + x) / cw))) (fromIntegral (floor ((ph / 2 + y) / ch)))
+  where
+    (cw, ch) = cellSize gi
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
 
-drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
-drawMap gs m@(LevelMap _ _ cells) gi@((col,row),(w,h)) = Color blue $ pictures $
-        map (\(c,ws) -> translateCell c gi (wallToSizedSection margin t cw ch ws)) (cachedWalls gs) ++
-        map (\c -> Color white $ translateCell c gi $ scale 1 (ch/cw) $ circleSolid (cw/16)) (cellsWithType Pellet cells) ++
-        map (\c -> translateCell c gi $ scale ((ch/32)*(1+margin*2)*(col/row)) ((cw/32)*(1+margin*2)*(row/col)) $ appleSprite ass) (cellsWithType PowerUp cells)
-    where
-        ass = assets gs
-        margin = mazeMargin $ settings gs
-        t = lineThickness $ settings gs
-        (w2,h2) = (w/2,h/2)
-        (cw,ch) = cellSize gi
+pelletColor :: Color
+pelletColor = makeColor 0.96 0.73 0.61 1
 
+drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
+drawMap gs m@(LevelMap _ _ cells) gi@((col, row), (w, h)) =
+  Color blue $
+  pictures $
+  map (\(c, ws) -> Color blue $ translateCell c gi (wallToSizedSection margin t cw ch ws)) (filter (cellHasType Wall . fst) $ cachedWalls gs) ++
+  map (\(c, ws) -> Color orange $ translateCell c gi (wallToSizedSection margin t cw ch ws)) (filter (cellHasType GhostWall . fst) $ cachedWalls gs) ++
+  map (\c -> Color pelletColor $ translateCell c gi $ scale 1 (ch / cw) $ circleSolid (cw / 16)) (cellsWithType Pellet cells) ++
+  map (\c -> Color pelletColor $ translateCell c gi $ scale 1 (ch / cw) $ circleSolid (cw / 3)) (cellsWithType PowerUp cells)
+  --  map (\c -> translateCell c gi $ scale ((ch/32)*(1+margin*2)*(col/row)) ((cw/32)*(1+margin*2)*(row/col)) $ appleSprite ass) (cellsWithType Apple cells)
+  where
+    ass = assets gs
+    margin = mazeMargin $ settings gs
+    t = lineThickness $ settings gs
+    (w2, h2) = (w / 2, h / 2)
+    (cw, ch) = cellSize gi
 
 getPlayerAnimation :: GlobalState -> Anim
 getPlayerAnimation gs
@@ -84,7 +102,7 @@ ghostToSprite gs Inky = inkySprite $ assets gs
 ghostToSprite gs Clyde = clydeSprite $ assets gs
 
 drawGhost :: GlobalState -> GhostType -> GridInfo -> Point -> Picture
-drawGhost gs gt gi@((c,r),(w,h)) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
+drawGhost gs gt gi@((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
   where
     (cw, ch) = cellSize gi
     margin = mazeMargin $ settings gs
@@ -94,7 +112,7 @@ drawGhost gs gt gi@((c,r),(w,h)) (px, py) = translate px py $ scale scalarX scal
     scalarY = (ch / 16) * ghostScalar * (r / c)
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
-drawPlayer gs gi@((c,r),(w,h)) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
+drawPlayer gs gi@((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
   where
     frame = pFrame $ player $ gameState gs
     (cw, ch) = cellSize gi
@@ -215,10 +233,10 @@ updatePlayerPosition dt s
     distMoved = dt * v
     (Cell nextCellType _) = fromMaybe dummyCell (getCell m (currentGridPos + dirToVec2 currentDirection))
     (x, y)
-      | currentDirection == North && py >= h / 2 = (px, -h / 2)
-      | currentDirection == South && py <= -h / 2 = (px, h / 2)
-      | currentDirection == East && px >= w / 2 = (-w / 2, py)
-      | currentDirection == West && px <= -w / 2 = (w / 2, py)
+      | currentDirection == North && py >= h / 2 = (px, -h / 2 + hc / 2)
+      | currentDirection == South && py <= -h / 2 = (px, h / 2 - hc / 2)
+      | currentDirection == East && px >= w / 2 = (-w / 2 + wc / 2, py)
+      | currentDirection == West && px <= -w / 2 = (w / 2 - wc / 2, py)
       | otherwise = (px, py)
     newLoc@(nx, ny)
       | nextCellType == Wall && isPastCentre = (x, y)
@@ -234,7 +252,11 @@ updatePlayerPosition dt s
       | currentDirection == West = cx >= x
     cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     bufferedInput = pBufferedInput ps
-    canTurn = maybe False (\d -> maybe False (cellHasType Wall) $ getCell m (currentGridPos + dirToVec2 d)) bufferedInput
+    canTurn =
+      maybe
+        False
+        (\d -> maybe False (\c -> not (cellHasType Wall c) && not (cellHasType GhostWall c)) $ getCell m (currentGridPos + dirToVec2 d))
+        bufferedInput
     newDir
       | canTurn = fromMaybe North bufferedInput
       | otherwise = currentDirection

@@ -11,7 +11,7 @@ import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), Sp
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getSpawnPoint, processWalls)
 import Prompt (errorPrompt)
-import Rendering (Rectangle(Rectangle), completeButton, defaultButton, rectangleHovered, renderButton, renderString, gridToScreenPos)
+import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt)
 import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
 import System.Directory (getCurrentDirectory)
@@ -77,7 +77,13 @@ confirmHeightPrompt :: GlobalState -> String -> GlobalState
 confirmHeightPrompt s v
   | isJust heightInt =
     let (Vec2 w _) = editorGridDimensions set
-     in s {settings = set {editorGridDimensions = Vec2 w height}, editorLevel = emptyMap w height, prompt = Nothing, route = EditorView, cachedWalls = processWalls $ editorLevel s}
+     in s
+          { settings = set {editorGridDimensions = Vec2 w height}
+          , editorLevel = emptyMap w height
+          , prompt = Nothing
+          , route = EditorView
+          , cachedWalls = processWalls $ editorLevel s
+          }
   | otherwise = s {prompt = errorPrompt $ "Invalid width: \n" ++ show v}
   where
     set = settings s

@@ -4,17 +4,43 @@ import Assets (Assets(Assets, emuFont, pacFont))
 import Data.List
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import FontContainer (FontContainer(..))
-import Graphics.Gloss (Color, Picture(..), black, blank, blue, green, makeColor, pictures, rectangleSolid, red, scale, translate, white, yellow)
+import Graphics.Gloss
+  ( Color
+  , Picture(..)
+  , black
+  , blank
+  , blue
+  , green
+  , makeColor
+  , orange
+  , pictures
+  , rectangleSolid
+  , red
+  , scale
+  , translate
+  , white
+  , yellow
+  )
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
 import Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection)
-import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, renderString', renderStringTopLeft, gridToScreenPos, cellSize)
+import Rendering
+  ( Rectangle(Rectangle)
+  , cellSize
+  , defaultButton
+  , gridToScreenPos
+  , rectangleHovered
+  , renderButton
+  , renderString
+  , renderString'
+  , renderStringTopLeft
+  )
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, screenToGridPos)
+import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, screenToGridPos, pelletColor)
 import Views.StartMenu (drawParticles, updateParticles)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
@@ -31,8 +57,11 @@ spawnIcon = generalIcon "S" black yellow
 foodIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 foodIcon = generalIcon "F" white green
 
-appleIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
-appleIcon = generalIcon "A" white red
+powerUpIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
+powerUpIcon = generalIcon "P" white pelletColor
+
+ghostWallIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
+ghostWallIcon = generalIcon "U" white orange
 
 blinkyIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 blinkyIcon = generalIcon "B" white red
@@ -65,7 +94,8 @@ editorToolToIcon :: GlobalState -> (Float, Float) -> Float -> Float -> EditorToo
 editorToolToIcon gs pos w h WallTool = wallIcon gs pos w h
 editorToolToIcon gs pos w h SpawnTool = spawnIcon gs pos w h
 editorToolToIcon gs pos w h FoodTool = foodIcon gs pos w h
-editorToolToIcon gs pos w h AppleTool = appleIcon gs pos w h
+editorToolToIcon gs pos w h PowerUpTool = powerUpIcon gs pos w h
+editorToolToIcon gs pos w h GhostWallTool = ghostWallIcon gs pos w h
 editorToolToIcon gs pos w h GhostTool = ghostToIcon gs pos w h (editorGhost gs)
 
 cellToIcon :: GlobalState -> Float -> Float -> Float -> Float -> CellType -> IO Picture
@@ -73,10 +103,11 @@ cellToIcon gs w h x y ct = do
   icon
   where
     icon
-      | ct == Wall = wallIcon gs pos w h
+      | ct == Wall = wallIcon gs pos w h -- TODO: Clean this up
       | ct == Spawn = spawnIcon gs pos w h
       | ct == Pellet = foodIcon gs pos w h
-      | ct == PowerUp = appleIcon gs pos w h
+      | ct == PowerUp = powerUpIcon gs pos w h
+      | ct == GhostWall = ghostWallIcon gs pos w h
       | (GhostSpawn gt) <- ct = ghostToIcon gs pos w h gt
       | otherwise = do return blank
     pos = (x * w - (gw / 2) + w / 2, y * h - (gh / 2) + h / 2)
@@ -95,7 +126,7 @@ renderEditorView :: GlobalState -> IO Picture
 renderEditorView gs = do
   let mEmu = m (emuFont (assets gs))
   txt <- renderString (mx / 2, h / 2 + 25) mEmu red "Pac-Man Level Editor"
-  toolsText <- renderString (-350, 300) mEmu white "Tools:"
+  toolsText <- renderString (-350, 300) mEmu white "Tools:" -- TODO: have all of these use top left rendering and properly alight them
   toolArrow <- renderString (-380, toolY) mEmu white "->"
   wallToolText <- renderString (-300, 260) mEmu white "wall"
   wallButton <- wallIcon gs (-350, 260) 25 25
@@ -103,17 +134,19 @@ renderEditorView gs = do
   spawnButton <- spawnIcon gs (-350, 220) 25 25
   foodToolText <- renderString (-300, 180) mEmu white "food"
   foodButton <- foodIcon gs (-350, 180) 25 25
-  appleToolText <- renderString (-290, 140) mEmu white "apple"
-  appleButton <- appleIcon gs (-350, 140) 25 25
-  ghostToolText <- renderString (-290, 100) mEmu white "ghost"
-  ghostButton <- ghostToIcon gs (-350, 100) 25 25 (editorGhost gs)
+  powerUpToolText <- renderString (-300, 140) mEmu white "pow"
+  powerUpButton <- powerUpIcon gs (-350, 140) 25 25
+  ghostWallToolText <- renderString (-290, 100) mEmu white "g-wall"
+  ghostWallButton <- ghostWallIcon gs (-350, 100) 25 25
+  ghostToolText <- renderString (-290, 60) mEmu white "ghost"
+  ghostButton <- ghostToIcon gs (-350, 60) 25 25 (editorGhost gs)
   let sEmu = FontContainer.s (emuFont (assets gs))
   instructionText <-
     renderStringTopLeft
-      (-390, 60)
+      (-390, 20)
       sEmu
       white
-      "Select tool\nUsing arrow keys\n \nThen select\nAny square \nin the maze\nusing the mouse\n \nUse the space key\nto switch ghosts\n  \nLeft click: place\nRight click: del.\n    \nThe keys:\nW,A,F and S \nalso activate \ntheir respective\ntools."
+      "Select tool\nUsing arrow keys\n \nThen select\nAny square \nin the maze\nusing the mouse\n \nUse the space key\nto switch ghosts\n  \nLeft click: place\nRight click: del.\n    \nThe keys:\nW,A,F,U and S \nalso activate \ntheir respective\ntools."
   debugString <-
     renderStringTopLeft
       (-400, 400)
@@ -140,9 +173,11 @@ renderEditorView gs = do
           , spawnToolText
           , foodToolText
           , foodButton
-          , appleToolText
-          , appleButton
+          , powerUpToolText
+          , powerUpButton
           , ghostToolText
+          , ghostWallButton
+          , ghostWallToolText
           , ghostButton
           , instructionText
           ]
@@ -161,8 +196,9 @@ renderEditorView gs = do
           , editorGrid gs
           ]
   let wallsPreview = drawMap gs {cachedWalls = processWalls level} level dims
-  let pacmanPreview = let pacSpawn = getSpawnPoint level in
-            if pacSpawn == outOfBounds
+  let pacmanPreview =
+        let pacSpawn = getSpawnPoint level
+         in if pacSpawn == outOfBounds
               then blank
               else drawPlayer gs dims $ gridToScreenPos dims pacSpawn
   let ghostPreviews =
@@ -197,8 +233,9 @@ renderEditorView gs = do
       | tool == WallTool = 260
       | tool == SpawnTool = 220
       | tool == FoodTool = 180
-      | tool == AppleTool = 140
-      | tool == GhostTool = 100
+      | tool == PowerUpTool = 140
+      | tool == GhostWallTool = 100
+      | tool == GhostTool = 60
       | otherwise = -1000 -- out of bounds
     rightDown = MouseButton RightButton `elem` keys gs
     leftDown = MouseButton LeftButton `elem` keys gs
@@ -209,7 +246,7 @@ renderEditorView gs = do
       | otherwise = "no"
 
 tools :: [EditorTool]
-tools = [WallTool, SpawnTool, FoodTool, AppleTool, GhostTool]
+tools = [WallTool, SpawnTool, FoodTool, PowerUpTool, GhostTool, GhostWallTool]
 
 getNextCircular :: Eq a => a -> [a] -> a
 getNextCircular v xs
@@ -231,15 +268,17 @@ toolToCellType :: EditorTool -> GhostType -> CellType
 toolToCellType WallTool _ = Wall
 toolToCellType SpawnTool _ = Spawn
 toolToCellType FoodTool _ = Pellet
-toolToCellType AppleTool _ = PowerUp
+toolToCellType PowerUpTool _ = PowerUp
+toolToCellType GhostWallTool _ = GhostWall
 toolToCellType GhostTool gt = GhostSpawn gt
 
 charToTool :: EditorTool -> Char -> EditorTool
 charToTool _ 'w' = WallTool
-charToTool _ 'a' = AppleTool
+charToTool _ 'p' = PowerUpTool
 charToTool _ 'f' = FoodTool
 charToTool _ 's' = SpawnTool
 charToTool _ 'g' = GhostTool
+charToTool _ 'u' = GhostWallTool
 charToTool e _ = e
 
 handleInputEditorView :: Event -> GlobalState -> IO GlobalState
@@ -260,8 +299,9 @@ handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) gs
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 260) 25 25 0 = do return gs {editorTool = WallTool}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 220) 25 25 0 = do return gs {editorTool = SpawnTool}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 180) 25 25 0 = do return gs {editorTool = FoodTool}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 140) 25 25 0 = do return gs {editorTool = AppleTool}
-  | rectangleHovered (mousePos gs) $ Rectangle (-350, 100) 25 25 0 = do return gs {editorTool = GhostTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 140) 25 25 0 = do return gs {editorTool = PowerUpTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 100) 25 25 0 = do return gs {editorTool = GhostWallTool}
+  | rectangleHovered (mousePos gs) $ Rectangle (-350, 60) 25 25 0 = do return gs {editorTool = GhostTool}
   where
     (dim, (_, h)) = getEditorGridInfo gs
     (mx, _) = windowMargin dim gs

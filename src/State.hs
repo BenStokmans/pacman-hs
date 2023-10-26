@@ -2,7 +2,7 @@ module State where
 
 import Assets (Assets(Assets), loadAssets)
 import Data.Map (Map, empty)
-import Graphics.Gloss (Color, Point, blue, Picture)
+import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
 import Map (WallSection, calculateIntersections, processWalls)
 import Struct
@@ -82,8 +82,9 @@ data EditorTool
   = WallTool
   | SpawnTool
   | FoodTool
-  | AppleTool
+  | PowerUpTool
   | GhostTool
+  | GhostWallTool
   deriving (Eq)
 
 data GlobalState = GlobalState

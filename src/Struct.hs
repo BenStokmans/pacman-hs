@@ -6,11 +6,6 @@ import Graphics.Gloss (Point)
 
 type GridInfo = ((Float, Float), (Float, Float))
 
-data OriginPoint
-  = OriginTopLeft
-  | OriginCenter
-  deriving (Show, Eq)
-
 data Direction
   = North
   | South
@@ -73,6 +68,7 @@ data CellType
   | Intersection
   | Spawn
   | GhostSpawn GhostType
+  | GhostWall
   deriving (Eq)
 
 instance Show CellType where
@@ -87,6 +83,7 @@ instance Show CellType where
   show (GhostSpawn Pinky) = "P"
   show (GhostSpawn Inky) = "I"
   show (GhostSpawn Clyde) = "C"
+  show GhostWall = "G"
 
 stringToCellType :: String -> CellType
 stringToCellType "F" = Pellet
@@ -98,6 +95,7 @@ stringToCellType "B" = GhostSpawn Blinky
 stringToCellType "P" = GhostSpawn Pinky
 stringToCellType "I" = GhostSpawn Inky
 stringToCellType "C" = GhostSpawn Clyde
+stringToCellType "G" = GhostWall
 stringToCellType _ = Empty
 
 data Cell =
@@ -204,6 +202,8 @@ data Player = Player
 data GhostBehaviour
   = Scatter
   | Chase
+  | Idling
+  | Respawning
   | Frightened
   deriving (Eq)
 

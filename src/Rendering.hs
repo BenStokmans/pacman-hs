@@ -4,7 +4,7 @@ import Control.Exception (bracket, bracket_)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Text (intercalate, pack)
 import Data.Word (Word8)
-import Foreign (castPtr, copyBytes, mallocForeignPtrBytes, withForeignPtr, finalizeForeignPtr)
+import Foreign (castPtr, copyBytes, finalizeForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.C.Types (CInt(..))
 import Graphics.Gloss
   ( Color
@@ -37,20 +37,24 @@ import SDL.Video.Renderer
   , surfacePixels
   , unlockSurface
   )
+import Struct (Cell(..), GridInfo, Vec2(..))
 import Text.Printf (printf)
-import Struct (GridInfo, Vec2 (..), Cell (..))
 
 data Rectangle =
   Rectangle Point Float Float Float --Centre point, width, height, border thickness
 
-cellSize :: GridInfo -> (Float,Float) --cell size in px
-cellSize ((c,r),(w,h)) = (w/c, h/r)
+cellSize :: GridInfo -> (Float, Float) --cell size in px
+cellSize ((c, r), (w, h)) = (w / c, h / r)
 
 gridToScreenPos :: GridInfo -> Vec2 -> Point -- get position screen from grid position
-gridToScreenPos gi@(dim,(w,h)) (Vec2 x y) = let (cw,ch) = cellSize gi in (x*cw-(w/2)+cw/2, y*ch-(h/2)+ch/2)
+gridToScreenPos gi@(dim, (w, h)) (Vec2 x y) =
+  let (cw, ch) = cellSize gi
+   in (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2)
 
 translateCell :: Cell -> ((Float, Float), (Float, Float)) -> Picture -> Picture
-translateCell (Cell _ v) gi = let (x,y) = gridToScreenPos gi v in translate x y
+translateCell (Cell _ v) gi =
+  let (x, y) = gridToScreenPos gi v
+   in translate x y
 
 resize :: Float -> Float -> Float -> Float -> Picture -> Picture
 resize ow oh nw nh = scale (nw / ow) (nh / oh)
@@ -120,7 +124,7 @@ stringSize f "" = do
   (_, h) <- stringSize f "f"
   return (0, h)
 stringSize f s = do
-  (w,h) <- size f (pack s)
+  (w, h) <- size f (pack s)
   return (fromIntegral w :: Float, fromIntegral h :: Float)
 
 renderString' :: Font -> Color -> String -> IO ((Float, Float), Picture)
@@ -139,19 +143,17 @@ surfaceToPicture surface = do
 copySDLToBitmap :: Surface -> IO BitmapData
 copySDLToBitmap surface = do
   dims <- surfaceDimensions surface
-
   copy <- createRGBSurface (fromIntegral <$> dims) RGBA8888 -- create copy with same dimensions
   surfaceBlit surface Nothing copy Nothing -- copy pixels from surface to new surface in RGBA8888 format
   lockSurface copy -- aquire lock on the copy
   pixels <- surfacePixels copy -- get pointer to pixels
   let V2 (CInt w) (CInt h) = dims
-  let cpSize = fromIntegral $ w * h * 4
+  let cpSize = fromIntegral $ w * h * 4 -- width * height * 4 (space for R G B A)
   dest <- mallocForeignPtrBytes cpSize -- alloc bitmap
   withForeignPtr dest $ \destPtr -> copyBytes destPtr (castPtr pixels) cpSize -- copy pixel data to bitmap
   unlockSurface copy
   let bitmap = bitmapDataOfForeignPtr (fromIntegral w) (fromIntegral h) (BitmapFormat TopToBottom PxABGR) dest False -- convert foreign bitmap to gloss bitmap
   freeSurface copy
-  
   return bitmap
 
 renderStringSurface :: Font -> Color -> String -> IO Surface

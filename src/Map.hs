@@ -17,6 +17,8 @@ import Struct
   , LevelMap(LevelMap)
   , Vec2(Vec2)
   , allDirections
+  , cellHasType
+  , cellsWithType
   , dirToVec2
   , getCell
   , getCells
@@ -24,7 +26,7 @@ import Struct
   , mapWidth
   , outOfBounds
   , scaleVec2
-  , setCells, cellHasType, cellsWithType
+  , setCells
   )
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
@@ -77,6 +79,9 @@ data WallType
   | DoubleCorner
   | End
   | StraightTwo
+  | StraightGhost
+  | GhostInCorner
+  | GhostOutCorner
   | Single
   | Misc
   deriving (Eq)
@@ -106,8 +111,16 @@ wallTypeToPic :: WallType -> Float -> Float -> Float -> Float -> Picture
 wallTypeToPic StraightOne m t w h = translate 0 ((h / 2) - h * m) (rectangleSolid w t)
 wallTypeToPic OutCorner m t w h = translate (w / 2) (-h / 2) $ thickArc 90 180 (w * (1 - m)) t
 wallTypeToPic InCorner m t w h = translate (w / 2) (h / 2) $ thickArc 180 (-90) (w * m) t
-wallTypeToPic End m t w h = translate 0 (-h / 2) $ thickArc 0 180 ((w / 2) - w * m) t
-wallTypeToPic StraightTwo m t w h = pictures [translate (-(w / 2) + w * m) 0 (rectangleSolid t h), translate ((w / 2) - w * m) 0 (rectangleSolid t h)]
+wallTypeToPic End m t w h =
+  pictures
+    [ thickArc 0 180 ((w / 2) - w * m) t
+    , translate (-(w / 2) + w * m) (-h / 4) (rectangleSolid t (h / 2))
+    , translate ((w / 2) - w * m) (-h / 4) (rectangleSolid t (h / 2))
+    ]
+wallTypeToPic StraightTwo m t w h =
+  pictures [translate (-(w / 2) + w * m) 0 (rectangleSolid t (h * 1.5)), translate ((w / 2) - w * m) 0 (rectangleSolid t h)]
+wallTypeToPic StraightGhost m t w h = rectangleSolid t (h * 1.5)
+wallTypeToPic GhostInCorner m t w h = translate (w / 4) (-h / 4) $ thickArc 90 180 (w * 0.70 * m) t
 wallTypeToPic SingleOutCorner m t w h =
   pictures [translate (w / 2) (-h / 2) $ thickArc 90 180 (w * (1 - m)) t, translate (w / 2) (-h / 2) $ thickArc 90 180 (w * m) t]
 wallTypeToPic SingleInVerCorner m t w h =
@@ -206,8 +219,8 @@ mapWallEdges (LevelMap w h cs) x@(c, ws@(WallSection s _))
      in (c, remapWallEdges ws a b)
   | otherwise = x
 
-processWallGroup :: LevelMap -> [Cell] -> [(Cell, WallSection)]
-processWallGroup (LevelMap width height _) cs = mappedCorners ++ mappedWallsEdges
+processWalls' :: LevelMap -> [Cell] -> [(Cell, WallSection)]
+processWalls' (LevelMap width height _) cs = mappedCorners ++ mappedWallsEdges
   where
     corners =
       filter
@@ -231,5 +244,15 @@ processWallGroup (LevelMap width height _) cs = mappedCorners ++ mappedWallsEdge
         fcorners
     mappedWallsEdges = map (mapWallEdges (LevelMap width height cs)) mappedWalls
 
+wallToGhostWall :: WallType -> WallType
+wallToGhostWall StraightTwo = StraightGhost
+wallToGhostWall End = StraightGhost
+wallToGhostWall SingleOutCorner = GhostInCorner
+wallToGhostWall _ = Single
+
+processGhostWalls :: LevelMap -> [(Cell, WallSection)]
+processGhostWalls m@(LevelMap _ _ l) =
+  map (\(c, WallSection t d) -> (c, WallSection (wallToGhostWall t) d)) $ processWalls' m (cellsWithType GhostWall l)
+
 processWalls :: LevelMap -> [(Cell, WallSection)]
-processWalls m@(LevelMap _ _ l) = processWallGroup m (cellsWithType Wall l)
+processWalls m@(LevelMap _ _ l) = processWalls' m (cellsWithType Wall l) ++ processGhostWalls m
