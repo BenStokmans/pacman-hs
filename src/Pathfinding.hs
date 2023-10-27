@@ -14,20 +14,20 @@ import Struct
   , mapHeight
   , mapWidth
   , setCells
-  , stringToCellType
+  , stringToCellType, cellHasType
   )
 
-data AStarCell = AStarCell
+data AStarNode = AStarNode
   { pos :: Vec2
   , fCost :: Float
   , gCost :: Float
   , hCost :: Float
-  , prev :: AStarCell
+  , prev :: AStarNode
   , dir :: Direction
   }
 
-instance Eq AStarCell where
-  (==) :: AStarCell -> AStarCell -> Bool
+instance Eq AStarNode where
+  (==) :: AStarNode -> AStarNode -> Bool
   a == b = pos a == pos b
 
 getTraveledDirection :: Vec2 -> Vec2 -> Direction
@@ -37,23 +37,23 @@ getTraveledDirection (Vec2 x1 y1) (Vec2 x2 y2)
   | x1 - 1 == x2 && y1 == y2 = West
   | x1 + 1 == x2 && y1 == y2 = East
 
-newCell :: (Vec2 -> Float) -> AStarCell -> Vec2 -> AStarCell
-newCell h from p = AStarCell {pos = p, gCost = gCost', hCost = hCost', fCost = gCost' + hCost', prev = from, dir = dir'}
+newCell :: (Vec2 -> Float) -> AStarNode -> Vec2 -> AStarNode
+newCell h from p = AStarNode {pos = p, gCost = gCost', hCost = hCost', fCost = gCost' + hCost', prev = from, dir = dir'}
   where
     gCost' = gCost from + 1
     hCost' = h p
     dir' = getTraveledDirection (pos from) p
 
 isValidPos :: LevelMap -> Vec2 -> Bool
-isValidPos m p = isJust (getCell m p) && maybe False (\(Cell t _) -> t /= Wall) (getCell m p)
+isValidPos m p = let mCel = getCell m p in isJust mCel && maybe False (not . cellHasType Wall) mCel
 
-getAdjacent :: LevelMap -> (Vec2 -> Float) -> AStarCell -> [AStarCell]
-getAdjacent m h t@(AStarCell {pos = pos}) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
+getAdjacent :: LevelMap -> (Vec2 -> Float) -> AStarNode -> [AStarNode]
+getAdjacent m h t@(AStarNode {pos = pos}) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
 
 vec2Dist :: Vec2 -> Vec2 -> Float
 vec2Dist (Vec2 x1 y1) (Vec2 x2 y2) = abs ((x1 - x2) + (y1 - y2))
 
-findSmallest :: [AStarCell] -> AStarCell
+findSmallest :: [AStarNode] -> AStarNode
 findSmallest =
   foldl1
     (\c1 c2 ->
@@ -61,16 +61,21 @@ findSmallest =
          then c1
          else c2)
 
-backtrack :: AStarCell -> [Vec2]
-backtrack t@(AStarCell {pos = pos, prev = f})
+backtrackVec2 :: AStarNode -> [Vec2]
+backtrackVec2 t@(AStarNode {pos = pos, prev = f})
   | f == t = []
-  | otherwise = backtrack f ++ [pos]
+  | otherwise = backtrackVec2 f ++ [pos]
 
-astar :: LevelMap -> Vec2 -> [AStarCell] -> [AStarCell] -> Maybe [Vec2]
-astar _ _ [] _ = Nothing
-astar map end open closed
-  | pos current == end = Just (backtrack current)
-  | otherwise = astar map end open' closed'
+backtrackDir :: AStarNode -> [Direction]
+backtrackDir t@(AStarNode {dir = dir, prev = f})
+  | f == t = []
+  | otherwise = backtrackDir f ++ [dir]
+
+astar' :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astar' _ _ _ [] _ = Nothing
+astar' f map end open closed
+  | pos current == end = Just (f current)
+  | otherwise = astar' f map end open' closed'
   where
     current = findSmallest open
     adjacent = getAdjacent map (vec2Dist end) current
@@ -78,8 +83,15 @@ astar map end open closed
     open' = unexplored ++ delete current open
     closed' = current : closed
 
+
 getShortestPath :: LevelMap -> Vec2 -> Vec2 -> Maybe [Vec2]
-getShortestPath map start end = astar map end [startCell] []
+getShortestPath map start end = astar' backtrackVec2 map end [startCell] []
   where
-    startCell = AStarCell {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
+
+getShortestDirections :: LevelMap -> Vec2 -> Vec2 -> Maybe [Direction]
+getShortestDirections map start end = astar' backtrackDir map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start

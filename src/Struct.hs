@@ -211,7 +211,7 @@ data GhostActor = GhostActor
   { ghost :: GhostType
   , gVelocity :: Float
   , gDirection :: Direction
-  , gLocation :: Vec2
+  , gLocation :: Point
   , gTarget :: Vec2
   , gBehaviourTimer :: Int
   , gCurrentBehaviour :: GhostBehaviour

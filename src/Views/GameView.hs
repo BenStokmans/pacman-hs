@@ -8,7 +8,7 @@ import Data.Maybe (fromMaybe, isNothing)
 import FontContainer (FontContainer(..))
 import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, orange, pictures, scale, translate, white, makeColor)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
-import Map (processWalls, wallSectionToPic, wallToSizedSection)
+import Map (processWalls, wallSectionToPic, wallToSizedSection, getGhostSpawnPoint)
 import Rendering (cellSize, gridToScreenPos, renderStringTopLeft, renderStringTopRight, translateCell)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
 import Struct
@@ -25,8 +25,9 @@ import Struct
   , dirToVec2
   , dummyCell
   , getCell
-  , oppositeDirection
+  , oppositeDirection, GhostActor (..), outOfBounds, ghosts
   )
+import Pathfinding (getShortestPath)
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of level
 gameGridDimensions GlobalState {gameState = GameState {level = (LevelMap w h _)}} = (w, h)
@@ -63,6 +64,18 @@ debugGrid s = drawGrid (gameGridInfo s) green
 
 pelletColor :: Color
 pelletColor = makeColor 0.96 0.73 0.61 1
+
+debugGhostPath :: GlobalState -> Picture
+debugGhostPath s | Just path <- mPath = Color green $ pictures $ map(\v -> let (x, y) = gridToScreenPos dims v in translate x y $ scale 1 (ch / cw) $ circleSolid (cw / 3)) path
+                 | otherwise = blank
+    where
+      gs = gameState s
+      dims@((c, r), (w, h)) = gameGridInfo s
+      (cw, ch) = cellSize dims
+      playerPos = screenToGridPos s dims (pLocation $ player gs)
+      blinkyPos = screenToGridPos s dims $ gridToScreenPos dims $ getGhostSpawnPoint (level gs) Blinky
+      mPath = getShortestPath (level gs) blinkyPos playerPos
+
 
 drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
 drawMap gs m@(LevelMap _ _ cells) gi@((col, row), (w, h)) =
@@ -134,11 +147,20 @@ renderGameView gs = do
   let gi = gameGridInfo gs
   let currentLevel = level $ gameState gs
   let drawnMap = drawMap gs currentLevel gi
+  let ghostPreviews =
+        pictures $
+        map
+          ((\(t, v) ->
+              if v == outOfBounds
+                then blank
+                else drawGhost gs t gi (gridToScreenPos gi v)) .
+           (\t -> (t, getGhostSpawnPoint currentLevel t)))
+          ghosts
   let grid =
         if enableDebugGrid $ settings gs
           then debugGrid gs
           else blank
-  return (pictures [grid, drawnMap, drawPlayer gs gi (pLocation $ player $ gameState gs), debugString, scoreString])
+  return (pictures [grid, drawnMap, drawPlayer gs gi (pLocation $ player $ gameState gs), debugString, scoreString, ghostPreviews,debugGhostPath gs])
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North
