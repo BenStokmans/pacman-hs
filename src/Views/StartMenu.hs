@@ -9,11 +9,11 @@ import Graphics.Gloss (Picture(..), black, blue, circleSolid, makeColor, picture
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(KeyEsc))
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
-import Map (getSpawnPoint, processWalls)
+import Map (getSpawnPoint, processWalls, getGhostSpawnPoint)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt)
-import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
+import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel, GhostActor (..), GhostType (..))
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
@@ -117,11 +117,12 @@ handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do
   exitSuccess
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
   | rectangleHovered (mousePos s) startButton = do
-    return
+    return -- TODO: make this bit a seperate function, make sure all cases for direction etc are scaleable (start with pathfinding)
       s
         { route = GameView
-        , gameState = gs {player = ps {pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (level gs))}}
-        , cachedWalls = processWalls $ level gs
+        , gameState = gs {player = ps { pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (gMap gs))}
+                                      , blinky = (blinky gs) {gLocation = gridToScreenPos gI (getGhostSpawnPoint (gMap gs) Blinky)}}
+        , cachedWalls = processWalls $ gMap gs
         }
   | rectangleHovered (mousePos s) newMapButton = do
     return
@@ -149,6 +150,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
   where
     gs = gameState s
     ps = player gs
+    gI = gameGridInfo s
 handleInputStartMenu _ s = do
   return s
 

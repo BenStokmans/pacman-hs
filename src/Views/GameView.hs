@@ -4,11 +4,11 @@ module Views.GameView where
 
 import Assets (Anim(..), Assets(..), PacManSprite(..))
 import Data.List (delete)
-import Data.Maybe (fromMaybe, isNothing)
+import Data.Maybe (fromMaybe, isNothing, mapMaybe)
 import FontContainer (FontContainer(..))
 import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, orange, pictures, scale, translate, white, makeColor)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
-import Map (processWalls, wallSectionToPic, wallToSizedSection, getGhostSpawnPoint)
+import Map (processWalls, wallSectionToPic, wallToSizedSection, getGhostSpawnPoint, deleteMultiple)
 import Rendering (cellSize, gridToScreenPos, renderStringTopLeft, renderStringTopRight, translateCell)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
 import Struct
@@ -25,12 +25,12 @@ import Struct
   , dirToVec2
   , dummyCell
   , getCell
-  , oppositeDirection, GhostActor (..), outOfBounds, ghosts
+  , oppositeDirection, GhostActor (..), outOfBounds, ghosts, allDirections
   )
-import Pathfinding (getShortestPath)
+import Pathfinding (getShortestPath, getShortestDirections, getShortestDirectionsLim, getShortestPathLim)
 
-gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of level
-gameGridDimensions GlobalState {gameState = GameState {level = (LevelMap w h _)}} = (w, h)
+gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
+gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)
 
 drawGrid :: GridInfo -> Color -> Picture
 drawGrid gi@((c, r), (w, h)) col =
@@ -66,15 +66,16 @@ pelletColor :: Color
 pelletColor = makeColor 0.96 0.73 0.61 1
 
 debugGhostPath :: GlobalState -> Picture
-debugGhostPath s | Just path <- mPath = Color green $ pictures $ map(\v -> let (x, y) = gridToScreenPos dims v in translate x y $ scale 1 (ch / cw) $ circleSolid (cw / 3)) path
+debugGhostPath s | Just path <- mPath = Color green $ pictures $ map (\v -> let (x, y) = gridToScreenPos dims v in translate x y $ scale 1 (ch / cw) $ circleSolid (cw / 3)) path
                  | otherwise = blank
     where
       gs = gameState s
       dims@((c, r), (w, h)) = gameGridInfo s
       (cw, ch) = cellSize dims
       playerPos = screenToGridPos s dims (pLocation $ player gs)
-      blinkyPos = screenToGridPos s dims $ gridToScreenPos dims $ getGhostSpawnPoint (level gs) Blinky
-      mPath = getShortestPath (level gs) blinkyPos playerPos
+      blinky = getGhostActor s Blinky
+      blinkyPos = screenToGridPos s dims (gLocation blinky)
+      mPath = getShortestPathLim (gMap gs) (oppositeDirection $ gDirection blinky) blinkyPos playerPos
 
 
 drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
@@ -135,32 +136,39 @@ drawPlayer gs gi@((c, r), (w, h)) (px, py) = translate px py $ scale scalarX sca
     scalarX = (cw / 16) * pacmanScalar * (c / r)
     scalarY = (ch / 16) * pacmanScalar * (r / c)
 
+getGhostActor :: GlobalState -> GhostType -> GhostActor
+getGhostActor gs Blinky = blinky $ gameState gs
+getGhostActor gs Pinky = pinky $ gameState gs
+getGhostActor gs Inky = inky $ gameState gs
+getGhostActor gs Clyde = clyde $ gameState gs
+
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
+  let currentLevel = gMap $ gameState gs
+  let gi = gameGridInfo gs
+  let ghost = getGhostActor gs Blinky
+  let currentDirection = gDirection ghost
+  let (px, py) = gLocation ghost
+  let currentGridPos = screenToGridPos gs gi (px, py)
+  let dl = length (cellsWithType Wall (mapMaybe (\d -> getCell currentLevel (currentGridPos + dirToVec2 d)) (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections)))
   debugString <-
     renderStringTopRight
       (400, 400)
       (s (emuFont (assets gs)))
       green
-      ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs))
+      ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs) ++ "\nDL: " ++ show dl)
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
-  let gi = gameGridInfo gs
-  let currentLevel = level $ gameState gs
   let drawnMap = drawMap gs currentLevel gi
-  let ghostPreviews =
+  let drawnGhosts =
         pictures $
         map
-          ((\(t, v) ->
-              if v == outOfBounds
-                then blank
-                else drawGhost gs t gi (gridToScreenPos gi v)) .
-           (\t -> (t, getGhostSpawnPoint currentLevel t)))
+           (\t -> drawGhost gs t gi $ gLocation (getGhostActor gs t))
           ghosts
   let grid =
         if enableDebugGrid $ settings gs
           then debugGrid gs
           else blank
-  return (pictures [grid, drawnMap, drawPlayer gs gi (pLocation $ player $ gameState gs), debugString, scoreString, ghostPreviews,debugGhostPath gs])
+  return (pictures [grid, drawnMap, drawPlayer gs gi (pLocation $ player $ gameState gs), drawnGhosts, debugString, scoreString, debugGhostPath gs])
 
 keyToDirection :: Direction -> Key -> Direction
 keyToDirection _ (SpecialKey KeyUp) = North
@@ -221,6 +229,56 @@ updatePlayerAnimState s
     c = clock s
     p = prevClock gs
 
+updateGhostPosition :: Float -> GlobalState -> GhostActor -> GlobalState
+updateGhostPosition dt s ghost = s {gameState = newGameState}
+  where
+    gs = gameState s
+    dims@((c, r), (w, h)) = gameGridInfo s
+    (wc, hc) = cellSize dims
+    m@(LevelMap lw lh cells) = gMap gs
+    v = gVelocity ghost
+    currentDirection = gDirection ghost
+    (px, py) = gLocation ghost
+    currentGridPos = screenToGridPos s dims (px, py)
+    distMoved = dt * v
+    (Cell nextCellType _) = fromMaybe dummyCell (getCell m (currentGridPos + dirToVec2 currentDirection))
+    (x, y)
+      | currentDirection == North && py >= h / 2 = (px, -h / 2 + hc / 2)
+      | currentDirection == South && py <= -h / 2 = (px, h / 2 - hc / 2)
+      | currentDirection == East && px >= w / 2 = (-w / 2 + wc / 2, py)
+      | currentDirection == West && px <= -w / 2 = (w / 2 - wc / 2, py)
+      | otherwise = (px, py)
+    newLoc@(nx, ny)
+      | nextCellType == Wall && isPastCentre = (x, y)
+      | currentDirection == North = (x, y + distMoved)
+      | currentDirection == East = (x + distMoved, y)
+      | currentDirection == South = (x, y - distMoved)
+      | currentDirection == West = (x - distMoved, y)
+    (cx, cy) = gridToScreenPos dims currentGridPos
+    isPastCentre
+      | currentDirection == North = cy <= y
+      | currentDirection == East = cx <= x
+      | currentDirection == South = cy >= y
+      | currentDirection == West = cx >= x
+    cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
+    mustPathfind = isPastCentre && length (cellsWithType Wall (mapMaybe (\d -> getCell m (currentGridPos + dirToVec2 d)) (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) < 2
+    calculateTarget = screenToGridPos s dims (pLocation $ player gs) -- TODO: implement different target calculation for the ghosts, for now just pacman pos
+    newDir | mustPathfind = maybe currentDirection head $ getShortestDirectionsLim m (oppositeDirection currentDirection) currentGridPos calculateTarget
+           | otherwise = currentDirection
+    pastCentreLocation
+      | newDir == North || newDir == South = (cx, ny)
+      | otherwise = (nx, cy)
+    finalLocation
+      | currentDirection /= newDir = pastCentreLocation
+      | otherwise = newLoc
+    newGhost = ghost {gLocation = finalLocation, gDirection = newDir}
+    newGameState | ghostType ghost == Blinky = gs {blinky = newGhost}
+                 | ghostType ghost == Pinky = gs {pinky = newGhost}
+                 | ghostType ghost == Clyde = gs {clyde = newGhost}
+                 | ghostType ghost == Inky = gs {inky = newGhost}
+
+
+
 updatePlayerPosition :: Float -> GlobalState -> GlobalState
 updatePlayerPosition dt s
   | isPastCentre =
@@ -238,7 +296,7 @@ updatePlayerPosition dt s
                         else bufferedInput
                   , pMoving = finalLocation /= (px, py)
                   }
-            , level = LevelMap lw lh newCells
+            , gMap = LevelMap lw lh newCells
             }
       }
   | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= (px, py)}}}
@@ -246,7 +304,7 @@ updatePlayerPosition dt s
     gs = gameState s
     dims@((c, r), (w, h)) = gameGridInfo s
     (wc, hc) = cellSize dims
-    m@(LevelMap lw lh cells) = level gs
+    m@(LevelMap lw lh cells) = gMap gs
     ps = player gs
     v = pVelocity ps
     currentDirection = pDirection ps
@@ -261,7 +319,7 @@ updatePlayerPosition dt s
       | currentDirection == West && px <= -w / 2 = (w / 2 - wc / 2, py)
       | otherwise = (px, py)
     newLoc@(nx, ny)
-      | nextCellType == Wall && isPastCentre = (x, y)
+      | (nextCellType == Wall || nextCellType == GhostWall) && isPastCentre = (x, y)
       | currentDirection == North = (x, y + distMoved)
       | currentDirection == East = (x + distMoved, y)
       | currentDirection == South = (x, y - distMoved)
@@ -296,4 +354,6 @@ updatePlayerPosition dt s
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
 handleUpdateGameView f gs = do
   ngs <- updatePlayerAnimState gs
-  return $ updatePlayerPosition f ngs
+  let pUpdate = updatePlayerPosition f ngs
+  let blinkyUpdate = updateGhostPosition f pUpdate (getGhostActor pUpdate Blinky)
+  return blinkyUpdate

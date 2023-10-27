@@ -208,11 +208,12 @@ data GhostBehaviour
   deriving (Eq)
 
 data GhostActor = GhostActor
-  { ghost :: GhostType
+  { ghostType :: GhostType
   , gVelocity :: Float
   , gDirection :: Direction
   , gLocation :: Point
   , gTarget :: Vec2
   , gBehaviourTimer :: Int
   , gCurrentBehaviour :: GhostBehaviour
+  , lastModeChange :: Float
   }

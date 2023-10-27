@@ -23,17 +23,6 @@ import           Text.Printf
 import           Graphics.UI.GLFW                 (WindowHint (..))
 import qualified Graphics.UI.GLFW                 as GLFW
 
--- start :: Vec2
--- start = Vec2 1 1
--- end :: Vec2
--- end = Vec2 21.0 9.0
-
--- main :: IO ()
--- main = do
---   level <- readLevel "assets/level.txt"
---   -- printf (show (setCells level (maybe [] (map (Cell Intersection)) (getShortestPath level start end))))
---   printf (showMapWithWalls level)
-
 window :: Settings -> Display
 window s = let (w,h) = windowSize s in InWindow "Pacman" (round w,round h) (10, 10)
 

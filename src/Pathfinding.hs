@@ -83,6 +83,27 @@ astar' f map end open closed
     open' = unexplored ++ delete current open
     closed' = current : closed
 
+astarLim' :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astarLim' nd f map end open closed | pos current == end = Just (f current)
+  | otherwise = astar' f map end open' closed'
+  where
+    current = findSmallest open
+    adjacent = filter (\AStarNode {dir = d} -> d /= nd) $ getAdjacent map (vec2Dist end) current
+    unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
+    open' = unexplored ++ delete current open
+    closed' = current : closed
+
+getShortestPathLim :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
+getShortestPathLim map ad start end = astarLim' ad backtrackVec2 map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
+
+getShortestDirectionsLim :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
+getShortestDirectionsLim map ad start end = astarLim' ad backtrackDir map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
 
 getShortestPath :: LevelMap -> Vec2 -> Vec2 -> Maybe [Vec2]
 getShortestPath map start end = astar' backtrackVec2 map end [startCell] []
