@@ -9,11 +9,11 @@ import Graphics.Gloss (Picture(..), black, blue, circleSolid, makeColor, picture
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(KeyEsc))
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
-import Map (getSpawnPoint, processWalls)
+import Map (getSpawnPoint, processWalls, getGhostSpawnPoint)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt)
-import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
+import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel, GhostActor (..), GhostType (..))
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>), takeBaseName)
@@ -143,15 +143,16 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
   (w,_) <- stringSize (m (emuFont (assets s))) selectText
   let newState | rectangleHovered (mousePos s) (selectMapButton (w+40)) = do
                   mMap <- selectMap
-                  let ns | Just (m,name) <- mMap = s {gameState = gs {level = m,mapName = name}}
+                  let ns | Just (m,name) <- mMap = s {gameState = gs {gMap = m,mapName = name}}
                          | otherwise = s
                   return ns
               | rectangleHovered (mousePos s) startButton = do
-                return
+                return -- TODO: make this bit a seperate function, make sure all cases for direction etc are scaleable (start with pathfinding)
                   s
                     { route = GameView
-                    , gameState = gs {player = ps {pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (level gs))}}
-                    , cachedWalls = processWalls $ level gs
+                    , gameState = gs {player = ps { pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (gMap gs))}
+                                                  , blinky = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Blinky)}}
+                    , cachedWalls = processWalls $ gMap gs
                     }
               | rectangleHovered (mousePos s) newMapButton = do
                 return

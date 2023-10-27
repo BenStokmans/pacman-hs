@@ -14,7 +14,7 @@ import Struct
   , mapHeight
   , mapWidth
   , setCells
-  , stringToCellType, cellHasType
+  , stringToCellType, cellHasType, oppositeDirection
   )
 
 data AStarNode = AStarNode
@@ -32,8 +32,8 @@ instance Eq AStarNode where
 
 getTraveledDirection :: Vec2 -> Vec2 -> Direction
 getTraveledDirection (Vec2 x1 y1) (Vec2 x2 y2)
-  | x1 == x2 && y1 - 1 == y2 = North
-  | x1 == x2 && y1 + 1 == y2 = South
+  | x1 == x2 && y1 - 1 == y2 = South
+  | x1 == x2 && y1 + 1 == y2 = North
   | x1 - 1 == x2 && y1 == y2 = West
   | x1 + 1 == x2 && y1 == y2 = East
 
@@ -83,6 +83,27 @@ astar' f map end open closed
     open' = unexplored ++ delete current open
     closed' = current : closed
 
+astarLim' :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astarLim' nd f map end open closed | pos current == end = Just (f current)
+  | otherwise = astar' f map end open' closed'
+  where
+    current = findSmallest open
+    adjacent = filter (\AStarNode {dir = d} -> d /= nd) $ getAdjacent map (vec2Dist end) current
+    unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
+    open' = unexplored ++ delete current open
+    closed' = current : closed
+
+getShortestPathLim :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
+getShortestPathLim map ad start end = astarLim' ad backtrackVec2 map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
+
+getShortestDirectionsLim :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
+getShortestDirectionsLim map ad start end = astarLim' ad backtrackDir map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
 
 getShortestPath :: LevelMap -> Vec2 -> Vec2 -> Maybe [Vec2]
 getShortestPath map start end = astar' backtrackVec2 map end [startCell] []

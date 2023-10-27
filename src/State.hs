@@ -4,7 +4,7 @@ import Assets (Assets(Assets), loadAssets)
 import Data.Map (Map, empty)
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
-import Map (WallSection, calculateIntersections, processWalls)
+import Map (WallSection, calculateIntersections, processWalls, getSpawnPoint)
 import Struct
 
 data Prompt = Prompt
@@ -69,8 +69,7 @@ data GameState = GameState
   , status :: GameStatus
   , prevClock :: Float
   , mapName :: String
-  , level :: LevelMap
-        -- level :: GameLevel, -- (if we decide to include multiple level options)
+  , gMap :: LevelMap
   , score :: Int
   , player :: Player -- the player character for pacman
   , pinky :: GhostActor
@@ -110,7 +109,7 @@ data GlobalState = GlobalState
 initState :: IO GlobalState
 initState = do
   assets <- loadAssets "assets"
-  level <- readLevel "maps/level.txt"
+  gMap <- readLevel "maps/default.txt"
   return
     GlobalState
       { settings =
@@ -130,9 +129,44 @@ initState = do
             , status = Paused
             , prevClock = 0
             , mapName = "default"
-            , level = level
-            , player = Player {pVelocity = 75, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
-            -- todo init ghosts
+            , gMap = gMap
+            , player = Player {pVelocity = 80, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
+            , blinky = GhostActor { ghostType = Blinky
+                                  , gVelocity = 75
+                                  , gDirection = East
+                                  , gLocation = (-1000,-1000) 
+                                  , gTarget = Vec2 0 0
+                                  , gBehaviourTimer = 0
+                                  , gCurrentBehaviour = Scatter
+                                  , lastModeChange = 0 
+                                  }
+            , pinky = GhostActor { ghostType = Pinky
+                                  , gVelocity = 75
+                                  , gDirection = East
+                                  , gLocation = (-1000,-1000) 
+                                  , gTarget = Vec2 0 0
+                                  , gBehaviourTimer = 0
+                                  , gCurrentBehaviour = Idling
+                                  , lastModeChange = 0 
+                                  }
+            , inky = GhostActor { ghostType = Inky
+                                  , gVelocity = 75
+                                  , gDirection = East
+                                  , gLocation = (-1000,-1000) 
+                                  , gTarget = Vec2 0 0
+                                  , gBehaviourTimer = 0
+                                  , gCurrentBehaviour = Idling
+                                  , lastModeChange = 0 
+                                  }
+            , clyde = GhostActor { ghostType = Clyde
+                                  , gVelocity = 75
+                                  , gDirection = East
+                                  , gLocation = (-1000,-1000) 
+                                  , gTarget = Vec2 0 0
+                                  , gBehaviourTimer = 0
+                                  , gCurrentBehaviour = Idling
+                                  , lastModeChange = 0 
+                                  }                    
             }
       , editorLevel = LevelMap 25 25 []
       , cachedWalls = []
