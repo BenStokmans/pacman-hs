@@ -36,14 +36,14 @@ renderPauseMenu gs = do
   let saveText =
         if lastRoute gs == GameView
           then "game"
-          else "level"
+          else "map"
   drawnSaveButton <- defaultButton saveButton lEmu ("Save " ++ saveText) mPos
   return (pictures [drawParticles gs, title, drawnContinueButton, drawnSaveButton, drawnMainMenuButton])
 
 saveEditorLevel :: GlobalState -> IO ()
 saveEditorLevel s = do
   ws <- getCurrentDirectory
-  file <- saveFileDialog (pack "select level") (pack $ ws </> "maps/newlevel.txt") [pack "*.txt"] (pack "level file")
+  file <- saveFileDialog (pack "save map") (pack $ ws </> "maps/newmap.txt") [pack "*.txt"] (pack "map file")
   let fName = maybe "" unpack file
   when (isJust file) $ writeFile fName (show $ editorLevel s)
 

@@ -68,6 +68,7 @@ data GameState = GameState
   { lives :: Int
   , status :: GameStatus
   , prevClock :: Float
+  , mapName :: String
   , level :: LevelMap
         -- level :: GameLevel, -- (if we decide to include multiple level options)
   , score :: Int
@@ -128,6 +129,7 @@ initState = do
             , lives = 0
             , status = Paused
             , prevClock = 0
+            , mapName = "default"
             , level = level
             , player = Player {pVelocity = 75, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
             -- todo init ghosts

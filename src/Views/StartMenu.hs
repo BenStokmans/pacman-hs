@@ -11,20 +11,23 @@ import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), Sp
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getSpawnPoint, processWalls)
 import Prompt (errorPrompt)
-import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString)
+import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt)
 import Struct (Cell(..), CellType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeBaseName)
 import Text.Read (readMaybe)
 import Views.GameView (gameGridInfo)
 
+selectMapButton :: Float -> Rectangle
+selectMapButton w = Rectangle (0, 70) w 50 10
+
 startButton :: Rectangle
-startButton = Rectangle (0, 10) 500 100 10
+startButton = Rectangle (0, -20) 500 100 10
 
 quitButton :: Rectangle
-quitButton = Rectangle (0, -150) 350 100 10
+quitButton = Rectangle (0, -180) 350 100 10
 
 newMapButton :: Rectangle
 newMapButton = Rectangle (-140, -350) 250 50 10
@@ -59,17 +62,24 @@ renderStartMenu s = do
   titleBg <- renderString (0, 250) xxlEmu black "pacman"
   title <- renderString (0, 250) xxlEmu blue "PACMAN"
   let lEmu = l (emuFont (assets s))
-  drawnStartButton <- defaultButton startButton (l (emuFont (assets s))) "Start new game" (mousePos s)
-  drawnQuitButton <- defaultButton quitButton (l (emuFont (assets s))) "Quit game" (mousePos s)
+  drawnStartButton <- defaultButton startButton lEmu "Start new game" (mousePos s)
+  drawnQuitButton <- defaultButton quitButton lEmu "Quit game" (mousePos s)
   let mEmu = m (emuFont (assets s))
+  let selectText = "Choose map: " ++ mapName (gameState s)
+  (w,_) <- stringSize mEmu selectText
+  drawnSelectMapButton <- defaultButton (selectMapButton (w+40)) mEmu selectText (mousePos s)
   subTitle <- renderString (0, 160) mEmu red "By Ben Stokmans and Geerten Helmers"
   drawnNewMapButton <- defaultButton newMapButton mEmu "Create new map" (mousePos s)
   drawnEditMapButton <- defaultButton editMapButton mEmu "Edit existing map" (mousePos s)
-  return (pictures [drawParticles s, titleBg, title, subTitle, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton])
+  return (pictures [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton])
 
 emptyMap :: Float -> Float -> LevelMap
 emptyMap w h =
-  LevelMap w h $ -- generate walls on the edges
+  LevelMap w h $ -- generate walls on the edges -- generate walls on the edges -- generate walls on the edges -- generate walls on the edges
+   -- generate walls on the edges
+   -- generate walls on the edges
+   -- generate walls on the edges -- generate walls on the edges
+   -- generate walls on the edges
   concatMap (\x -> [Cell Wall (Vec2 (fromInteger x :: Float) 0), Cell Wall (Vec2 (fromInteger x :: Float) (h - 1))]) [0 .. (round w - 1)] ++
   concatMap (\y -> [Cell Wall (Vec2 0 (fromInteger y :: Float)), Cell Wall (Vec2 (w - 1) (fromInteger y :: Float))]) [0 .. (round h - 1)]
 
@@ -112,43 +122,59 @@ confirmWidthPrompt s v
     widthInt = readMaybe v :: Maybe Int
     width = maybe 0 (\v -> fromIntegral v :: Float) widthInt
 
+selectMap :: IO (Maybe (LevelMap,String))
+selectMap = do
+  ws <- getCurrentDirectory
+  mFiles <- openFileDialog (pack "select map") (pack $ ws </> "maps") [pack "*.txt"] (pack "map file") False
+  let (lm,name) | Just files <- mFiles = let f = head $ map unpack files in (readLevel f, takeBaseName f)
+                | otherwise = (do return $ LevelMap 0 0 [], "")
+  m <- lm
+  let ls | isJust mFiles = Just (m, name)
+         | otherwise = Nothing
+  return ls
+
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do
   exitSuccess
-handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s
-  | rectangleHovered (mousePos s) startButton = do
-    return
-      s
-        { route = GameView
-        , gameState = gs {player = ps {pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (level gs))}}
-        , cachedWalls = processWalls $ level gs
-        }
-  | rectangleHovered (mousePos s) newMapButton = do
-    return
-      s
-        { prompt =
-            Just
-              defaultPrompt
-                { promptText = "Enter grid width:"
-                , promptValue =
-                    let (Vec2 x _) = editorGridDimensions $ settings s
-                     in show (round x)
-                , confirmAction = confirmWidthPrompt
-                , closeAction = \state _ -> state {route = StartMenu, prompt = Nothing}
-                }
-        }
-  | rectangleHovered (mousePos s) editMapButton = do
-    ws <- getCurrentDirectory
-    file <- openFileDialog (pack "select level") (pack $ ws </> "maps") [pack "*.txt"] (pack "level file") False
-    map@(LevelMap w h _) <- maybe (do return $ emptyMap 25 25) (readLevel . head) $ (Just . map unpack) =<< file
-    return $
-      if isJust file
-        then s {editorLevel = map, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}}
-        else s
-  | rectangleHovered (mousePos s) quitButton = do exitSuccess
-  where
-    gs = gameState s
-    ps = player gs
+handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
+  let gs = gameState s
+  let ps = player gs
+  let selectText = "Choose map: " ++ mapName (gameState s)
+  (w,_) <- stringSize (m (emuFont (assets s))) selectText
+  let newState | rectangleHovered (mousePos s) (selectMapButton (w+40)) = do
+                  mMap <- selectMap
+                  let ns | Just (m,name) <- mMap = s {gameState = gs {level = m,mapName = name}}
+                         | otherwise = s
+                  return ns
+              | rectangleHovered (mousePos s) startButton = do
+                return
+                  s
+                    { route = GameView
+                    , gameState = gs {player = ps {pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (level gs))}}
+                    , cachedWalls = processWalls $ level gs
+                    }
+              | rectangleHovered (mousePos s) newMapButton = do
+                return
+                  s
+                    { prompt =
+                        Just
+                          defaultPrompt
+                            { promptText = "Enter grid width:"
+                            , promptValue =
+                                let (Vec2 x _) = editorGridDimensions $ settings s
+                                in show (round x)
+                            , confirmAction = confirmWidthPrompt
+                            , closeAction = \state _ -> state {route = StartMenu, prompt = Nothing}
+                            }
+                    }
+                | rectangleHovered (mousePos s) editMapButton = do
+                  mMap <- selectMap
+                  let ns | Just (m@(LevelMap w h _),_) <- mMap = s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}}
+                         | otherwise = s
+                  return ns
+                | rectangleHovered (mousePos s) quitButton = do exitSuccess
+                | otherwise = do return s
+  newState
 handleInputStartMenu _ s = do
   return s
 

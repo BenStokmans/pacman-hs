@@ -33,7 +33,7 @@ import Rendering
   , renderButton
   , renderString
   , renderString'
-  , renderStringTopLeft
+  , renderStringTopLeft, stringSize
   )
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
@@ -42,6 +42,7 @@ import System.Exit (exitSuccess)
 import Text.Printf ()
 import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, screenToGridPos, pelletColor)
 import Views.StartMenu (drawParticles, updateParticles)
+import Views.PauseMenu (saveEditorLevel)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x, y) w h = do
@@ -122,24 +123,28 @@ ghostToIcon gs pos w h Clyde = clydeIcon gs pos w h
 previewButton :: Float -> Float -> Rectangle
 previewButton mx my = Rectangle (mx, my) 325 40 10
 
+saveButton :: Rectangle
+saveButton = Rectangle (-320, -230) 120 40 10
+
 renderEditorView :: GlobalState -> IO Picture
 renderEditorView gs = do
   let mEmu = m (emuFont (assets gs))
+  (_,fh) <- stringSize mEmu ""
   txt <- renderString (mx / 2, h / 2 + 25) mEmu red "Pac-Man Level Editor"
-  toolsText <- renderString (-350, 300) mEmu white "Tools:" -- TODO: have all of these use top left rendering and properly alight them
-  toolArrow <- renderString (-380, toolY) mEmu white "->"
-  wallToolText <- renderString (-300, 260) mEmu white "wall"
-  wallButton <- wallIcon gs (-350, 260) 25 25
-  spawnToolText <- renderString (-290, 220) mEmu white "spawn"
-  spawnButton <- spawnIcon gs (-350, 220) 25 25
-  foodToolText <- renderString (-300, 180) mEmu white "food"
-  foodButton <- foodIcon gs (-350, 180) 25 25
-  powerUpToolText <- renderString (-300, 140) mEmu white "pow"
-  powerUpButton <- powerUpIcon gs (-350, 140) 25 25
-  ghostWallToolText <- renderString (-290, 100) mEmu white "g-wall"
-  ghostWallButton <- ghostWallIcon gs (-350, 100) 25 25
-  ghostToolText <- renderString (-290, 60) mEmu white "ghost"
-  ghostButton <- ghostToIcon gs (-350, 60) 25 25 (editorGhost gs)
+  toolsText <- renderStringTopLeft (-390, 320) mEmu white "Tools:" -- TODO: have all of these use top left rendering and properly alight them
+  toolArrow <- renderStringTopLeft (-400, toolY) mEmu white "->"
+  wallToolText <- renderStringTopLeft (-330, 290) mEmu white "wall"
+  wallButton <- wallIcon gs (-350, 280) 25 25
+  spawnToolText <- renderStringTopLeft (-330, 250) mEmu white "spawn"
+  spawnButton <- spawnIcon gs (-350, 240) 25 25
+  foodToolText <- renderStringTopLeft (-330, 210) mEmu white "food"
+  foodButton <- foodIcon gs (-350, 200) 25 25
+  powerUpToolText <- renderStringTopLeft (-330, 170) mEmu white "pow"
+  powerUpButton <- powerUpIcon gs (-350, 160) 25 25
+  ghostWallToolText <- renderStringTopLeft (-330, 130) mEmu white "gwall"
+  ghostWallButton <- ghostWallIcon gs (-350, 120) 25 25
+  ghostToolText <- renderStringTopLeft (-330, 90) mEmu white "ghost"
+  ghostButton <- ghostToIcon gs (-350, 80) 25 25 (editorGhost gs)
   let sEmu = FontContainer.s (emuFont (assets gs))
   instructionText <-
     renderStringTopLeft
@@ -163,6 +168,7 @@ renderEditorView gs = do
          in show (Vec2 lw lh)) ++
        " pixels: " ++ show w ++ ", " ++ show h)
   previewButton <- defaultButton (previewButton (mx / 2) (-h / 2 - 30)) mEmu (previewText ++ " preview (V)") mPos
+  saveButton <- defaultButton saveButton mEmu "Save" mPos
   let tools =
         pictures
           [ toolsText
@@ -180,6 +186,7 @@ renderEditorView gs = do
           , ghostWallToolText
           , ghostButton
           , instructionText
+          , saveButton
           ]
   wi <- editorToolToIcon gs (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2) cw ch tool
   let hoveredCell =
@@ -230,12 +237,12 @@ renderEditorView gs = do
         then "Disable"
         else "Enable"
     toolY
-      | tool == WallTool = 260
-      | tool == SpawnTool = 220
-      | tool == FoodTool = 180
-      | tool == PowerUpTool = 140
-      | tool == GhostWallTool = 100
-      | tool == GhostTool = 60
+      | tool == WallTool = 290
+      | tool == SpawnTool = 250
+      | tool == FoodTool = 210
+      | tool == PowerUpTool = 170
+      | tool == GhostWallTool = 130
+      | tool == GhostTool = 90
       | otherwise = -1000 -- out of bounds
     rightDown = MouseButton RightButton `elem` keys gs
     leftDown = MouseButton LeftButton `elem` keys gs
@@ -246,7 +253,7 @@ renderEditorView gs = do
       | otherwise = "no"
 
 tools :: [EditorTool]
-tools = [WallTool, SpawnTool, FoodTool, PowerUpTool, GhostTool, GhostWallTool]
+tools = [WallTool, SpawnTool, FoodTool, PowerUpTool, GhostWallTool, GhostTool]
 
 getNextCircular :: Eq a => a -> [a] -> a
 getNextCircular v xs
@@ -295,6 +302,9 @@ handleInputEditorView (EventKey (Char 'v') _ _ _) gs = do
 handleInputEditorView (EventKey (Char c) _ _ _) gs = do
   return gs {editorTool = charToTool (editorTool gs) c}
 handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) gs
+  | rectangleHovered (mousePos gs) saveButton = do
+    saveEditorLevel gs
+    return gs
   | rectangleHovered (mousePos gs) $ previewButton mx (-h / 2 - 30) = do return gs {previewEditor = not $ previewEditor gs}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 260) 25 25 0 = do return gs {editorTool = WallTool}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 220) 25 25 0 = do return gs {editorTool = SpawnTool}
@@ -324,6 +334,7 @@ handleUpdateEditorView _ s = do
       | otherwise = cells
     newCell = Cell (toolToCellType (editorTool s) (editorGhost s)) v
     newState
+      | previewEditor s = s
       | x >= c || x < 0 || y >= r || y < 0 = s
       | elem (MouseButton LeftButton) $ keys s = s {editorLevel = LevelMap c r $ newCell : editCells}
       | elem (MouseButton RightButton) $ keys s = s {editorLevel = LevelMap c r editCells}
