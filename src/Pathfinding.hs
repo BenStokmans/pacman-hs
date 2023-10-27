@@ -14,7 +14,7 @@ import Struct
   , mapHeight
   , mapWidth
   , setCells
-  , stringToCellType, cellHasType
+  , stringToCellType, cellHasType, oppositeDirection
   )
 
 data AStarNode = AStarNode
@@ -69,7 +69,7 @@ backtrackVec2 t@(AStarNode {pos = pos, prev = f})
 backtrackDir :: AStarNode -> [Direction]
 backtrackDir t@(AStarNode {dir = dir, prev = f})
   | f == t = []
-  | otherwise = backtrackDir f ++ [dir]
+  | otherwise = backtrackDir f ++ [oppositeDirection dir]
 
 astar' :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
 astar' _ _ _ [] _ = Nothing
