@@ -146,23 +146,12 @@ renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
   let currentLevel = gMap $ gameState gs
   let gi = gameGridInfo gs
-  let ghost = getGhostActor gs Blinky
-  let currentDirection = gDirection ghost
-  let (px, py) = gLocation ghost
-  let currentGridPos = screenToGridPos gs gi (px, py)
-  let (cx, cy) = gridToScreenPos gi currentGridPos
-  let isPastCentre | currentDirection == North = cy <= py
-                   | currentDirection == East = cx <= px
-                   | currentDirection == South = cy >= py
-                   | currentDirection == West = cx >= px
-  let dl = length (cellsWithType Wall (mapMaybe (\d -> getCell currentLevel (currentGridPos + dirToVec2 d)) (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections)))
-  let p = fromMaybe [] $ getShortestDirectionsLim currentLevel (oppositeDirection currentDirection) currentGridPos (screenToGridPos gs gi $ pLocation $ player $ gameState gs)
   debugString <-
     renderStringTopRight
       (400, 400)
       (s (emuFont (assets gs)))
       green
-      ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs) ++ "\nDL: " ++ show dl ++ "\nPastCenter: " ++ show isPastCentre ++ "\nNExtdir: " ++ show (head p))
+      ("Maze margin: " ++ show (mazeMargin $ settings gs) ++ "\nPac-Man padding: " ++ show (pacmanPadding $ settings gs))
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let drawnMap = drawMap gs currentLevel gi
   let drawnGhosts =
@@ -269,7 +258,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
     cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     mustPathfind = isPastCentre && length (cellsWithType Wall (mapMaybe (\d -> getCell m (currentGridPos + dirToVec2 d)) (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) < 2
     calculateTarget = screenToGridPos s dims (pLocation $ player gs) -- TODO: implement different target calculation for the ghosts, for now just pacman pos
-    newDir | mustPathfind = maybe currentDirection (head) $ getShortestDirectionsLim m (oppositeDirection currentDirection) currentGridPos calculateTarget -- FIXME: Pathfinding fsome reason
+    newDir | mustPathfind = maybe currentDirection head $ getShortestDirectionsLim m (oppositeDirection currentDirection) currentGridPos calculateTarget -- FIXME: Pathfinding fsome reason
            | otherwise = currentDirection
     pastCentreLocation
       | newDir == North || newDir == South = (cx, ny)

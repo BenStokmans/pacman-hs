@@ -32,8 +32,8 @@ instance Eq AStarNode where
 
 getTraveledDirection :: Vec2 -> Vec2 -> Direction
 getTraveledDirection (Vec2 x1 y1) (Vec2 x2 y2)
-  | x1 == x2 && y1 - 1 == y2 = North
-  | x1 == x2 && y1 + 1 == y2 = South
+  | x1 == x2 && y1 - 1 == y2 = South
+  | x1 == x2 && y1 + 1 == y2 = North
   | x1 - 1 == x2 && y1 == y2 = West
   | x1 + 1 == x2 && y1 == y2 = East
 
@@ -69,7 +69,7 @@ backtrackVec2 t@(AStarNode {pos = pos, prev = f})
 backtrackDir :: AStarNode -> [Direction]
 backtrackDir t@(AStarNode {dir = dir, prev = f})
   | f == t = []
-  | otherwise = backtrackDir f ++ [oppositeDirection dir]
+  | otherwise = backtrackDir f ++ [dir]
 
 astar' :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
 astar' _ _ _ [] _ = Nothing
