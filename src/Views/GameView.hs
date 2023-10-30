@@ -9,7 +9,6 @@ import FontContainer (FontContainer(..))
 import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, makeColor, orange, pictures, scale, translate, white)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
 import Map (deleteMultiple, getGhostSpawnPoint, processWalls, wallSectionToPic, wallToSizedSection)
-import Pathfinding (getShortestDirections, getShortestDirectionsLimComplete, getShortestPath, getShortestPathLimPartial, getShortestPathLimComplete)
 import Rendering (cellSize, gridToScreenPos, renderStringTopLeft, renderStringTopRight, translateCell)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
 import Struct
@@ -32,6 +31,7 @@ import Struct
   , oppositeDirection
   , outOfBounds
   )
+import Pathfinding (getPathLimited, getDirectionsLimited)
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
 gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)
@@ -87,7 +87,7 @@ debugGhostPath s
     playerPos = screenToGridPos s dims (pLocation $ player gs)
     blinky = getGhostActor s Blinky
     blinkyPos = screenToGridPos s dims (gLocation blinky)
-    mPath = getShortestPathLimComplete (gMap gs) (oppositeDirection $ gDirection blinky) blinkyPos playerPos
+    mPath = getPathLimited (gMap gs) (oppositeDirection $ gDirection blinky) blinkyPos playerPos False
 
 drawMap :: GlobalState -> LevelMap -> GridInfo -> Picture
 drawMap gs m@(LevelMap _ _ cells) gi@((col, row), (w, h)) =
@@ -275,7 +275,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
     calculateTarget = screenToGridPos s dims (pLocation $ player gs) -- TODO: implement different target calculation for the ghosts, for now just pacman pos
     newDir
       | mustPathfind =
-        maybe currentDirection head $ getShortestDirectionsLimComplete m (oppositeDirection currentDirection) currentGridPos calculateTarget -- FIXME: Pathfinding fsome reason
+        maybe currentDirection head $ getDirectionsLimited m (oppositeDirection currentDirection) currentGridPos calculateTarget True -- FIXME: Pathfinding fsome reason
       | otherwise = currentDirection
     pastCentreLocation
       | newDir == North || newDir == South = (cx, ny)

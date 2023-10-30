@@ -75,26 +75,14 @@ backtrackDir t@(AStarNode {dir = dir, prev = f})
   | f == t = []
   | otherwise = backtrackDir f ++ [dir]
 
--- TODO: cleanup everything below
--- always returns a path regardless of whether the goal node is reacable
-astarPartial :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astarPartial f map end open closed
-  | null open' = Just (f $ minimumBy (\x y -> compare (vec2Dist (pos x) end) (vec2Dist (pos y) end)) closed')
+-- partial == True -> always returns a path regardless of whether the goal node is reacable
+-- partial == False -> only returns a path if the last node matches the goal node
+astar :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Bool -> Maybe [a]
+astar _ _ _ [] _ _ = Nothing
+astar f map end open closed partial
+  | null open' && partial = Just (f $ minimumBy (\x y -> compare (vec2Dist (pos x) end) (vec2Dist (pos y) end)) closed')
   | pos current == end = Just (f current)
-  | otherwise = astarPartial f map end open' closed'
-  where
-    current = findSmallest open
-    adjacent = getAdjacent map (vec2Dist end) current
-    unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
-    open' = unexplored ++ delete current open
-    closed' = current : closed
-
--- only returns a path if the last node matches the goal node
-astarComplete :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astarComplete _ _ _ [] _ = Nothing
-astarComplete f map end open closed
-  | pos current == end = Just (f current)
-  | otherwise = astarComplete f map end open' closed'
+  | otherwise = astar f map end open' closed' partial
   where
     current = findSmallest open
     adjacent = getAdjacent map (vec2Dist end) current
@@ -103,60 +91,35 @@ astarComplete f map end open closed
     closed' = current : closed
 
 -- limits path to 3 cardinal directions
-astarLimComplete :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astarLimComplete nd f map end open closed
+astarLimited :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Bool -> Maybe [a]
+astarLimited nd f map end open closed partial
   | pos current == end = Just (f current)
-  | otherwise = astarComplete f map end open' closed'
+  | otherwise = astar f map end (unexplored ++ delete current open) (current : closed) partial
   where
     current = findSmallest open
     adjacent = filter (\AStarNode {dir = d} -> d /= nd) $ getAdjacent map (vec2Dist end) current
     unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
-    open' = unexplored ++ delete current open
-    closed' = current : closed
 
-astarLimPartial :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astarLimPartial nd f map end open closed
-  | pos current == end = Just (f current)
-  | otherwise = astarPartial f map end open' closed'
-  where
-    current = findSmallest open
-    adjacent = filter (\AStarNode {dir = d} -> d /= nd) $ getAdjacent map (vec2Dist end) current
-    unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
-    open' = unexplored ++ delete current open
-    closed' = current : closed
-
-getShortestPathLimComplete :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
-getShortestPathLimComplete map ad start end = astarLimComplete ad backtrackVec2 map end [startCell] []
+getPathLimited :: LevelMap -> Direction -> Vec2 -> Vec2 -> Bool -> Maybe [Vec2]
+getPathLimited map ad start end = astarLimited ad backtrackVec2 map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
-getShortestDirectionsLimComplete :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
-getShortestDirectionsLimComplete map ad start end = astarLimComplete ad backtrackDir map end [startCell] []
+getDirectionsLimited :: LevelMap -> Direction -> Vec2 -> Vec2 -> Bool -> Maybe [Direction]
+getDirectionsLimited map ad start end = astarLimited ad backtrackDir map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
-getShortestPathLimPartial :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
-getShortestPathLimPartial map ad start end = astarLimPartial ad backtrackVec2 map end [startCell] []
+getPath :: LevelMap -> Vec2 -> Vec2 -> Bool -> Maybe [Vec2]
+getPath map start end = astar backtrackVec2 map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
-getShortestDirectionsLimPartial :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
-getShortestDirectionsLimPartial map ad start end = astarLimPartial ad backtrackDir map end [startCell] []
-  where
-    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
-    startCost = vec2Dist end start
-
-getShortestPath :: LevelMap -> Vec2 -> Vec2 -> Maybe [Vec2]
-getShortestPath map start end = astarComplete backtrackVec2 map end [startCell] []
-  where
-    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
-    startCost = vec2Dist end start
-
-getShortestDirections :: LevelMap -> Vec2 -> Vec2 -> Maybe [Direction]
-getShortestDirections map start end = astarComplete backtrackDir map end [startCell] []
+getDirections :: LevelMap -> Vec2 -> Vec2 -> Bool -> Maybe [Direction]
+getDirections map start end = astar backtrackDir map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
