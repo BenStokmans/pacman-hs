@@ -16,6 +16,7 @@ import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Views.StartMenu (drawParticles, updateParticles)
+import Data.Aeson
 
 continueButton :: Rectangle
 continueButton = Rectangle (0, 0) 400 100 10
@@ -47,6 +48,13 @@ saveEditorLevel s = do
   let fName = maybe "" unpack file
   when (isJust file) $ writeFile fName (show $ editorLevel s)
 
+saveGameState :: GlobalState -> IO ()
+saveGameState s = do
+  ws <- getCurrentDirectory
+  file <- saveFileDialog (pack "save game") (pack $ ws </> "maps/game.txt") [pack "*.json"] (pack "game save")
+  let fName = maybe "" unpack file
+  when (isJust file) $ writeFile fName (show (encode $ gameState s))
+
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
 handleInputPauseMenu (EventKey (SpecialKey KeyEsc) _ _ _) s = do
   return s {route = lastRoute s}
@@ -54,6 +62,7 @@ handleInputPauseMenu (EventKey (MouseButton LeftButton) _ _ _) s
   | continueButtonHover = do return s {route = lastRoute s}
   | saveButtonHover = do
     when (lastRoute s == EditorView) $ saveEditorLevel s
+    when (lastRoute s == GameView) $ saveGameState s
     return s --TODO implement saving of game state
   | mainMenuButtonHover = do return s {route = StartMenu}
   where

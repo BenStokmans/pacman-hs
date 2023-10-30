@@ -3,6 +3,8 @@ module Struct where
 import Data.List (intercalate)
 import Data.Maybe (mapMaybe)
 import Graphics.Gloss (Point)
+import GHC.Generics (Generic)
+import Data.Aeson
 
 type GridInfo = ((Float, Float), (Float, Float))
 
@@ -11,14 +13,7 @@ data Direction
   | South
   | West
   | East
-  deriving (Eq)
-
-instance Show Direction where
-  show :: Direction -> String
-  show North = "North"
-  show South = "South"
-  show West = "West"
-  show East = "East"
+  deriving (Eq,Show)
 
 allDirections :: [Direction]
 allDirections = [North, South, West, East]
@@ -123,7 +118,7 @@ data GhostType
   | Pinky
   | Inky
   | Clyde
-  deriving (Eq)
+  deriving (Eq,Show)
 
 ghosts :: [GhostType]
 ghosts = [Blinky, Pinky, Inky, Clyde]
@@ -197,7 +192,7 @@ data Player = Player
   , pFrame :: Int
   , pBufferedInput :: Maybe Direction
   , pMoving :: Bool
-  }
+  } deriving (Generic,Show)
 
 data GhostBehaviour
   = Scatter
@@ -205,7 +200,7 @@ data GhostBehaviour
   | Idling
   | Respawning
   | Frightened
-  deriving (Eq)
+  deriving (Eq,Show)
 
 data GhostActor = GhostActor
   { ghostType :: GhostType
@@ -216,4 +211,4 @@ data GhostActor = GhostActor
   , gBehaviourTimer :: Int
   , gCurrentBehaviour :: GhostBehaviour
   , lastModeChange :: Float
-  }
+  } deriving (Generic,Show)

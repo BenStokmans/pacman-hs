@@ -6,6 +6,11 @@ import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
 import Map (WallSection, calculateIntersections, getSpawnPoint, processWalls)
 import Struct
+import Data.Aeson
+import Data.Text
+import GHC.Generics
+
+
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -62,7 +67,7 @@ data GameStatus
   | Lost
   | Playing
   | Paused
-  deriving (Eq)
+  deriving (Eq,Show)
 
 data GameState = GameState
   { lives :: Int
@@ -76,7 +81,10 @@ data GameState = GameState
   , inky :: GhostActor
   , blinky :: GhostActor
   , clyde :: GhostActor -- the four ghost
-  }
+  } deriving (Generic, Show)
+
+instance ToJSON GameState where
+    toJSON (GameState { score = score, lives = lives }) = object ["score" .= score, "lives" .= lives]
 
 data EditorTool
   = WallTool
@@ -89,7 +97,7 @@ data EditorTool
 
 data GlobalState = GlobalState
   { settings :: Settings
-  , keys :: [Key]
+  , keys :: [Graphics.Gloss.Interface.IO.Game.Key]
   , gameState :: GameState
   , route :: MenuRoute
   , assets :: Assets
@@ -106,30 +114,14 @@ data GlobalState = GlobalState
   , cachedWalls :: [(Cell, WallSection)]
   }
 
-initState :: IO GlobalState
-initState = do
-  assets <- loadAssets "assets"
-  gMap <- readLevel "maps/default.txt"
-  return
-    GlobalState
-      { settings =
-          Settings
-            { windowSize = (800, 800)
-            , ghostPadding = 0.20
-            , pacmanPadding = 0.15
-            , mazeMargin = 0.35
-            , lineThickness = 15
-            , enableDebugGrid = False
-            , editorGridDimensions = Vec2 25 25
-            }
-      , gameState =
-          GameState
+emptyGameState :: GameState
+emptyGameState = GameState
             { score = 0
             , lives = 0
             , status = Paused
             , prevClock = 0
             , mapName = "default"
-            , gMap = gMap
+            , gMap = LevelMap 0 0 []
             , player = Player {pVelocity = 80, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
             , blinky =
                 GhostActor
@@ -176,6 +168,24 @@ initState = do
                   , lastModeChange = 0
                   }
             }
+
+initState :: IO GlobalState
+initState = do
+  assets <- loadAssets "assets"
+  gMap <- readLevel "maps/default.txt"
+  return
+    GlobalState
+      { settings =
+          Settings
+            { windowSize = (800, 800)
+            , ghostPadding = 0.20
+            , pacmanPadding = 0.15
+            , mazeMargin = 0.35
+            , lineThickness = 15
+            , enableDebugGrid = False
+            , editorGridDimensions = Vec2 25 25
+            }
+      , gameState = emptyGameState {gMap = gMap}
       , editorLevel = LevelMap 25 25 []
       , cachedWalls = []
       , route = StartMenu

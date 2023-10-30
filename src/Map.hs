@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Map where
 
 import Codec.Picture.Metadata (Keys(Source), Value(Double))

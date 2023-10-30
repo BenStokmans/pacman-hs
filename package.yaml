@@ -22,6 +22,7 @@ dependencies:
   - tinyfiledialogs
   - linear
   - gloss-rendering
+  - aeson
 
 default-extensions:
   - TupleSections
@@ -29,6 +30,7 @@ default-extensions:
   - OverloadedStrings
   - InstanceSigs
   - LambdaCase
+  - DeriveGeneric
 
 library:
   source-dirs: src

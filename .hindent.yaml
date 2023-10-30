@@ -9,3 +9,4 @@ extensions:
   - OverloadedStrings
   - InstanceSigs
   - LambdaCase
+  - DeriveGeneric
