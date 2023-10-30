@@ -9,12 +9,14 @@ import Struct
   , LevelMap(LevelMap)
   , Vec2(Vec2)
   , allDirections
+  , cellHasType
   , dirToVec2
   , getCell
   , mapHeight
   , mapWidth
+  , oppositeDirection
   , setCells
-  , stringToCellType, cellHasType, oppositeDirection
+  , stringToCellType
   )
 
 data AStarNode = AStarNode
@@ -45,7 +47,9 @@ newCell h from p = AStarNode {pos = p, gCost = gCost', hCost = hCost', fCost = g
     dir' = getTraveledDirection (pos from) p
 
 isValidPos :: LevelMap -> Vec2 -> Bool
-isValidPos m p = let mCel = getCell m p in isJust mCel && maybe False (not . cellHasType Wall) mCel
+isValidPos m p =
+  let mCel = getCell m p
+   in isJust mCel && maybe False (not . cellHasType Wall) mCel
 
 getAdjacent :: LevelMap -> (Vec2 -> Float) -> AStarNode -> [AStarNode]
 getAdjacent m h t@(AStarNode {pos = pos}) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
@@ -84,7 +88,8 @@ astar' f map end open closed
     closed' = current : closed
 
 astarLim' :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astarLim' nd f map end open closed | pos current == end = Just (f current)
+astarLim' nd f map end open closed
+  | pos current == end = Just (f current)
   | otherwise = astar' f map end open' closed'
   where
     current = findSmallest open

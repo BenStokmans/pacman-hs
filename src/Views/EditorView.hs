@@ -33,16 +33,17 @@ import Rendering
   , renderButton
   , renderString
   , renderString'
-  , renderStringTopLeft, stringSize
+  , renderStringTopLeft
+  , stringSize
   )
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, screenToGridPos, pelletColor)
-import Views.StartMenu (drawParticles, updateParticles)
+import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, pelletColor, screenToGridPos)
 import Views.PauseMenu (saveEditorLevel)
+import Views.StartMenu (drawParticles, updateParticles)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x, y) w h = do
@@ -129,7 +130,7 @@ saveButton = Rectangle (-320, -230) 120 40 10
 renderEditorView :: GlobalState -> IO Picture
 renderEditorView gs = do
   let mEmu = m (emuFont (assets gs))
-  (_,fh) <- stringSize mEmu ""
+  (_, fh) <- stringSize mEmu ""
   txt <- renderString (mx / 2, h / 2 + 25) mEmu red "Pac-Man Level Editor"
   toolsText <- renderStringTopLeft (-390, 320) mEmu white "Tools:" -- TODO: have all of these use top left rendering and properly alight them
   toolArrow <- renderStringTopLeft (-400, toolY) mEmu white "->"
