@@ -1,6 +1,6 @@
 module Pathfinding where
 
-import Data.List (delete)
+import Data.List (delete, maximumBy, minimumBy, sortBy)
 import Data.Maybe (isJust)
 import Struct
   ( Cell(Cell)
@@ -55,7 +55,7 @@ getAdjacent :: LevelMap -> (Vec2 -> Float) -> AStarNode -> [AStarNode]
 getAdjacent m h t@(AStarNode {pos = pos}) = map (newCell h t) (filter (isValidPos m) (map (\d -> pos + dirToVec2 d) allDirections))
 
 vec2Dist :: Vec2 -> Vec2 -> Float
-vec2Dist (Vec2 x1 y1) (Vec2 x2 y2) = abs ((x1 - x2) + (y1 - y2))
+vec2Dist (Vec2 x1 y1) (Vec2 x2 y2) = abs ((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)) -- we only use this for comparisons so sqrt is not need
 
 findSmallest :: [AStarNode] -> AStarNode
 findSmallest =
@@ -75,11 +75,13 @@ backtrackDir t@(AStarNode {dir = dir, prev = f})
   | f == t = []
   | otherwise = backtrackDir f ++ [dir]
 
-astar' :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astar' _ _ _ [] _ = Nothing
-astar' f map end open closed
+-- TODO: cleanup everything below
+-- always returns a path regardless of whether the goal node is reacable
+astarPartial :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astarPartial f map end open closed
+  | null open' = Just (f $ minimumBy (\x y -> compare (vec2Dist (pos x) end) (vec2Dist (pos y) end)) closed')
   | pos current == end = Just (f current)
-  | otherwise = astar' f map end open' closed'
+  | otherwise = astarPartial f map end open' closed'
   where
     current = findSmallest open
     adjacent = getAdjacent map (vec2Dist end) current
@@ -87,10 +89,24 @@ astar' f map end open closed
     open' = unexplored ++ delete current open
     closed' = current : closed
 
-astarLim' :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
-astarLim' nd f map end open closed
+-- only returns a path if the last node matches the goal node
+astarComplete :: (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astarComplete _ _ _ [] _ = Nothing
+astarComplete f map end open closed
   | pos current == end = Just (f current)
-  | otherwise = astar' f map end open' closed'
+  | otherwise = astarComplete f map end open' closed'
+  where
+    current = findSmallest open
+    adjacent = getAdjacent map (vec2Dist end) current
+    unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
+    open' = unexplored ++ delete current open
+    closed' = current : closed
+
+-- limits path to 3 cardinal directions
+astarLimComplete :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astarLimComplete nd f map end open closed
+  | pos current == end = Just (f current)
+  | otherwise = astarComplete f map end open' closed'
   where
     current = findSmallest open
     adjacent = filter (\AStarNode {dir = d} -> d /= nd) $ getAdjacent map (vec2Dist end) current
@@ -98,26 +114,49 @@ astarLim' nd f map end open closed
     open' = unexplored ++ delete current open
     closed' = current : closed
 
-getShortestPathLim :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
-getShortestPathLim map ad start end = astarLim' ad backtrackVec2 map end [startCell] []
+astarLimPartial :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Maybe [a]
+astarLimPartial nd f map end open closed
+  | pos current == end = Just (f current)
+  | otherwise = astarPartial f map end open' closed'
+  where
+    current = findSmallest open
+    adjacent = filter (\AStarNode {dir = d} -> d /= nd) $ getAdjacent map (vec2Dist end) current
+    unexplored = filter (\b -> not (any (b `elem`) [open, closed])) adjacent
+    open' = unexplored ++ delete current open
+    closed' = current : closed
+
+getShortestPathLimComplete :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
+getShortestPathLimComplete map ad start end = astarLimComplete ad backtrackVec2 map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
-getShortestDirectionsLim :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
-getShortestDirectionsLim map ad start end = astarLim' ad backtrackDir map end [startCell] []
+getShortestDirectionsLimComplete :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
+getShortestDirectionsLimComplete map ad start end = astarLimComplete ad backtrackDir map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
+
+getShortestPathLimPartial :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Vec2]
+getShortestPathLimPartial map ad start end = astarLimPartial ad backtrackVec2 map end [startCell] []
+  where
+    startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
+    startCost = vec2Dist end start
+
+getShortestDirectionsLimPartial :: LevelMap -> Direction -> Vec2 -> Vec2 -> Maybe [Direction]
+getShortestDirectionsLimPartial map ad start end = astarLimPartial ad backtrackDir map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
 getShortestPath :: LevelMap -> Vec2 -> Vec2 -> Maybe [Vec2]
-getShortestPath map start end = astar' backtrackVec2 map end [startCell] []
+getShortestPath map start end = astarComplete backtrackVec2 map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
 getShortestDirections :: LevelMap -> Vec2 -> Vec2 -> Maybe [Direction]
-getShortestDirections map start end = astar' backtrackDir map end [startCell] []
+getShortestDirections map start end = astarComplete backtrackDir map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
