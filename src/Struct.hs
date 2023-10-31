@@ -45,6 +45,8 @@ instance Num Vec2 where
   (Vec2 x1 y1) + (Vec2 x2 y2) = Vec2 (x1 + x2) (y1 + y2)
   (-) :: Vec2 -> Vec2 -> Vec2
   (Vec2 x1 y1) - (Vec2 x2 y2) = Vec2 (x1 - x2) (y1 - y2)
+  abs :: Vec2 -> Vec2
+  abs (Vec2 x y) = Vec2 (abs x) (abs y)
 
 scaleVec2 :: Vec2 -> Float -> Vec2
 scaleVec2 (Vec2 x y) scalar = Vec2 (x * scalar) (y * scalar)
