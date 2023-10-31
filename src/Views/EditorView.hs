@@ -38,10 +38,10 @@ import Rendering
   )
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
-import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds)
+import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, pelletColor, screenToGridPos)
+import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, pelletColor, screenToGridPos, getGhostColor)
 import Views.PauseMenu (saveEditorLevel)
 import Views.StartMenu (drawParticles, updateParticles)
 
@@ -66,16 +66,16 @@ ghostWallIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 ghostWallIcon = generalIcon "U" white orange
 
 blinkyIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
-blinkyIcon = generalIcon "B" white red
+blinkyIcon = generalIcon "B" white (getGhostColor Blinky)
 
 pinkyIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
-pinkyIcon = generalIcon "P" white (makeColor 1 0.72 1 1)
+pinkyIcon = generalIcon "P" white (getGhostColor Pinky)
 
 inkyIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
-inkyIcon = generalIcon "I" white (makeColor 0 1 1 1)
+inkyIcon = generalIcon "I" white (getGhostColor Inky)
 
 clydeIcon :: GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
-clydeIcon = generalIcon "C" white (makeColor 1 0.72 0.32 1)
+clydeIcon = generalIcon "C" white (getGhostColor Clyde)
 
 editorGrid :: GlobalState -> Picture
 editorGrid s = drawGrid (getEditorGridInfo s) green
@@ -194,7 +194,7 @@ renderEditorView gs = do
         if x < c && x >= 0 && y < r && y >= 0
           then wi
           else blank -- check if hovered cell is on the grid
-  cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon gs cw ch vx vy t) cells
+  cs <- mapM (\(Cell t (Vec2 vx vy)) -> cellToIcon gs cw ch vx vy t) (concat cells)
   let gridEditor =
         pictures
           [ pictures cs
@@ -327,16 +327,13 @@ handleUpdateEditorView _ s = do
     (mx, _) = windowMargin (c, r) s
     (mouseX, mouseY) = mousePos s
     v@(Vec2 x y) = screenToGridPos s dims (mouseX - mx / 2, mouseY)
-    map@(LevelMap _ _ cells) = editorLevel s
-    mCell = getCell map v
-    cell = fromMaybe (Cell Empty (Vec2 0 0)) mCell
-    editCells
-      | isJust mCell = delete cell cells
-      | otherwise = cells
+    m@(LevelMap _ _ cells) = editorLevel s
+    mCell = getCell m v
+    emptyCell = Cell Empty v
     newCell = Cell (toolToCellType (editorTool s) (editorGhost s)) v
     newState
       | previewEditor s = s
       | x >= c || x < 0 || y >= r || y < 0 = s
-      | elem (MouseButton LeftButton) $ keys s = s {editorLevel = LevelMap c r $ newCell : editCells}
-      | elem (MouseButton RightButton) $ keys s = s {editorLevel = LevelMap c r editCells}
+      | elem (MouseButton LeftButton) $ keys s = s {editorLevel = setCell m newCell}
+      | elem (MouseButton RightButton) $ keys s = s {editorLevel = setCell m emptyCell}
       | otherwise = s

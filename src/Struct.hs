@@ -101,6 +101,9 @@ data Cell =
 dummyCell :: Cell
 dummyCell = Cell Empty (Vec2 0 0)
 
+cellsWithTypeMap :: CellType -> LevelMap -> [Cell]
+cellsWithTypeMap ct (LevelMap _ _ cells) = filter (cellHasType ct) (concat cells)
+
 cellsWithType :: CellType -> [Cell] -> [Cell]
 cellsWithType ct = filter (cellHasType ct)
 
@@ -126,50 +129,73 @@ ghosts :: [GhostType]
 ghosts = [Blinky, Pinky, Inky, Clyde]
 
 data LevelMap =
-  LevelMap Float Float [Cell]
+  LevelMap Float Float [[Cell]]
 
 instance Show LevelMap where
   show :: LevelMap -> String
-  show m@(LevelMap w h l) = intercalate "\n" $ reverse (map (unwords) cells)
+  show m@(LevelMap w h l) = intercalate "\n" $ reverse (map unwords cells)
     where
       indeces = map (\y -> map (`Vec2` y) [0 .. w - 1]) [0 .. h - 1]
       cells = map (map (maybe "E" (\(Cell t _) -> show t) . getCell m)) indeces
 
+-- setCell :: LevelMap -> Cell -> LevelMap
+-- setCell (LevelMap w h m) c@(Cell _ v1) = LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
+
 setCell :: LevelMap -> Cell -> LevelMap
-setCell (LevelMap w h m) c@(Cell _ v1) = LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
+setCell (LevelMap w h cells) c@(Cell _ (Vec2 x y)) = LevelMap w h newCells
+  where
+    (rs1,rs2) = splitAt (round y) cells
+    row = head rs2
+    (cs1, cs2) = splitAt (round x) row
+    newRow = cs1 ++ (c:tail cs2)
+    newCells = rs1 ++ (newRow:tail rs2)
+
+
 
 setCells :: LevelMap -> [Cell] -> LevelMap
 setCells = foldl setCell
 
-getCell :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
-getCell (LevelMap _ _ []) _ = Nothing
-getCell (LevelMap w h (c@(Cell _ v2@(Vec2 x y)):xs)) v1
-  | v1 == v2 = Just c
-                                                --    | x < 0 || y < 0 || x >= w || y >= h = Just OutOfBounds
-  | otherwise = getCell (LevelMap w h xs) v1
+getWall :: LevelMap -> Vec2 -> Maybe Cell
+getWall m v | Just c@(Cell Wall _) <- getCell m v = Just c
+            | otherwise = Nothing
 
-getCell' :: LevelMap -> Vec2 -> Maybe Cell
-getCell' (LevelMap _ _ m) v1
-  | null n = Nothing
-  | otherwise = Just (head n)
-  where
-    n = filter (\(Cell _ v2) -> v1 == v2) m
+getCellWithType :: CellType -> LevelMap -> Vec2  -> Maybe Cell
+getCellWithType ct m v | Just c@(Cell ct _) <- getCell m v = Just c
+                       | otherwise = Nothing
+
+getCell :: LevelMap -> Vec2 -> Maybe Cell 
+getCell (LevelMap w h cells) (Vec2 x y) | x < 0 || y < 0 || x >= w || y >= h = Nothing
+                                        | otherwise = Just $ (cells !! round y) !! round x
+
+-- getCell' :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
+-- getCell' (LevelMap _ _ []) _ = Nothing
+-- getCell' (LevelMap w h (c@(Cell _ v2@(Vec2 x y)):xs)) v1
+--   | v1 == v2 = Just c
+--                                                 --    | x < 0 || y < 0 || x >= w || y >= h = Just OutOfBounds
+--   | otherwise = getCell (LevelMap w h xs) v1
+
+-- getCell'' :: LevelMap -> Vec2 -> Maybe Cell
+-- getCell'' (LevelMap _ _ m) v1
+--   | null n = Nothing
+--   | otherwise = Just (head n)
+--   where
+--     n = filter (\(Cell _ v2) -> v1 == v2) m
 
 getCells :: LevelMap -> [Vec2] -> [Cell]
 getCells l = mapMaybe (getCell l)
 
-mapHeight :: [Cell] -> Float
-mapHeight = foldr (max . (\(Cell _ (Vec2 _ y)) -> y)) 0
+mapHeight :: [[Cell]] -> Float
+mapHeight cs = foldr (max . (\(Cell _ (Vec2 _ y)) -> y)) 0 (concat cs)
 
-mapWidth :: [Cell] -> Float
-mapWidth = foldr (max . (\(Cell _ (Vec2 x _)) -> x)) 0
+mapWidth :: [[Cell]] -> Float
+mapWidth cs = foldr (max . (\(Cell _ (Vec2 x _)) -> x)) 0 (concat cs)
 
 parseLevel :: String -> LevelMap
 parseLevel s = LevelMap (mapWidth cells + 1) (mapHeight cells + 1) cells
   where
     cells = parseAll (map words (reverse (lines s)))
-    parseAll :: [[String]] -> [Cell]
-    parseAll rows = concatMap (\(y, row) -> parseRow row (fromInteger y :: Float)) (zip [0 ..] rows)
+    parseAll :: [[String]] -> [[Cell]]
+    parseAll = zipWith (\y row -> parseRow row (fromInteger y :: Float)) [0 ..]
     parseRow :: [String] -> Float -> [Cell]
     parseRow r y = zipWith (\x t -> Cell (stringToCellType t) (Vec2 (fromInteger x :: Float) y)) [0 ..] r
 
@@ -206,6 +232,7 @@ data GhostBehaviour
 
 data GhostActor = GhostActor
   { ghostType :: GhostType
+  , gUpdate :: Float
   , gVelocity :: Float
   , gDirection :: Direction
   , gLocation :: Point

@@ -77,13 +77,11 @@ renderStartMenu s = do
 
 emptyMap :: Float -> Float -> LevelMap
 emptyMap w h =
-  LevelMap w h $ -- generate walls on the edges -- generate walls on the edges -- generate walls on the edges -- generate walls on the edges
-   -- generate walls on the edges
-   -- generate walls on the edges
-   -- generate walls on the edges -- generate walls on the edges
-   -- generate walls on the edges
-  concatMap (\x -> [Cell Wall (Vec2 (fromInteger x :: Float) 0), Cell Wall (Vec2 (fromInteger x :: Float) (h - 1))]) [0 .. (round w - 1)] ++
-  concatMap (\y -> [Cell Wall (Vec2 0 (fromInteger y :: Float)), Cell Wall (Vec2 (w - 1) (fromInteger y :: Float))]) [0 .. (round h - 1)]
+  LevelMap w h (fr : ors ++ [lr])
+  where
+    fr = map (\x -> Cell Wall (Vec2 (fromInteger x :: Float) 0)) [0 .. (round w - 1)]
+    ors = concatMap (\y -> [[Cell Wall (Vec2 0 (fromInteger y :: Float))], map (\x -> Cell Empty (Vec2 (fromInteger x :: Float) (fromInteger y :: Float))) [1 .. (round w - 2)], [Cell Wall (Vec2 (w - 1) (fromInteger y :: Float))]]) [1 .. (round h - 2)]
+    lr = map (\x -> Cell Wall (Vec2 (fromInteger x :: Float) (h-1))) [0 .. (round w - 1)]
 
 confirmHeightPrompt :: GlobalState -> String -> GlobalState
 confirmHeightPrompt s v

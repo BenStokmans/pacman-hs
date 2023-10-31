@@ -52,6 +52,7 @@ data Settings = Settings
   , lineThickness :: Float
   , enableDebugGrid :: Bool
   , editorGridDimensions :: Vec2
+  , ghostTagetCD :: Float
   }
 
 data MenuRoute
@@ -133,6 +134,7 @@ emptyGameState = GameState
                   , gBehaviourTimer = 0
                   , gCurrentBehaviour = Scatter
                   , lastModeChange = 0
+                  , gUpdate = 0
                   }
             , pinky =
                 GhostActor
@@ -144,6 +146,7 @@ emptyGameState = GameState
                   , gBehaviourTimer = 0
                   , gCurrentBehaviour = Scatter
                   , lastModeChange = 0
+                  , gUpdate = 0
                   }
             , inky =
                 GhostActor
@@ -155,6 +158,7 @@ emptyGameState = GameState
                   , gBehaviourTimer = 0
                   , gCurrentBehaviour = Scatter
                   , lastModeChange = 0
+                  , gUpdate = 0
                   }
             , clyde =
                 GhostActor
@@ -166,6 +170,7 @@ emptyGameState = GameState
                   , gBehaviourTimer = 0
                   , gCurrentBehaviour = Scatter
                   , lastModeChange = 0
+                  , gUpdate = 0
                   }
             }
 
@@ -184,6 +189,7 @@ initState = do
             , lineThickness = 15
             , enableDebugGrid = False
             , editorGridDimensions = Vec2 25 25
+            , ghostTagetCD = 0.1
             }
       , gameState = emptyGameState {gMap = gMap}
       , editorLevel = LevelMap 25 25 []

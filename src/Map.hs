@@ -2,7 +2,7 @@ module Map where
 
 import Codec.Picture.Metadata (Keys(Source), Value(Double))
 import Data.List (intercalate)
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isJust, isNothing, mapMaybe)
 import Graphics.Gloss (Picture(..), blank, circleSolid, pictures, rotate, thickArc, thickCircle, translate)
 import Graphics.Gloss.Data.Color (green, red, white, yellow)
 import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
@@ -18,13 +18,12 @@ import Struct
   , cellHasType
   , cellsWithType
   , dirToVec2
-  , getCell
   , getCells
   , mapHeight
   , mapWidth
   , outOfBounds
   , scaleVec2
-  , setCells
+  , setCells, getWall, getCellWithType
   )
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
@@ -32,7 +31,7 @@ getSpawnPoint' (LevelMap w h cs) f
   | null ss = outOfBounds
   | otherwise = foldr (\x c -> c + scaleVec2 x sc) (Vec2 0 0) ss
   where
-    ss = map (\(Cell _ v) -> v) (filter f cs)
+    ss = map (\(Cell _ v) -> v) (filter f (concat cs))
     sc = 1 / fromIntegral (length ss) :: Float
 
 getSpawnPoint :: LevelMap -> Vec2
@@ -46,20 +45,20 @@ getGhostSpawnPoint l gt =
        (Cell (GhostSpawn t) _) -> t == gt
        _ -> False)
 
-getDiags :: LevelMap -> Cell -> [Cell]
-getDiags l c@(Cell t pos) = getCells l (map (pos +) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1])
+getDiags :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> [Cell]
+getDiags f l c@(Cell t pos) = mapMaybe (f l . (pos +)) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1]
 
-getAdjacent :: LevelMap -> Cell -> [Cell]
-getAdjacent l c@(Cell t pos) = getCells l (map (\d -> pos + dirToVec2 d) allDirections)
+getAdjacent :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> [Cell]
+getAdjacent f l c@(Cell t pos) = mapMaybe (f l . (\d -> pos + dirToVec2 d)) allDirections
 
-getIntersections :: LevelMap -> [Vec2]
-getIntersections l@(LevelMap _ _ m) = map (\(Cell _ v) -> v) (filter (\c -> length (emptyAdjacent c) >= 3 && null (emptyDiag c)) m)
+getIntersections :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> [Vec2]
+getIntersections f l@(LevelMap _ _ m) = map (\(Cell _ v) -> v) (filter (\c -> length (emptyAdjacent c) >= 3 && null (emptyDiag c)) (concat m))
   where
-    emptyAdjacent c = filter (\(Cell t _) -> t == Empty || t == Pellet) (getAdjacent l c)
-    emptyDiag c = filter (\(Cell t _) -> t == Empty || t == Pellet) (getDiags l c)
+    emptyAdjacent c = filter (\(Cell t _) -> t == Empty || t == Pellet) (getAdjacent f l c)
+    emptyDiag c = filter (\(Cell t _) -> t == Empty || t == Pellet) (getDiags f l c)
 
-calculateIntersections :: LevelMap -> LevelMap
-calculateIntersections l = setCells l (map (Cell Intersection) (getIntersections l))
+calculateIntersections :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> LevelMap
+calculateIntersections f l = setCells l (map (Cell Intersection) (getIntersections f l))
 
 deleteMultiple :: Eq a => [a] -> [a] -> [a] -- TODO: optimize
 deleteMultiple [] _ = []
@@ -168,23 +167,23 @@ diagToWallCorner ne sw se nw
   | otherwise = WallSection Single North
 
 -- returns ne sw se nw
-getDiagsTuple :: LevelMap -> Cell -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell)
-getDiagsTuple l c@(Cell t pos) =
-  (getCell l (pos + Vec2 1 1), getCell l (pos + Vec2 (-1) (-1)), getCell l (pos + Vec2 1 (-1)), getCell l (pos + Vec2 (-1) 1))
+getDiagsTuple :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell)
+getDiagsTuple f l c@(Cell t pos) =
+  (f l (pos + Vec2 1 1), f l (pos + Vec2 (-1) (-1)), f l (pos + Vec2 1 (-1)), f l (pos + Vec2 (-1) 1))
 
-getAdjacentTuple :: LevelMap -> Cell -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell)
-getAdjacentTuple l c@(Cell t pos) =
-  (getCell l (pos + dirToVec2 North), getCell l (pos + dirToVec2 East), getCell l (pos + dirToVec2 South), getCell l (pos + dirToVec2 West))
+getAdjacentTuple :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell)
+getAdjacentTuple f l c@(Cell t pos) =
+  (f l (pos + dirToVec2 North), f l (pos + dirToVec2 East), f l (pos + dirToVec2 South), f l (pos + dirToVec2 West))
 
-singleVert :: LevelMap -> Cell -> Bool
-singleVert l c@(Cell t pos) =
-  isNothing (getCell l (pos + dirToVec2 West)) &&
-  isJust (getCell l (pos + dirToVec2 North)) && isJust (getCell l (pos + dirToVec2 South)) && isNothing (getCell l (pos + dirToVec2 East))
+singleVert :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> Bool
+singleVert f l c@(Cell t pos) =
+  isNothing (f l (pos + dirToVec2 West)) &&
+  isJust (f l (pos + dirToVec2 North)) && isJust (f l (pos + dirToVec2 South)) && isNothing (f l (pos + dirToVec2 East))
 
-singleHor :: LevelMap -> Cell -> Bool
-singleHor l c@(Cell t pos) =
-  isJust (getCell l (pos + dirToVec2 West)) &&
-  isNothing (getCell l (pos + dirToVec2 North)) && isNothing (getCell l (pos + dirToVec2 South)) && isJust (getCell l (pos + dirToVec2 East))
+singleHor :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> Bool
+singleHor f l c@(Cell t pos) =
+  isJust (f l (pos + dirToVec2 West)) &&
+  isNothing (f l (pos + dirToVec2 North)) && isNothing (f l (pos + dirToVec2 South)) && isJust (f l (pos + dirToVec2 East))
 
 remapWallEdges :: WallSection -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell) -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell) -> WallSection
 remapWallEdges ws@(WallSection Single _) (n, e, s, w) (ne, sw, se, nw)
@@ -210,37 +209,37 @@ remapWallEdges ws@(WallSection StraightOne _) (n, e, s, w) (ne, sw, se, nw)
   | otherwise = ws
 remapWallEdges ws _ _ = ws
 
-mapWallEdges :: LevelMap -> (Cell, WallSection) -> (Cell, WallSection)
-mapWallEdges (LevelMap w h cs) x@(c, ws@(WallSection s _))
+mapWallEdges :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> (Cell, WallSection) -> (Cell, WallSection)
+mapWallEdges f m x@(c, ws@(WallSection s _))
   | s == Single || s == StraightOne =
-    let (a, b) = (getAdjacentTuple (LevelMap w h cs) c, getDiagsTuple (LevelMap w h cs) c)
+    let (a, b) = (getAdjacentTuple f m c, getDiagsTuple f m c)
      in (c, remapWallEdges ws a b)
   | otherwise = x
 
-processWalls' :: LevelMap -> [Cell] -> [(Cell, WallSection)]
-processWalls' (LevelMap width height _) cs = mappedCorners ++ mappedWallsEdges
+processWalls' :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> [(Cell, WallSection)]
+processWalls' f l@(LevelMap width height cells) = mappedCorners ++ mappedWallsEdges
   where
     corners =
       filter
         (\c ->
-           let (ld, la) = (length (getDiags (LevelMap width height cs) c), length (getAdjacent (LevelMap width height cs) c))
+           let (ld, la) = (length (getDiags f l c), length (getAdjacent f l c))
             in (ld == 1 || ld == 3) && (la == 2 || la == 4))
-        cs
-    fcorners = filter (\c -> not (singleVert (LevelMap width height cs) c) && not (singleHor (LevelMap width height cs) c)) corners
-    walls = deleteMultiple cs fcorners
+        (concat cells)
+    fcorners = filter (\c -> not (singleVert f l c) && not (singleHor f l c)) corners
+    walls = deleteMultiple (concat cells) fcorners
     mappedWalls =
       map
         (\cell ->
-           let (n, e, s, w) = getAdjacentTuple (LevelMap width height cs) cell
+           let (n, e, s, w) = getAdjacentTuple f l cell
             in (cell, adjacentToWallSection n e s w))
         walls
     mappedCorners =
       map
         (\cell ->
-           let (ne, sw, se, nw) = getDiagsTuple (LevelMap width height cs) cell
+           let (ne, sw, se, nw) = getDiagsTuple f l cell
             in (cell, diagToWallCorner ne sw se nw))
         fcorners
-    mappedWallsEdges = map (mapWallEdges (LevelMap width height cs)) mappedWalls
+    mappedWallsEdges = map (mapWallEdges f l) mappedWalls
 
 wallToGhostWall :: WallType -> WallType
 wallToGhostWall StraightTwo = StraightGhost
@@ -249,8 +248,7 @@ wallToGhostWall SingleOutCorner = GhostInCorner
 wallToGhostWall _ = Single
 
 processGhostWalls :: LevelMap -> [(Cell, WallSection)]
-processGhostWalls m@(LevelMap _ _ l) =
-  map (\(c, WallSection t d) -> (c, WallSection (wallToGhostWall t) d)) $ processWalls' m (cellsWithType GhostWall l)
+processGhostWalls m@(LevelMap _ _ l) = map (\(c, WallSection t d) -> (c, WallSection (wallToGhostWall t) d)) $ processWalls' (getCellWithType GhostWall) m
 
 processWalls :: LevelMap -> [(Cell, WallSection)]
-processWalls m@(LevelMap _ _ l) = processWalls' m (cellsWithType Wall l) ++ processGhostWalls m
+processWalls m@(LevelMap _ _ l) = processWalls' getWall m ++ processGhostWalls m
