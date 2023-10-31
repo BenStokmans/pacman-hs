@@ -3,7 +3,7 @@
 module Views.GameView where
 
 import Assets (Anim(..), Assets(..), PacManSprite(..))
-import Data.List (delete)
+import Data.List (delete, minimumBy)
 import Data.Maybe (fromMaybe, isNothing, mapMaybe)
 import FontContainer (FontContainer(..))
 import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, makeColor, orange, pictures, scale, translate, white, red)
@@ -32,8 +32,10 @@ import Struct
   , oppositeDirection
   , outOfBounds, GhostBehaviour (..)
   , scaleVec2, cellsWithTypeMap, setCell
+  , isOutOfBounds
   )
 import Control.Monad.Random
+import GHC.Base (undefined)
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
 gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)
@@ -236,14 +238,14 @@ calculateScatterTarget :: GhostType -> Point -> Vec2 -- after certain amount of 
 calculateScatterTarget gt (xmax,ymax) | gt == Blinky = Vec2 xmax ymax
                                       | gt == Pinky = Vec2 0 ymax
                                       | gt == Inky = Vec2 xmax 0
-                                      | gt == Clyde = Vec2 0 0
+                                      | gt == Clyde = Vec2 1 1
 
 
 
 calculateChaseTarget :: GhostType -> GlobalState -> Vec2
 calculateChaseTarget gt s  | gt == Blinky = pLoc
                            | gt == Pinky = pLoc + scaleVec2 pDir 4
-                           | gt == Inky = blinkyPos + scaleVec2 (pLoc + scaleVec2 pDir 2 - blinkyPos) 2 --check if work
+                           | gt == Inky = blinkyPos + scaleVec2 (pLoc + scaleVec2 pDir 2 - blinkyPos) 2 --check if work; does not work lol!!!!
                            | gt == Clyde && sqrt (vec2Dist pLoc clydePos) < 8 = calculateScatterTarget Clyde (gameGridDimensions s)
                            | otherwise = pLoc
   where
@@ -255,22 +257,31 @@ calculateChaseTarget gt s  | gt == Blinky = pLoc
     blinkyPos = screenToGridPos s gInfo (gLocation $ blinky gs)
     clydePos = screenToGridPos s gInfo (gLocation $ clyde gs)
 
+normalizeTarget :: LevelMap -> Vec2 -> Vec2
+normalizeTarget m v | (_,Just r) <- normalizeTarget' m [v] = r
+                    | otherwise = error "?" -- this can never happen
+  where
+    normalizeTarget' :: LevelMap -> [Vec2] -> ([Vec2],Maybe Vec2)
+    normalizeTarget' _ [] = ([],Nothing)
+    normalizeTarget' l current | null valid = normalizeTarget' l $ concatMap getAdjacentVecs current
+                               | otherwise = ([],Just $ minimumBy (\x y -> compare (vec2Dist x v) (vec2Dist y v)) valid)
+      where
+        valid = filter (\w -> let (Cell ct v) = fromMaybe (Cell Wall (Vec2 0 0)) (getCell l w) in ct /= Wall && not (isOutOfBounds l v)) current
 
 updateGhostTarget :: GhostActor -> GlobalState -> IO GlobalState
 -- lvl 1 pinky leaves house instantly, inky after 30 dots clyde after 90
 -- lvl 2 pinky and inky leave instantly, clyde after 50 dots
 -- lvl 3 everyone leaves instantly
 -- for now everyone always leaves instantly
-updateGhostTarget ghost s | clock s - gUpdate ghost < ghostTagetCD (settings s) = do return s
-                          | not mustPathfind = do return s
-                          | ghoststate == Frightened && mustPathfind = do
+updateGhostTarget ghost s | not mustPathfind = do return s
+                          | ghostState == Frightened && mustPathfind = do
                                x <- getRandomR (0 :: Integer, round xmax)
                                y <- getRandomR (0 :: Integer, round ymax)
                                return $ newState x y
                           | otherwise = do return $ newState 0 0
   where
-    ghoststate = gCurrentBehaviour ghost
-    ghosttype = ghostType ghost
+    ghostState = gCurrentBehaviour ghost
+    ghostT = ghostType ghost
     m@(LevelMap lw lh cells) = gMap gs
     gi@((xmax,ymax),_) = gameGridInfo s
     gs = gameState s
@@ -291,13 +302,15 @@ updateGhostTarget ghost s | clock s - gUpdate ghost < ghostTagetCD (settings s) 
            (mapMaybe
               (\d -> getCell m (currentGridPos + dirToVec2 d))
               (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) < 2
-    t x y | ghoststate == Scatter = calculateScatterTarget ghosttype (xmax, ymax)
-          | ghoststate == Chase = calculateChaseTarget ghosttype s
-          | ghoststate == Frightened = Vec2 (fromIntegral x :: Float) (fromIntegral y :: Float)
-    newState x y | ghosttype == Blinky = s {gameState = gs {blinky = ghost {gTarget = t x y, gUpdate = clock s}}}
-                 | ghosttype == Pinky = s {gameState = gs {pinky = ghost {gTarget = t x y, gUpdate = clock s}}}
-                 | ghosttype == Inky = s {gameState = gs {inky = ghost {gTarget = t x y, gUpdate = clock s}}}
-                 | ghosttype == Clyde = s {gameState = gs {clyde = ghost {gTarget = t x y, gUpdate = clock s}}}
+
+    t x y | ghostState == Scatter = calculateScatterTarget ghostT (xmax, ymax)
+          | ghostState == Chase = calculateChaseTarget ghostT s
+          | ghostState == Frightened = Vec2 (fromIntegral x :: Float) (fromIntegral y :: Float)
+
+    newState x y | ghostT == Blinky = s {gameState = gs {blinky = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
+                 | ghostT == Pinky = s {gameState = gs {pinky = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
+                 | ghostT == Inky = s {gameState = gs {inky = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
+                 | ghostT == Clyde = s {gameState = gs {clyde = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
 
 
 updateGhostPosition :: Float -> GlobalState -> GhostActor -> GlobalState
@@ -305,13 +318,16 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
   where
     gs = gameState s
     dims@((c, r), (w, h)) = gameGridInfo s
+
     (wc, hc) = cellSize dims
     m@(LevelMap lw lh cells) = gMap gs
     v = gVelocity ghost
     currentDirection = gDirection ghost
+
     (px, py) = gLocation ghost
     currentGridPos = screenToGridPos s dims (px, py)
     distMoved = dt * v
+
     (Cell nextCellType _) = fromMaybe dummyCell (getCell m (currentGridPos + dirToVec2 currentDirection))
     (x, y)
       | currentDirection == North && py >= h / 2 = (px, -h / 2 + hc / 2)
@@ -319,18 +335,21 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
       | currentDirection == East && px >= w / 2 = (-w / 2 + wc / 2, py)
       | currentDirection == West && px <= -w / 2 = (w / 2 - wc / 2, py)
       | otherwise = (px, py)
+
     newLoc@(nx, ny)
       | nextCellType == Wall && isPastCentre = (x, y)
       | currentDirection == North = (x, y + distMoved)
       | currentDirection == East = (x + distMoved, y)
       | currentDirection == South = (x, y - distMoved)
       | currentDirection == West = (x - distMoved, y)
+
     (cx, cy) = gridToScreenPos dims currentGridPos
     isPastCentre
       | currentDirection == North = cy <= y
       | currentDirection == East = cx <= x
       | currentDirection == South = cy >= y
       | currentDirection == West = cx >= x
+
     cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     mustPathfind =
       isPastCentre &&
@@ -340,12 +359,13 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
            (mapMaybe
               (\d -> getCell m (currentGridPos + dirToVec2 d))
               (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) < 2
+
     path = fromMaybe [currentDirection] $ getDirectionsLimited m (oppositeDirection currentDirection) currentGridPos (gTarget ghost) True
-    newDir 
+    newDir
       | null path = currentDirection
       | mustPathfind = head path
       | otherwise = currentDirection
-    pastCentreLocation 
+    pastCentreLocation
       | newDir == North || newDir == South = (cx, ny)
       | otherwise = (nx, cy)
     finalLocation
@@ -441,5 +461,5 @@ handleUpdateGameView f gs = do
   let blinkyUpdate = updateGhostPosition f clydeTargetUpdate (getGhostActor clydeTargetUpdate Blinky)
   let pinkyUpdate = updateGhostPosition f blinkyUpdate (getGhostActor blinkyUpdate Pinky)
   let inkyUpdate = updateGhostPosition f pinkyUpdate (getGhostActor pinkyUpdate Inky)
-  let clydeUpdate = updateGhostPosition f inkyUpdate (getGhostActor inkyUpdate Clyde)
-  return clydeUpdate
+  -- let clydeUpdate = updateGhostPosition f inkyUpdate (getGhostActor inkyUpdate Clyde)
+  return inkyUpdate

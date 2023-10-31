@@ -128,7 +128,7 @@ emptyGameState = GameState
                 GhostActor
                   { ghostType = Blinky
                   , gVelocity = 75
-                  , gDirection = West
+                  , gDirection = North
                   , gLocation = (-1000, -1000)
                   , gTarget = Vec2 0 0
                   , gBehaviourTimer = 0
@@ -140,11 +140,11 @@ emptyGameState = GameState
                 GhostActor
                   { ghostType = Pinky
                   , gVelocity = 75
-                  , gDirection = East
+                  , gDirection = North
                   , gLocation = (-1000, -1000)
                   , gTarget = Vec2 0 0
                   , gBehaviourTimer = 0
-                  , gCurrentBehaviour = Scatter
+                  , gCurrentBehaviour = Chase
                   , lastModeChange = 0
                   , gUpdate = 0
                   }
@@ -152,7 +152,7 @@ emptyGameState = GameState
                 GhostActor
                   { ghostType = Inky
                   , gVelocity = 75
-                  , gDirection = East
+                  , gDirection = North
                   , gLocation = (-1000, -1000)
                   , gTarget = Vec2 0 0
                   , gBehaviourTimer = 0
@@ -164,7 +164,7 @@ emptyGameState = GameState
                 GhostActor
                   { ghostType = Clyde
                   , gVelocity = 75
-                  , gDirection = East
+                  , gDirection = North
                   , gLocation = (-1000, -1000)
                   , gTarget = Vec2 0 0
                   , gBehaviourTimer = 0

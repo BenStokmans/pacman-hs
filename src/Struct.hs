@@ -163,9 +163,12 @@ getCellWithType :: CellType -> LevelMap -> Vec2  -> Maybe Cell
 getCellWithType ct m v | Just c@(Cell ct _) <- getCell m v = Just c
                        | otherwise = Nothing
 
+isOutOfBounds :: LevelMap -> Vec2 -> Bool
+isOutOfBounds (LevelMap w h _) (Vec2 x y) = x < 0 || y < 0 || x >= w || y >= h
+
 getCell :: LevelMap -> Vec2 -> Maybe Cell 
-getCell (LevelMap w h cells) (Vec2 x y) | x < 0 || y < 0 || x >= w || y >= h = Nothing
-                                        | otherwise = Just $ (cells !! round y) !! round x
+getCell l@(LevelMap _ _ cells) v@(Vec2 x y) | isOutOfBounds l v = Nothing
+                                            | otherwise = Just $ (cells !! round y) !! round x
 
 -- getCell' :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
 -- getCell' (LevelMap _ _ []) _ = Nothing
