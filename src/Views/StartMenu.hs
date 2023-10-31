@@ -162,7 +162,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                     , blinky = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Blinky)}
                     , pinky = (pinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Pinky)}
                     , inky = (inky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Inky)}
-                    , clyde = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Clyde)}
+                    , clyde = (clyde gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Clyde)}
                     }
               , cachedWalls = processWalls $ gMap gs
               }

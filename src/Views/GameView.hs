@@ -375,8 +375,8 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
     newGameState
       | ghostType ghost == Blinky = gs {blinky = newGhost}
       | ghostType ghost == Pinky = gs {pinky = newGhost}
-      | ghostType ghost == Clyde = gs {clyde = newGhost}
       | ghostType ghost == Inky = gs {inky = newGhost}
+      | ghostType ghost == Clyde = gs {clyde = newGhost}
 
 updatePlayerPosition :: Float -> GlobalState -> GlobalState
 updatePlayerPosition dt s
@@ -461,5 +461,5 @@ handleUpdateGameView f gs = do
   let blinkyUpdate = updateGhostPosition f clydeTargetUpdate (getGhostActor clydeTargetUpdate Blinky)
   let pinkyUpdate = updateGhostPosition f blinkyUpdate (getGhostActor blinkyUpdate Pinky)
   let inkyUpdate = updateGhostPosition f pinkyUpdate (getGhostActor pinkyUpdate Inky)
-  -- let clydeUpdate = updateGhostPosition f inkyUpdate (getGhostActor inkyUpdate Clyde)
-  return inkyUpdate
+  let clydeUpdate = updateGhostPosition f inkyUpdate (getGhostActor inkyUpdate Clyde)
+  return clydeUpdate
