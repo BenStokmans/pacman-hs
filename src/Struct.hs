@@ -1,10 +1,10 @@
 module Struct where
 
+import Data.Aeson
 import Data.List (intercalate)
 import Data.Maybe (mapMaybe)
-import Graphics.Gloss (Point)
 import GHC.Generics (Generic)
-import Data.Aeson
+import Graphics.Gloss (Point)
 
 type GridInfo = ((Float, Float), (Float, Float))
 
@@ -13,7 +13,7 @@ data Direction
   | South
   | West
   | East
-  deriving (Eq,Show)
+  deriving (Eq, Show)
 
 allDirections :: [Direction]
 allDirections = [North, South, West, East]
@@ -123,7 +123,7 @@ data GhostType
   | Pinky
   | Inky
   | Clyde
-  deriving (Eq,Show)
+  deriving (Eq, Show)
 
 ghosts :: [GhostType]
 ghosts = [Blinky, Pinky, Inky, Clyde]
@@ -140,35 +140,35 @@ instance Show LevelMap where
 
 -- setCell :: LevelMap -> Cell -> LevelMap
 -- setCell (LevelMap w h m) c@(Cell _ v1) = LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
-
 setCell :: LevelMap -> Cell -> LevelMap
 setCell (LevelMap w h cells) c@(Cell _ (Vec2 x y)) = LevelMap w h newCells
   where
-    (rs1,rs2) = splitAt (round y) cells
+    (rs1, rs2) = splitAt (round y) cells
     row = head rs2
     (cs1, cs2) = splitAt (round x) row
-    newRow = cs1 ++ (c:tail cs2)
-    newCells = rs1 ++ (newRow:tail rs2)
-
-
+    newRow = cs1 ++ (c : tail cs2)
+    newCells = rs1 ++ (newRow : tail rs2)
 
 setCells :: LevelMap -> [Cell] -> LevelMap
 setCells = foldl setCell
 
 getWall :: LevelMap -> Vec2 -> Maybe Cell
-getWall m v | Just c@(Cell Wall _) <- getCell m v = Just c
-            | otherwise = Nothing
+getWall m v
+  | Just c@(Cell Wall _) <- getCell m v = Just c
+  | otherwise = Nothing
 
-getCellWithType :: CellType -> LevelMap -> Vec2  -> Maybe Cell
-getCellWithType ct m v | Just c@(Cell ct _) <- getCell m v = Just c
-                       | otherwise = Nothing
+getCellWithType :: CellType -> LevelMap -> Vec2 -> Maybe Cell
+getCellWithType ct m v
+  | Just c@(Cell ct _) <- getCell m v = Just c
+  | otherwise = Nothing
 
 isOutOfBounds :: LevelMap -> Vec2 -> Bool
 isOutOfBounds (LevelMap w h _) (Vec2 x y) = x < 0 || y < 0 || x >= w || y >= h
 
-getCell :: LevelMap -> Vec2 -> Maybe Cell 
-getCell l@(LevelMap _ _ cells) v@(Vec2 x y) | isOutOfBounds l v = Nothing
-                                            | otherwise = Just $ (cells !! round y) !! round x
+getCell :: LevelMap -> Vec2 -> Maybe Cell
+getCell l@(LevelMap _ _ cells) v@(Vec2 x y)
+  | isOutOfBounds l v = Nothing
+  | otherwise = Just $ (cells !! round y) !! round x
 
 -- getCell' :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
 -- getCell' (LevelMap _ _ []) _ = Nothing
@@ -176,14 +176,12 @@ getCell l@(LevelMap _ _ cells) v@(Vec2 x y) | isOutOfBounds l v = Nothing
 --   | v1 == v2 = Just c
 --                                                 --    | x < 0 || y < 0 || x >= w || y >= h = Just OutOfBounds
 --   | otherwise = getCell (LevelMap w h xs) v1
-
 -- getCell'' :: LevelMap -> Vec2 -> Maybe Cell
 -- getCell'' (LevelMap _ _ m) v1
 --   | null n = Nothing
 --   | otherwise = Just (head n)
 --   where
 --     n = filter (\(Cell _ v2) -> v1 == v2) m
-
 getCells :: LevelMap -> [Vec2] -> [Cell]
 getCells l = mapMaybe (getCell l)
 
@@ -223,7 +221,7 @@ data Player = Player
   , pFrame :: Int
   , pBufferedInput :: Maybe Direction
   , pMoving :: Bool
-  } deriving (Generic,Show)
+  } deriving (Generic, Show)
 
 data GhostBehaviour
   = Scatter
@@ -231,7 +229,7 @@ data GhostBehaviour
   | Idling
   | Respawning
   | Frightened
-  deriving (Eq,Show)
+  deriving (Eq, Show)
 
 data GhostActor = GhostActor
   { ghostType :: GhostType
@@ -240,7 +238,8 @@ data GhostActor = GhostActor
   , gDirection :: Direction
   , gLocation :: Point
   , gTarget :: Vec2
+  , lastDirChange :: Vec2
   , gBehaviourTimer :: Int
   , gCurrentBehaviour :: GhostBehaviour
   , lastModeChange :: Float
-  } deriving (Generic,Show)
+  } deriving (Generic, Show)

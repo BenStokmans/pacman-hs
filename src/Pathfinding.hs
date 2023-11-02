@@ -95,7 +95,8 @@ astar f map end open closed partial
 
 -- limits path to 3 cardinal directions
 astarLim' :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Bool -> Maybe [a]
-astarLim' nd f map end open closed partial | pos current == end = Just (f current)
+astarLim' nd f map end open closed partial
+  | pos current == end = Just (f current)
   | otherwise = astar f map end open' closed' partial
   where
     current = findSmallest open

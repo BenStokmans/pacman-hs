@@ -41,7 +41,7 @@ import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Pro
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, gridSizePx, pelletColor, screenToGridPos, getGhostColor)
+import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, getGhostColor, gridSizePx, pelletColor, screenToGridPos)
 import Views.PauseMenu (saveEditorLevel)
 import Views.StartMenu (drawParticles, updateParticles)
 

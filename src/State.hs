@@ -1,16 +1,14 @@
 module State where
 
 import Assets (Assets(Assets), loadAssets)
+import Data.Aeson
 import Data.Map (Map, empty)
+import Data.Text
+import GHC.Generics
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
 import Map (WallSection, calculateIntersections, getSpawnPoint, processWalls)
 import Struct
-import Data.Aeson
-import Data.Text
-import GHC.Generics
-
-
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -68,7 +66,7 @@ data GameStatus
   | Lost
   | Playing
   | Paused
-  deriving (Eq,Show)
+  deriving (Eq, Show)
 
 data GameState = GameState
   { lives :: Int
@@ -77,6 +75,7 @@ data GameState = GameState
   , mapName :: String
   , gMap :: LevelMap
   , score :: Int
+  , pelletCount :: Int
   , player :: Player -- the player character for pacman
   , pinky :: GhostActor
   , inky :: GhostActor
@@ -85,7 +84,7 @@ data GameState = GameState
   } deriving (Generic, Show)
 
 instance ToJSON GameState where
-    toJSON (GameState { score = score, lives = lives }) = object ["score" .= score, "lives" .= lives]
+  toJSON (GameState {score = score, lives = lives}) = object ["score" .= score, "lives" .= lives]
 
 data EditorTool
   = WallTool
@@ -116,63 +115,69 @@ data GlobalState = GlobalState
   }
 
 emptyGameState :: GameState
-emptyGameState = GameState
-            { score = 0
-            , lives = 0
-            , status = Paused
-            , prevClock = 0
-            , mapName = "default"
-            , gMap = LevelMap 0 0 []
-            , player = Player {pVelocity = 80, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
-            , blinky =
-                GhostActor
-                  { ghostType = Blinky
-                  , gVelocity = 75
-                  , gDirection = North
-                  , gLocation = (-1000, -1000)
-                  , gTarget = Vec2 0 0
-                  , gBehaviourTimer = 0
-                  , gCurrentBehaviour = Scatter
-                  , lastModeChange = 0
-                  , gUpdate = 0
-                  }
-            , pinky =
-                GhostActor
-                  { ghostType = Pinky
-                  , gVelocity = 75
-                  , gDirection = North
-                  , gLocation = (-1000, -1000)
-                  , gTarget = Vec2 0 0
-                  , gBehaviourTimer = 0
-                  , gCurrentBehaviour = Chase
-                  , lastModeChange = 0
-                  , gUpdate = 0
-                  }
-            , inky =
-                GhostActor
-                  { ghostType = Inky
-                  , gVelocity = 75
-                  , gDirection = North
-                  , gLocation = (-1000, -1000)
-                  , gTarget = Vec2 0 0
-                  , gBehaviourTimer = 0
-                  , gCurrentBehaviour = Scatter
-                  , lastModeChange = 0
-                  , gUpdate = 0
-                  }
-            , clyde =
-                GhostActor
-                  { ghostType = Clyde
-                  , gVelocity = 75
-                  , gDirection = North
-                  , gLocation = (-1000, -1000)
-                  , gTarget = Vec2 0 0
-                  , gBehaviourTimer = 0
-                  , gCurrentBehaviour = Scatter
-                  , lastModeChange = 0
-                  , gUpdate = 0
-                  }
-            }
+emptyGameState =
+  GameState
+    { score = 0
+    , pelletCount = 0
+    , lives = 0
+    , status = Paused
+    , prevClock = 0
+    , mapName = "default"
+    , gMap = LevelMap 0 0 []
+    , player = Player {pVelocity = 80, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
+    , blinky =
+        GhostActor
+          { ghostType = Blinky
+          , gVelocity = 75
+          , gDirection = North
+          , gLocation = (-1000, -1000)
+          , gTarget = Vec2 0 0
+          , lastDirChange = Vec2 0 0
+          , gBehaviourTimer = 0
+          , gCurrentBehaviour = Scatter
+          , lastModeChange = 0
+          , gUpdate = 0
+          }
+    , pinky =
+        GhostActor
+          { ghostType = Pinky
+          , gVelocity = 75
+          , gDirection = North
+          , gLocation = (-1000, -1000)
+          , gTarget = Vec2 0 0
+          , lastDirChange = Vec2 0 0
+          , gBehaviourTimer = 0
+          , gCurrentBehaviour = Chase
+          , lastModeChange = 0
+          , gUpdate = 0
+          }
+    , inky =
+        GhostActor
+          { ghostType = Inky
+          , gVelocity = 75
+          , gDirection = North
+          , gLocation = (-1000, -1000)
+          , gTarget = Vec2 0 0
+          , lastDirChange = Vec2 0 0
+          , gBehaviourTimer = 0
+          , gCurrentBehaviour = Scatter
+          , lastModeChange = 0
+          , gUpdate = 0
+          }
+    , clyde =
+        GhostActor
+          { ghostType = Clyde
+          , gVelocity = 75
+          , gDirection = North
+          , gLocation = (-1000, -1000)
+          , gTarget = Vec2 0 0
+          , lastDirChange = Vec2 0 0
+          , gBehaviourTimer = 0
+          , gCurrentBehaviour = Scatter
+          , lastModeChange = 0
+          , gUpdate = 0
+          }
+    }
 
 initState :: IO GlobalState
 initState = do

@@ -18,12 +18,14 @@ import Struct
   , cellHasType
   , cellsWithType
   , dirToVec2
+  , getCellWithType
   , getCells
+  , getWall
   , mapHeight
   , mapWidth
   , outOfBounds
   , scaleVec2
-  , setCells, getWall, getCellWithType
+  , setCells
   )
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
@@ -168,8 +170,7 @@ diagToWallCorner ne sw se nw
 
 -- returns ne sw se nw
 getDiagsTuple :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell)
-getDiagsTuple f l c@(Cell t pos) =
-  (f l (pos + Vec2 1 1), f l (pos + Vec2 (-1) (-1)), f l (pos + Vec2 1 (-1)), f l (pos + Vec2 (-1) 1))
+getDiagsTuple f l c@(Cell t pos) = (f l (pos + Vec2 1 1), f l (pos + Vec2 (-1) (-1)), f l (pos + Vec2 1 (-1)), f l (pos + Vec2 (-1) 1))
 
 getAdjacentTuple :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> (Maybe Cell, Maybe Cell, Maybe Cell, Maybe Cell)
 getAdjacentTuple f l c@(Cell t pos) =
@@ -248,7 +249,8 @@ wallToGhostWall SingleOutCorner = GhostInCorner
 wallToGhostWall _ = Single
 
 processGhostWalls :: LevelMap -> [(Cell, WallSection)]
-processGhostWalls m@(LevelMap _ _ l) = map (\(c, WallSection t d) -> (c, WallSection (wallToGhostWall t) d)) $ processWalls' (getCellWithType GhostWall) m
+processGhostWalls m@(LevelMap _ _ l) =
+  map (\(c, WallSection t d) -> (c, WallSection (wallToGhostWall t) d)) $ processWalls' (getCellWithType GhostWall) m
 
 processWalls :: LevelMap -> [(Cell, WallSection)]
 processWalls m@(LevelMap _ _ l) = processWalls' getWall m ++ processGhostWalls m

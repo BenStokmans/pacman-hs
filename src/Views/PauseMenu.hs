@@ -2,6 +2,7 @@ module Views.PauseMenu where
 
 import Assets (Assets(Assets, emuFont, pacFont))
 import Control.Monad (when)
+import Data.Aeson
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
 import FontContainer (FontContainer(..))
@@ -16,7 +17,6 @@ import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Views.StartMenu (drawParticles, updateParticles)
-import Data.Aeson
 
 continueButton :: Rectangle
 continueButton = Rectangle (0, 0) 400 100 10
