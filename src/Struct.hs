@@ -169,12 +169,14 @@ getCellWithType ct m v
 
 getCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Maybe Cell
 getCellCond m f v
-  | Just c <- getCell m v, f c = Just c
+  | Just c <- getCell m v
+  , f c = Just c
   | otherwise = Nothing
 
 isCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Bool
 isCellCond m f v
-  | Just c <- getCell m v, f c = True
+  | Just c <- getCell m v
+  , f c = True
   | otherwise = False
 
 isOutOfBounds :: LevelMap -> Vec2 -> Bool
@@ -189,7 +191,7 @@ getCellType :: LevelMap -> Vec2 -> CellType
 getCellType m v
   | Just (Cell t _) <- getCell m v = t
   | otherwise = Invalid
-  
+
 getCells :: LevelMap -> [Vec2] -> [Cell]
 getCells l = mapMaybe (getCell l)
 

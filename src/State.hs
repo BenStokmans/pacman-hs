@@ -114,6 +114,11 @@ data GlobalState = GlobalState
   , cachedWalls :: [(Cell, WallSection)]
   }
 
+gridSizePx :: (Float, Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
+gridSizePx (c, r) gs =
+  let (x, y) = windowSize (settings gs)
+   in (x * 0.8 * (c / r), y * 0.8 * (r / c))
+
 ghostToSprite :: GlobalState -> GhostType -> Picture
 ghostToSprite gs Blinky = blinkySprite $ assets gs
 ghostToSprite gs Pinky = pinkySprite $ assets gs

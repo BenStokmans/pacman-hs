@@ -10,7 +10,7 @@ import SDL.Audio (PlaybackState(Pause))
 import State (GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), windowSize)
 import System.Exit (exitSuccess)
 import Views.EditorView (handleInputEditorView, handleUpdateEditorView, renderEditorView)
-import Views.GameView (gridSizePx, handleInputGameView, handleUpdateGameView, renderGameView)
+import Views.GameView (handleInputGameView, handleUpdateGameView, renderGameView)
 import Views.PauseMenu (handleInputPauseMenu, handleUpdatePauseMenu, renderPauseMenu)
 import Views.StartMenu (handleInputStartMenu, handleUpdateStartMenu, renderStartMenu)
 

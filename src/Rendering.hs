@@ -22,7 +22,7 @@ import Graphics.Gloss
   , white
   )
 import Graphics.Gloss.Data.Point (Point, pointInBox)
-import Graphics.Gloss.Rendering (BitmapData(..), BitmapFormat(..), PixelFormat(..), RowOrder(..), bitmapDataOfForeignPtr, bitmapSize)
+import Graphics.Gloss.Rendering (BitmapData(..), BitmapFormat(..), Picture(..), PixelFormat(..), RowOrder(..), bitmapDataOfForeignPtr, bitmapSize)
 import Linear.V2 (V2(..))
 import SDL.Font (Font, blended, size)
 import SDL.Vect (V4(..))
@@ -50,6 +50,28 @@ gridToScreenPos :: GridInfo -> Vec2 -> Point -- get position screen from grid po
 gridToScreenPos gi@(dim, (w, h)) (Vec2 x y) =
   let (cw, ch) = cellSize gi
    in (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2)
+
+drawGrid :: GridInfo -> Color -> Picture
+drawGrid gi@((c, r), (w, h)) col =
+  Color col $
+  pictures $
+  [ let hc = -w2 + cw * i
+   in Line [(hc, -h2), (hc, h2)]
+  | i <- [0 .. c]
+  ] ++
+  [ let hr = -h2 + ch * i
+   in Line [(-w2, hr), (w2, hr)]
+  | i <- [0 .. r]
+  ]
+  where
+    w2 = w / 2
+    h2 = h / 2
+    (cw, ch) = cellSize gi
+
+screenToGridPos :: GridInfo -> Point -> Vec2 -- get position on grid from screen position
+screenToGridPos gi@(_, (pw, ph)) (x, y) = Vec2 (fromIntegral (floor ((pw / 2 + x) / cw))) (fromIntegral (floor ((ph / 2 + y) / ch)))
+  where
+    (cw, ch) = cellSize gi
 
 translateCell :: Cell -> ((Float, Float), (Float, Float)) -> Picture -> Picture
 translateCell (Cell _ v) gi =
