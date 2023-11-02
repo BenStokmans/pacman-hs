@@ -58,7 +58,8 @@ dirToVec2 West = Vec2 (-1) 0
 dirToVec2 East = Vec2 1 0
 
 data CellType
-  = Empty
+  = Invalid
+  | Empty
   | Pellet
   | PowerUp
   | Wall
@@ -81,6 +82,7 @@ instance Show CellType where
   show (GhostSpawn Inky) = "I"
   show (GhostSpawn Clyde) = "C"
   show GhostWall = "G"
+  show Invalid = ""
 
 stringToCellType :: String -> CellType
 stringToCellType "F" = Pellet
@@ -93,7 +95,7 @@ stringToCellType "P" = GhostSpawn Pinky
 stringToCellType "I" = GhostSpawn Inky
 stringToCellType "C" = GhostSpawn Clyde
 stringToCellType "G" = GhostWall
-stringToCellType _ = Empty
+stringToCellType _ = Invalid
 
 data Cell =
   Cell CellType Vec2
@@ -149,6 +151,9 @@ setCell (LevelMap w h cells) c@(Cell _ (Vec2 x y)) = LevelMap w h newCells
     newRow = cs1 ++ (c : tail cs2)
     newCells = rs1 ++ (newRow : tail rs2)
 
+clearCell :: LevelMap -> Vec2 -> LevelMap
+clearCell m v = setCell m (Cell Empty v)
+
 setCells :: LevelMap -> [Cell] -> LevelMap
 setCells = foldl setCell
 
@@ -162,6 +167,16 @@ getCellWithType ct m v
   | Just c@(Cell ct _) <- getCell m v = Just c
   | otherwise = Nothing
 
+getCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Maybe Cell
+getCellCond m f v
+  | Just c <- getCell m v, f c = Just c
+  | otherwise = Nothing
+
+isCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Bool
+isCellCond m f v
+  | Just c <- getCell m v, f c = True
+  | otherwise = False
+
 isOutOfBounds :: LevelMap -> Vec2 -> Bool
 isOutOfBounds (LevelMap w h _) (Vec2 x y) = x < 0 || y < 0 || x >= w || y >= h
 
@@ -170,18 +185,11 @@ getCell l@(LevelMap _ _ cells) v@(Vec2 x y)
   | isOutOfBounds l v = Nothing
   | otherwise = Just $ (cells !! round y) !! round x
 
--- getCell' :: LevelMap -> Vec2 -> Maybe Cell -- recursion should be way faster than the function below in the best case and the same in the worst case
--- getCell' (LevelMap _ _ []) _ = Nothing
--- getCell' (LevelMap w h (c@(Cell _ v2@(Vec2 x y)):xs)) v1
---   | v1 == v2 = Just c
---                                                 --    | x < 0 || y < 0 || x >= w || y >= h = Just OutOfBounds
---   | otherwise = getCell (LevelMap w h xs) v1
--- getCell'' :: LevelMap -> Vec2 -> Maybe Cell
--- getCell'' (LevelMap _ _ m) v1
---   | null n = Nothing
---   | otherwise = Just (head n)
---   where
---     n = filter (\(Cell _ v2) -> v1 == v2) m
+getCellType :: LevelMap -> Vec2 -> CellType
+getCellType m v
+  | Just (Cell t _) <- getCell m v = t
+  | otherwise = Invalid
+  
 getCells :: LevelMap -> [Vec2] -> [Cell]
 getCells l = mapMaybe (getCell l)
 

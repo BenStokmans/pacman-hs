@@ -1,13 +1,13 @@
 module State where
 
-import Assets (Assets(Assets), loadAssets)
+import Assets (Assets(..), loadAssets)
 import Data.Aeson
 import Data.Map (Map, empty)
 import Data.Text
 import GHC.Generics
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
-import Map (WallSection, calculateIntersections, getSpawnPoint, processWalls)
+import Map (WallSection, getSpawnPoint, processWalls)
 import Struct
 
 data Prompt = Prompt
@@ -113,6 +113,18 @@ data GlobalState = GlobalState
   , mouseDown :: Maybe MouseButton
   , cachedWalls :: [(Cell, WallSection)]
   }
+
+ghostToSprite :: GlobalState -> GhostType -> Picture
+ghostToSprite gs Blinky = blinkySprite $ assets gs
+ghostToSprite gs Pinky = pinkySprite $ assets gs
+ghostToSprite gs Inky = inkySprite $ assets gs
+ghostToSprite gs Clyde = clydeSprite $ assets gs
+
+getGhostActor :: GlobalState -> GhostType -> GhostActor
+getGhostActor gs Blinky = blinky $ gameState gs
+getGhostActor gs Pinky = pinky $ gameState gs
+getGhostActor gs Inky = inky $ gameState gs
+getGhostActor gs Clyde = clyde $ gameState gs
 
 emptyGameState :: GameState
 emptyGameState =

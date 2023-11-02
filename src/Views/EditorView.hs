@@ -28,20 +28,22 @@ import Rendering
   ( Rectangle(Rectangle)
   , cellSize
   , defaultButton
+  , drawGrid
   , gridToScreenPos
   , rectangleHovered
   , renderButton
   , renderString
   , renderString'
   , renderStringTopLeft
+  , screenToGridPos
   , stringSize
   )
 import SDL.Font (Font(Font))
-import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..))
+import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..), gridSizePx)
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
-import Views.GameView (debugGrid, drawGhost, drawGrid, drawMap, drawPlayer, getGhostColor, gridSizePx, pelletColor, screenToGridPos)
+import Views.GameView (debugGrid, drawGhost, drawMap, drawPlayer, getGhostColor, pelletColor)
 import Views.PauseMenu (saveEditorLevel)
 import Views.StartMenu (drawParticles, updateParticles)
 
@@ -229,7 +231,7 @@ renderEditorView gs = do
     dims@((c, r), (w, h)) = getEditorGridInfo gs
     level@(LevelMap _ _ cells) = editorLevel gs
     mPos@(mouseX, mouseY) = mousePos gs
-    mouseCell@(Vec2 x y) = screenToGridPos gs dims (mouseX - mx / 2, mouseY)
+    mouseCell@(Vec2 x y) = screenToGridPos dims (mouseX - mx / 2, mouseY)
     (cw, ch) = cellSize dims
     (mx, _) = windowMargin (c, r) gs
     tool = editorTool gs
@@ -326,7 +328,7 @@ handleUpdateEditorView _ s = do
     dims@((c, r), (w, h)) = getEditorGridInfo s
     (mx, _) = windowMargin (c, r) s
     (mouseX, mouseY) = mousePos s
-    v@(Vec2 x y) = screenToGridPos s dims (mouseX - mx / 2, mouseY)
+    v@(Vec2 x y) = screenToGridPos dims (mouseX - mx / 2, mouseY)
     m@(LevelMap _ _ cells) = editorLevel s
     mCell = getCell m v
     emptyCell = Cell Empty v

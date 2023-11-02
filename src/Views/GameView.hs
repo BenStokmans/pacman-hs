@@ -4,16 +4,27 @@ module Views.GameView where
 
 import Assets (Anim(..), Assets(..), PacManSprite(..))
 import Control.Monad.Random
+import Data.Foldable (foldrM)
 import Data.List (delete, minimumBy)
-import Data.Maybe (fromMaybe, isNothing, mapMaybe)
+import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
 import FontContainer (FontContainer(..))
 import GHC.Base (undefined)
 import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, makeColor, orange, pictures, red, scale, translate, white)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
-import Map (deleteMultiple, getGhostSpawnPoint, processWalls, wallSectionToPic, wallToSizedSection)
+import Map
+  ( calcNextGhostPosition
+  , calcNextPlayerPosition
+  , calcWrappedPosition
+  , deleteMultiple
+  , getGhostSpawnPoint
+  , isPastCentre
+  , processWalls
+  , wallSectionToPic
+  , wallToSizedSection
+  )
 import Pathfinding
-import Rendering (cellSize, gridToScreenPos, renderStringTopLeft, renderStringTopRight, translateCell)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..))
+import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell)
+import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx)
 import Struct
   ( Cell(..)
   , CellType(..)
@@ -29,10 +40,14 @@ import Struct
   , cellHasType
   , cellsWithType
   , cellsWithTypeMap
+  , clearCell
   , dirToVec2
   , dummyCell
   , getCell
+  , getCellCond
+  , getCellType
   , ghosts
+  , isCellCond
   , isOutOfBounds
   , oppositeDirection
   , outOfBounds
@@ -42,33 +57,6 @@ import Struct
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
 gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)
-
-drawGrid :: GridInfo -> Color -> Picture
-drawGrid gi@((c, r), (w, h)) col =
-  Color col $
-  pictures $
-  [ let hc = -w2 + cw * i
-   in Line [(hc, -h2), (hc, h2)]
-  | i <- [0 .. c]
-  ] ++
-  [ let hr = -h2 + ch * i
-   in Line [(-w2, hr), (w2, hr)]
-  | i <- [0 .. r]
-  ]
-  where
-    w2 = w / 2
-    h2 = h / 2
-    (cw, ch) = cellSize gi
-
-gridSizePx :: (Float, Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
-gridSizePx (c, r) gs =
-  let (x, y) = windowSize (settings gs)
-   in (x * 0.8 * (c / r), y * 0.8 * (r / c))
-
-screenToGridPos :: GlobalState -> GridInfo -> Point -> Vec2 -- get position on grid from screen position --TODO: remove gamestate but lot of work
-screenToGridPos gs gi@(_, (pw, ph)) (x, y) = Vec2 (fromIntegral (floor ((pw / 2 + x) / cw))) (fromIntegral (floor ((ph / 2 + y) / ch)))
-  where
-    (cw, ch) = cellSize gi
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -98,7 +86,7 @@ debugGhostPath s =
        getPathLimited
          (gMap gs)
          (oppositeDirection $ gDirection $ getGhostActor s g)
-         (screenToGridPos s dims (gLocation $ getGhostActor s g))
+         (screenToGridPos dims (gLocation $ getGhostActor s g))
          (gTarget $ getGhostActor s g)
          True)
     ghosts
@@ -151,38 +139,21 @@ gameGridInfo gs =
   let (x, y) = gameGridDimensions gs
    in ((x, y), gridSizePx (x, y) gs)
 
-ghostToSprite :: GlobalState -> GhostType -> Picture
-ghostToSprite gs Blinky = blinkySprite $ assets gs
-ghostToSprite gs Pinky = pinkySprite $ assets gs
-ghostToSprite gs Inky = inkySprite $ assets gs
-ghostToSprite gs Clyde = clydeSprite $ assets gs
-
 drawGhost :: GlobalState -> GhostType -> GridInfo -> Point -> Picture
-drawGhost gs gt gi@((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
+drawGhost gs gt gi@((c, r), _) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
   where
     (cw, ch) = cellSize gi
-    margin = mazeMargin $ settings gs
-    padding = ghostPadding $ settings gs
-    ghostScalar = (1 + margin * 2) * (1 - padding * 2)
+    ghostScalar = (1 + mazeMargin (settings gs) * 2) * (1 - ghostPadding (settings gs) * 2)
     scalarX = (cw / 16) * ghostScalar * (c / r)
     scalarY = (ch / 16) * ghostScalar * (r / c)
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
-drawPlayer gs gi@((c, r), (w, h)) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! frame)
+drawPlayer gs gi@((c, r), _) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! pFrame (player $ gameState gs))
   where
-    frame = pFrame $ player $ gameState gs
     (cw, ch) = cellSize gi
-    margin = mazeMargin $ settings gs
-    padding = pacmanPadding $ settings gs
-    pacmanScalar = (1 + margin * 2) * (1 - padding * 2)
+    pacmanScalar = (1 + mazeMargin (settings gs) * 2) * (1 - pacmanPadding (settings gs) * 2)
     scalarX = (cw / 16) * pacmanScalar * (c / r)
     scalarY = (ch / 16) * pacmanScalar * (r / c)
-
-getGhostActor :: GlobalState -> GhostType -> GhostActor
-getGhostActor gs Blinky = blinky $ gameState gs
-getGhostActor gs Pinky = pinky $ gameState gs
-getGhostActor gs Inky = inky $ gameState gs
-getGhostActor gs Clyde = clyde $ gameState gs
 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
@@ -198,29 +169,26 @@ renderGameView gs = do
        "\nPac-Man padding: " ++
        show (pacmanPadding $ settings gs) ++
        "\nBlinky: " ++
-       show (screenToGridPos gs gi $ gLocation $ blinky $ gameState gs) ++
+       show (screenToGridPos gi $ gLocation $ blinky $ gameState gs) ++
        ", " ++
        show (gTarget $ blinky $ gameState gs) ++
-      ", " ++
-       show (gDirection$ blinky $ gameState gs) ++
+       ", " ++
+       show (gDirection $ blinky $ gameState gs) ++
        "\nInky: " ++
-       show (screenToGridPos gs gi $ gLocation $ inky $ gameState gs) ++
+       show (screenToGridPos gi $ gLocation $ inky $ gameState gs) ++
        ", " ++
        show (gTarget $ inky $ gameState gs) ++
        ", " ++
-       show (gDirection$ inky $ gameState gs) ++
+       show (gDirection $ inky $ gameState gs) ++
        "\nPinky: " ++
-       show (screenToGridPos gs gi $ gLocation $ pinky $ gameState gs) ++
+       show (screenToGridPos gi $ gLocation $ pinky $ gameState gs) ++
        ", " ++
        show (gTarget $ pinky $ gameState gs) ++
        ", " ++
-       show (gDirection$ pinky $ gameState gs) ++
-       "\nClyde: " ++ show (screenToGridPos gs gi $ gLocation $ clyde $ gameState gs) ++ 
-       ", " ++ 
-       show (gTarget $ clyde $ gameState gs) ++  
-       ", " ++
-       show (gDirection$ clyde $ gameState gs)
-       )
+       show (gDirection $ pinky $ gameState gs) ++
+       "\nClyde: " ++
+       show (screenToGridPos gi $ gLocation $ clyde $ gameState gs) ++
+       ", " ++ show (gTarget $ clyde $ gameState gs) ++ ", " ++ show (gDirection $ clyde $ gameState gs))
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let drawnMap = drawMap gs currentLevel gi
   let drawnGhosts = pictures $ map (\t -> drawGhost gs t gi $ gLocation (getGhostActor gs t)) [Blinky, Pinky, Inky, Clyde]
@@ -317,15 +285,15 @@ calculateChaseTarget gt s
     p = player gs
     gs = gameState s
     gInfo = gameGridInfo s
-    pLoc = screenToGridPos s gInfo (pLocation p)
+    pLoc = screenToGridPos gInfo (pLocation p)
     pDir = dirToVec2 (pDirection p)
-    blinkyPos = screenToGridPos s gInfo (gLocation $ blinky gs)
-    clydePos = screenToGridPos s gInfo (gLocation $ clyde gs)
+    blinkyPos = screenToGridPos gInfo (gLocation $ blinky gs)
+    clydePos = screenToGridPos gInfo (gLocation $ clyde gs)
 
 normalizeTarget :: LevelMap -> Vec2 -> Vec2
 normalizeTarget m v
   | (_, Just r) <- normalizeTarget' m [v] = r
-  | otherwise = error "?" -- this can never happen
+  | otherwise = error "impressive" -- this can never happen
   where
     normalizeTarget' :: LevelMap -> [Vec2] -> ([Vec2], Maybe Vec2)
     normalizeTarget' _ [] = ([], Nothing)
@@ -360,7 +328,7 @@ updateGhostTarget ghost s
     gs = gameState s
     currentDirection = gDirection ghost
     (px, py) = gLocation ghost
-    currentGridPos = screenToGridPos s gi (px, py)
+    currentGridPos = screenToGridPos gi (px, py)
     (cx, cy) = gridToScreenPos gi currentGridPos
     isPastCentre
       | currentDirection == North = cy <= py
@@ -393,33 +361,18 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
     dims@((c, r), (w, h)) = gameGridInfo s
     (wc, hc) = cellSize dims
     m@(LevelMap lw lh cells) = gMap gs
-    v = gVelocity ghost
     currentDirection = gDirection ghost
-    (px, py) = gLocation ghost
-    currentGridPos = screenToGridPos s dims (px, py)
-    distMoved = dt * v
-    (Cell nextCellType _) = fromMaybe dummyCell (getCell m (currentGridPos + dirToVec2 currentDirection))
-    (x, y)
-      | currentDirection == North && py >= h / 2 = (px, -h / 2 + hc / 2)
-      | currentDirection == South && py <= -h / 2 = (px, h / 2 - hc / 2)
-      | currentDirection == East && px >= w / 2 = (-w / 2 + wc / 2, py)
-      | currentDirection == West && px <= -w / 2 = (w / 2 - wc / 2, py)
-      | otherwise = (px, py)
-    newLoc@(nx, ny)
-      | nextCellType == Wall && isPastCentre = (x, y)
-      | currentDirection == North = (x, y + distMoved)
-      | currentDirection == East = (x + distMoved, y)
-      | currentDirection == South = (x, y - distMoved)
-      | currentDirection == West = (x - distMoved, y)
+    location = gLocation ghost
+    currentGridPos = screenToGridPos dims location
+    distMoved = dt * gVelocity ghost
+    nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
+    wrappedPos = calcWrappedPosition dims currentDirection location
+    pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
+    newLoc@(nx, ny) = calcNextGhostPosition currentDirection nextCellType pastCenter wrappedPos distMoved
     (cx, cy) = gridToScreenPos dims currentGridPos
-    isPastCentre
-      | currentDirection == North = cy <= y
-      | currentDirection == East = cx <= x
-      | currentDirection == South = cy >= y
-      | currentDirection == West = cx >= x
-    cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
+    Cell ctype cLoc = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     mustPathfind =
-      isPastCentre &&
+      pastCenter &&
       length
         (cellsWithType
            Wall
@@ -429,7 +382,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
       2
     path = fromMaybe [currentDirection] $ getDirectionsLimited m (oppositeDirection currentDirection) currentGridPos (gTarget ghost) True
     oldChange = lastDirChange ghost
-    (newDir,newChange)
+    (newDir, newChange)
       | oldChange == currentGridPos = (currentDirection, oldChange)
       | null path = (currentDirection, oldChange)
       | mustPathfind = (head path, currentGridPos)
@@ -449,7 +402,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
 
 updatePlayerPosition :: Float -> GlobalState -> GlobalState
 updatePlayerPosition dt s
-  | isPastCentre =
+  | pastCenter =
     s
       { gameState =
           gs
@@ -463,83 +416,54 @@ updatePlayerPosition dt s
                       if currentDirection /= newDir
                         then Nothing
                         else bufferedInput
-                  , pMoving = finalLocation /= (px, py)
+                  , pMoving = finalLocation /= location
                   }
-            , gMap = LevelMap lw lh newCells
+            , gMap = m
             }
       }
-  | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= (px, py)}}}
+  | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= location}}}
   where
     gs = gameState s
     dims@((c, r), (w, h)) = gameGridInfo s
     (wc, hc) = cellSize dims
     m@(LevelMap lw lh cells) = gMap gs
     ps = player gs
-    v = pVelocity ps
     currentDirection = pDirection ps
-    (px, py) = pLocation ps
-    currentGridPos = screenToGridPos s dims (px, py)
-    distMoved = dt * v
-    (Cell nextCellType _) = fromMaybe dummyCell (getCell m (currentGridPos + dirToVec2 currentDirection))
-    (x, y)
-      | currentDirection == North && py >= h / 2 = (px, -h / 2 + hc / 2)
-      | currentDirection == South && py <= -h / 2 = (px, h / 2 - hc / 2)
-      | currentDirection == East && px >= w / 2 = (-w / 2 + wc / 2, py)
-      | currentDirection == West && px <= -w / 2 = (w / 2 - wc / 2, py)
-      | otherwise = (px, py)
-    newLoc@(nx, ny)
-      | (nextCellType == Wall || nextCellType == GhostWall) && isPastCentre = (x, y)
-      | currentDirection == North = (x, y + distMoved)
-      | currentDirection == East = (x + distMoved, y)
-      | currentDirection == South = (x, y - distMoved)
-      | currentDirection == West = (x - distMoved, y)
+    location = pLocation ps
+    currentGridPos = screenToGridPos dims location
+    distMoved = dt * pVelocity ps
+    nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
+    wrappedPos = calcWrappedPosition dims currentDirection location
+    pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
+    newLoc@(nx, ny) = calcNextPlayerPosition currentDirection nextCellType pastCenter wrappedPos distMoved
     (cx, cy) = gridToScreenPos dims currentGridPos
-    isPastCentre
-      | currentDirection == North = cy <= y
-      | currentDirection == East = cx <= x
-      | currentDirection == South = cy >= y
-      | currentDirection == West = cx >= x
-    cell@(Cell ctype cLoc) = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
+    Cell ctype cLoc = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
     bufferedInput = pBufferedInput ps
     canTurn =
-      maybe
-        False
-        (\d -> maybe False (\c -> not (cellHasType Wall c) && not (cellHasType GhostWall c)) $ getCell m (currentGridPos + dirToVec2 d))
-        bufferedInput
+      maybe False (\d -> isCellCond m (\c -> not (cellHasType Wall c) && not (cellHasType GhostWall c)) (currentGridPos + dirToVec2 d)) bufferedInput
     newDir
       | canTurn = fromMaybe North bufferedInput
       | otherwise = currentDirection
-    pastCentreLocation
+    newDirLocation
       | newDir == North || newDir == South = (cx, ny)
       | otherwise = (nx, cy)
+    finalLocation
+      | currentDirection /= newDir = newDirLocation
+      | otherwise = newLoc
     oldScore = score gs
     oldPelletCount = pelletCount gs
     (newScore, newPelletCount, newCells)
-      | ctype == Pellet =
-        ( oldScore + 1
-        , oldPelletCount + 1
-        , let (LevelMap _ _ cs) = setCell m (Cell Empty cLoc)
-           in cs)
+      | ctype == Pellet = (oldScore + 1, oldPelletCount + 1, clearCell m cLoc)
       | ctype == PowerUp =
         ( oldScore + 1
         , oldPelletCount
-        , let (LevelMap _ _ cs) = setCell m (Cell Empty cLoc)
-           in cs)
-      | otherwise = (oldScore, oldPelletCount, cells)
-    finalLocation
-      | currentDirection /= newDir = pastCentreLocation
-      | otherwise = newLoc
+        , clearCell m cLoc -- clean this up
+         )
+      | otherwise = (oldScore, oldPelletCount, m)
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
 handleUpdateGameView f gs = do
   ngs <- updatePlayerAnimState gs
   let pUpdate = updatePlayerPosition f ngs
-  blinkyTargetUpdate <- updateGhostTarget (getGhostActor pUpdate Blinky) pUpdate
-  pinkyTargetUpdate <- updateGhostTarget (getGhostActor blinkyTargetUpdate Pinky) blinkyTargetUpdate
-  inkyTargetUpdate <- updateGhostTarget (getGhostActor pinkyTargetUpdate Inky) pinkyTargetUpdate
-  clydeTargetUpdate <- updateGhostTarget (getGhostActor inkyTargetUpdate Clyde) inkyTargetUpdate
-  let blinkyUpdate = updateGhostPosition f clydeTargetUpdate (getGhostActor clydeTargetUpdate Blinky)
-  let pinkyUpdate = updateGhostPosition f blinkyUpdate (getGhostActor blinkyUpdate Pinky)
-  let inkyUpdate = updateGhostPosition f pinkyUpdate (getGhostActor pinkyUpdate Inky)
-  let clydeUpdate = updateGhostPosition f inkyUpdate (getGhostActor inkyUpdate Clyde)
-  return clydeUpdate
+  ghostTargetUpdate <- foldrM (\v acc -> updateGhostTarget (getGhostActor acc v) acc) pUpdate ghosts
+  return $ foldr (\v acc -> updateGhostPosition f acc (getGhostActor acc v)) ghostTargetUpdate ghosts

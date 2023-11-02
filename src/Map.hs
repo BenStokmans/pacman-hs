@@ -3,10 +3,10 @@ module Map where
 import Codec.Picture.Metadata (Keys(Source), Value(Double))
 import Data.List (intercalate)
 import Data.Maybe (isJust, isNothing, mapMaybe)
-import Graphics.Gloss (Picture(..), blank, circleSolid, pictures, rotate, thickArc, thickCircle, translate)
+import Graphics.Gloss (Picture(..), blank, circleSolid, pictures, rotate, thickArc, thickCircle, translate, Point)
 import Graphics.Gloss.Data.Color (green, red, white, yellow)
 import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
-import Rendering (resize)
+import Rendering (resize, gridToScreenPos, cellSize)
 import Struct
   ( Cell(Cell)
   , CellType(..)
@@ -25,7 +25,7 @@ import Struct
   , mapWidth
   , outOfBounds
   , scaleVec2
-  , setCells
+  , setCells, GridInfo
   )
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
@@ -53,16 +53,7 @@ getDiags f l c@(Cell t pos) = mapMaybe (f l . (pos +)) [Vec2 1 1, Vec2 (-1) (-1)
 getAdjacent :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> [Cell]
 getAdjacent f l c@(Cell t pos) = mapMaybe (f l . (\d -> pos + dirToVec2 d)) allDirections
 
-getIntersections :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> [Vec2]
-getIntersections f l@(LevelMap _ _ m) = map (\(Cell _ v) -> v) (filter (\c -> length (emptyAdjacent c) >= 3 && null (emptyDiag c)) (concat m))
-  where
-    emptyAdjacent c = filter (\(Cell t _) -> t == Empty || t == Pellet) (getAdjacent f l c)
-    emptyDiag c = filter (\(Cell t _) -> t == Empty || t == Pellet) (getDiags f l c)
-
-calculateIntersections :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> LevelMap
-calculateIntersections f l = setCells l (map (Cell Intersection) (getIntersections f l))
-
-deleteMultiple :: Eq a => [a] -> [a] -> [a] -- TODO: optimize
+deleteMultiple :: Eq a => [a] -> [a] -> [a]
 deleteMultiple [] _ = []
 deleteMultiple (x:xs) ys
   | x `elem` ys = deleteMultiple xs ys
@@ -254,3 +245,29 @@ processGhostWalls m@(LevelMap _ _ l) =
 
 processWalls :: LevelMap -> [(Cell, WallSection)]
 processWalls m@(LevelMap _ _ l) = processWalls' getWall m ++ processGhostWalls m
+
+isPastCentre :: GridInfo -> Direction -> Vec2 -> Point -> Bool
+isPastCentre gi d v@(Vec2 vx vy) (x, y) | d == North = cy <= y
+                                        | d == East = cx <= x
+                                        | d == South = cy >= y
+                                        | d == West = cx >= x
+                                      where
+                                        (cx,cy) = gridToScreenPos gi v
+
+calcWrappedPosition :: GridInfo -> Direction -> Point -> Point
+calcWrappedPosition gi@(_,(w,h)) d (x, y)
+      | d == North && y >= h / 2 = (x, -h / 2 + hc / 2)
+      | d == South && y <= -h / 2 = (x, h / 2 - hc / 2)
+      | d == East && x >= w / 2 = (-w / 2 + wc / 2, y)
+      | d == West && x <= -w / 2 = (w / 2 - wc / 2, y)
+      | otherwise = (x, y)
+      where
+        (wc, hc) = cellSize gi
+
+calcNextPosition :: Direction -> CellType -> Bool -> Point -> Float -> Point
+calcNextPosition d nextCellType pastCenter (x,y) delta
+      | (nextCellType == Wall || nextCellType == GhostWall) && pastCenter = (x, y)
+      | d == North = (x, y + delta)
+      | d == East = (x + delta, y)
+      | d == South = (x, y - delta)
+      | d == West = (x - delta, y)

@@ -94,8 +94,8 @@ astar f map end open closed partial
     closed' = current : closed
 
 -- limits path to 3 cardinal directions
-astarLim' :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Bool -> Maybe [a]
-astarLim' nd f map end open closed partial
+astarLimited :: Direction -> (AStarNode -> [a]) -> LevelMap -> Vec2 -> [AStarNode] -> [AStarNode] -> Bool -> Maybe [a]
+astarLimited nd f map end open closed partial
   | pos current == end = Just (f current)
   | otherwise = astar f map end open' closed' partial
   where
@@ -106,13 +106,13 @@ astarLim' nd f map end open closed partial
     closed' = current : closed
 
 getPathLimited :: LevelMap -> Direction -> Vec2 -> Vec2 -> Bool -> Maybe [Vec2]
-getPathLimited map ad start end = astarLim' ad backtrackVec2 map end [startCell] []
+getPathLimited map ad start end = astarLimited ad backtrackVec2 map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
 
 getDirectionsLimited :: LevelMap -> Direction -> Vec2 -> Vec2 -> Bool -> Maybe [Direction]
-getDirectionsLimited map ad start end = astarLim' ad backtrackDir map end [startCell] []
+getDirectionsLimited map ad start end = astarLimited ad backtrackDir map end [startCell] []
   where
     startCell = AStarNode {pos = start, fCost = startCost, gCost = 0, hCost = startCost, prev = startCell, dir = North}
     startCost = vec2Dist end start
