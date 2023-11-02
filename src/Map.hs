@@ -26,7 +26,7 @@ import Struct
   , mapWidth
   , outOfBounds
   , scaleVec2
-  , setCells
+  , setCells, oppositeDirection, isCellCond
   )
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
@@ -279,3 +279,6 @@ calcNextPlayerPosition = calcNextPosition' False
 
 calcNextGhostPosition :: Direction -> CellType -> Bool -> Point -> Float -> Point
 calcNextGhostPosition = calcNextPosition' False
+
+getAllowedGhostDirections :: LevelMap -> Direction -> Vec2 -> [Direction]
+getAllowedGhostDirections m d v = filter (\d -> isCellCond m (not . cellHasType Wall) (v + dirToVec2 d)) (deleteMultiple allDirections [oppositeDirection d, d])

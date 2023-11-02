@@ -20,7 +20,7 @@ import Map
   , isPastCentre
   , processWalls
   , wallSectionToPic
-  , wallToSizedSection
+  , wallToSizedSection, getAllowedGhostDirections
   )
 import Pathfinding
 import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell)
@@ -174,6 +174,8 @@ renderGameView gs = do
        show (gTarget $ blinky $ gameState gs) ++
        ", " ++
        show (gDirection $ blinky $ gameState gs) ++
+        ", " ++
+       show (getAllowedGhostDirections currentLevel (gDirection $ blinky $ gameState gs) (screenToGridPos gi $ gLocation $ blinky $ gameState gs)) ++
        "\nInky: " ++
        show (screenToGridPos gi $ gLocation $ inky $ gameState gs) ++
        ", " ++
@@ -371,21 +373,21 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
     newLoc@(nx, ny) = calcNextGhostPosition currentDirection nextCellType pastCenter wrappedPos distMoved
     (cx, cy) = gridToScreenPos dims currentGridPos
     Cell ctype cLoc = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
-    mustPathfind =
-      pastCenter &&
-      length
-        (cellsWithType
+    walls = cellsWithType
            Wall
            (mapMaybe
               (\d -> getCell m (currentGridPos + dirToVec2 d))
-              (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) <
-      2
+              (deleteMultiple allDirections [oppositeDirection currentDirection, currentDirection]))
     path = fromMaybe [currentDirection] $ getDirectionsLimited m (oppositeDirection currentDirection) currentGridPos (gTarget ghost) True
+    allowedDirections = getAllowedGhostDirections m currentDirection currentGridPos
+
     oldChange = lastDirChange ghost
     (newDir, newChange)
       | oldChange == currentGridPos = (currentDirection, oldChange)
+      | gTarget ghost == currentGridPos && not (null allowedDirections) = (head allowedDirections, currentGridPos)
+      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos)
       | null path = (currentDirection, oldChange)
-      | mustPathfind = (head path, currentGridPos)
+      | pastCenter && length walls < 2 = (head path, currentGridPos)
       | otherwise = (currentDirection, oldChange)
     pastCentreLocation
       | newDir == North || newDir == South = (cx, ny)

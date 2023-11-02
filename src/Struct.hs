@@ -133,7 +133,7 @@ ghosts = [Blinky, Pinky, Inky, Clyde]
 data LevelMap =
   LevelMap Float Float [[Cell]]
 
-instance Show LevelMap where
+instance Show LevelMap where --TODO: Fix
   show :: LevelMap -> String
   show m@(LevelMap w h l) = intercalate "\n" $ reverse (map unwords cells)
     where
@@ -175,8 +175,7 @@ getCellCond m f v
 
 isCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Bool
 isCellCond m f v
-  | Just c <- getCell m v
-  , f c = True
+  | Just c <- getCell m v, f c = True
   | otherwise = False
 
 isOutOfBounds :: LevelMap -> Vec2 -> Bool

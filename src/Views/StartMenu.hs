@@ -75,7 +75,7 @@ renderStartMenu s = do
     (pictures
        [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton])
 
-emptyMap :: Float -> Float -> LevelMap
+emptyMap :: Float -> Float -> LevelMap -- TODO: Fix
 emptyMap w h = LevelMap w h (fr : ors ++ [lr])
   where
     fr = map (\x -> Cell Wall (Vec2 (fromInteger x :: Float) 0)) [0 .. (round w - 1)]
