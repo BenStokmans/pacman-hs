@@ -6,7 +6,7 @@ stack exec -- curl -O https://repo.msys2.org/mingw/x86_64/mingw-w64-x86_64-SDL2-
 stack exec -- pacman -U mingw-w64-x86_64-SDL2-2.0.22-2-any.pkg.tar.zst
 rm .\mingw-w64-x86_64-SDL2-2.0.22-2-any.pkg.tar.zst
 
-stack exec -- pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2_ttf
+stack exec -- pacman -S mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2_ttf mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_mixer
 
 # Download freeglut
 https://www.transmissionzero.co.uk/files/software/development/GLUT/freeglut-MinGW.zip

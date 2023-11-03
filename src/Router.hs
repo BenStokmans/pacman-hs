@@ -13,6 +13,7 @@ import Views.EditorView (handleInputEditorView, handleUpdateEditorView, renderEd
 import Views.GameView (handleInputGameView, handleUpdateGameView, renderGameView)
 import Views.PauseMenu (handleInputPauseMenu, handleUpdatePauseMenu, renderPauseMenu)
 import Views.StartMenu (handleInputStartMenu, handleUpdateStartMenu, renderStartMenu)
+import Views.SettingsView (handleUpdateSettingsView, handleInputSettingsView, renderSettingsView)
 
 handleRender :: GlobalState -> IO Picture
 handleRender s@(GlobalState {route = r, prompt = p}) = do
@@ -25,6 +26,7 @@ handleRender s@(GlobalState {route = r, prompt = p}) = do
       | r == GameView = renderGameView s
       | r == EditorView = renderEditorView s
       | r == PauseMenu = renderPauseMenu s
+      | r == SettingsView = renderSettingsView s
       | otherwise = error "Route not implemented"
     pImage
       | isJust p = renderPrompt s (fromMaybe emptyPrompt p)
@@ -68,6 +70,7 @@ handleInput e@(EventKey k Down _ _) s =
       | r == GameView = handleInputGameView promptEvent
       | r == EditorView = handleInputEditorView promptEvent
       | r == PauseMenu = handleInputPauseMenu promptEvent
+      | r == SettingsView = handleInputSettingsView promptEvent
       | otherwise = error "Route not implemented"
 handleInput e@(EventKey (SpecialKey KeyUnknown) Up _ _) s -- for some reason when the user lets go of a number key its reported as unknown
  = do
@@ -95,4 +98,5 @@ handleUpdate f s@(GlobalState {route = r, prompt = p}) = do
       | r == GameView = handleUpdateGameView f
       | r == EditorView = handleUpdateEditorView f
       | r == PauseMenu = handleUpdatePauseMenu f
+      | r == SettingsView = handleUpdateSettingsView f
       | otherwise = error "Route not implemented"

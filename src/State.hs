@@ -42,8 +42,18 @@ defaultPrompt =
     , darkenBackground = True
     }
 
+defaultUserSettings :: UserSettings
+defaultUserSettings = UserSettings { musicVolume = 127, debugMode = True } -- TODO: Disable debugmode by default
+
+data UserSettings = UserSettings
+  { 
+    musicVolume :: Int,
+    debugMode :: Bool
+  }
+
 data Settings = Settings
   { windowSize :: (Float, Float)
+  , userSettings :: UserSettings
   , ghostPadding :: Float
   , pacmanPadding :: Float
   , mazeMargin :: Float
@@ -59,6 +69,7 @@ data MenuRoute
   | EditorView
   | PauseMenu
   | GameOverMenu
+  | SettingsView
   deriving (Eq, Show)
 
 data GameStatus
@@ -219,6 +230,7 @@ initState = do
       { settings =
           Settings
             { windowSize = (800, 800)
+            , userSettings = defaultUserSettings
             , ghostPadding = 0.20
             , pacmanPadding = 0.15
             , mazeMargin = 0.35

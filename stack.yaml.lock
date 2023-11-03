@@ -29,6 +29,28 @@ packages:
       size: 482
   original:
     hackage: GLFW-b-1.4.8.4@sha256:b35242b401ac3235753f2bdfdfd07981f531e1d0457928caafb1db3801df40bc,2284
+- completed:
+    commit: 0c13ee0d06edd76fa5c19c46b7b9a3b9fc9889d3
+    git: https://github.com/locallycompact/sdl2-mixer.git
+    name: sdl2-mixer
+    pantry-tree:
+      sha256: 23089df20ce66510c85271bd4e2590d08991aba9e9fb2dbafa36b3367eb8a578
+      size: 886
+    version: 1.1.0
+  original:
+    commit: 0c13ee0d06edd76fa5c19c46b7b9a3b9fc9889d3
+    git: https://github.com/locallycompact/sdl2-mixer.git
+- completed:
+    commit: 397715f086db7c732c1225a9ff7059e6cfa8d825
+    git: https://github.com/BenStokmans/sdl2-image.git
+    name: sdl2-image
+    pantry-tree:
+      sha256: 49986c050feefdd386c5cffcc0ceb39ade7afe9b49934a1c249925669dfeff88
+      size: 545
+    version: 2.0.0
+  original:
+    commit: 397715f086db7c732c1225a9ff7059e6cfa8d825
+    git: https://github.com/BenStokmans/sdl2-image.git
 snapshots:
 - completed:
     sha256: 1d663bec402f77fa09fa3e8cf288c3c7eb18a1f28a5e0c331ac47adeacd21346

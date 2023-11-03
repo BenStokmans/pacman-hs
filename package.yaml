@@ -23,6 +23,8 @@ dependencies:
   - linear
   - gloss-rendering
   - aeson
+  - sdl2-mixer
+  - sdl2-image
 
 default-extensions:
   - TupleSections
@@ -36,12 +38,13 @@ library:
   source-dirs: src
 
 executables:
-  pacman:
+  pacman-exe:
     main: Main.hs
     source-dirs: app
     ghc-options:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
+      - -Wmissing-pattern-synonym-signatures
     dependencies:
       - pacman

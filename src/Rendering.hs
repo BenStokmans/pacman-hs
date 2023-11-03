@@ -87,6 +87,12 @@ rectangleHovered mouse (Rectangle (x, y) width height _) = pointInBox mouse (sx 
     sx = width / 2
     sy = height / 2
 
+defaultButtonImg :: Rectangle -> Picture -> Picture -> Point -> Picture
+defaultButtonImg r@(Rectangle (x, y) width height thickness) prim sec p = translate x y (pictures [thickRectangle width height thickness color black,img])
+  where
+    (color,img) | rectangleHovered p r = (white,sec)
+                | otherwise = (blue,prim)
+
 defaultButton :: Rectangle -> Font -> String -> Point -> IO Picture
 defaultButton r f s p = completeButton r f s p blue white
 
@@ -132,6 +138,14 @@ renderStringTopLeft (x, y) f c txt = do
   let width = foldr (\((w, _), _) mw -> max w mw) 0 sections
   let (height, imgs) = foldr (\((w, h), pic) (ch, pics) -> (ch + h, translate (-((width - w) / 2)) (-ch - (h / 2)) pic : pics)) (0, []) sections
   do return (translate (width / 2 + x) y (pictures imgs))
+
+renderStringResize :: Point -> Font -> Color -> String -> Float -> Float -> IO Picture
+renderStringResize _ _ _ "" _ _ = do
+  return blank
+renderStringResize (x, y) f c txt tw th = do
+  sections <- mapM (renderString' f c) (reverse $ lines txt)
+  let ((width,height), imgs) = foldr (\((w, h), pic) ((cw,ch), pics) -> ((max w cw,ch + h), translate 0 (-ch - (h / 2)) pic : pics)) ((0,0), []) sections
+  do return $ translate x y (translate 0 (height / 2) $ resize width height tw th (pictures imgs))
 
 renderString :: Point -> Font -> Color -> String -> IO Picture
 renderString _ _ _ "" = do
