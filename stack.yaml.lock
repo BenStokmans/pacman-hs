@@ -29,6 +29,17 @@ packages:
       size: 482
   original:
     hackage: GLFW-b-1.4.8.4@sha256:b35242b401ac3235753f2bdfdfd07981f531e1d0457928caafb1db3801df40bc,2284
+- completed:
+    commit: 382395c763b473032721c71921b5c9241142178f
+    git: https://github.com/haskell-game/sdl2-image.git
+    name: sdl2-image
+    pantry-tree:
+      sha256: 3f8d686c74dd577de885ef34703859efb2a8d543183ba1ccb71b77868cc052f9
+      size: 545
+    version: 2.0.0
+  original:
+    commit: 382395c763b473032721c71921b5c9241142178f
+    git: https://github.com/haskell-game/sdl2-image.git
 snapshots:
 - completed:
     sha256: 1d663bec402f77fa09fa3e8cf288c3c7eb18a1f28a5e0c331ac47adeacd21346
