@@ -9,8 +9,6 @@ extra-deps:
     commit: acbdfd864b7e574dfbe1595fbdcd154563b2a0ef 
   - tinyfiledialogs-0.2.1.0
   - GLFW-b-1.4.8.4@sha256:b35242b401ac3235753f2bdfdfd07981f531e1d0457928caafb1db3801df40bc,2284
-  - git: https://github.com/haskell-game/sdl2-image.git
-    commit: 382395c763b473032721c71921b5c9241142178f
 
 allow-newer-deps: 
   - hindent
