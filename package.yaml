@@ -23,6 +23,8 @@ dependencies:
   - linear
   - gloss-rendering
   - aeson
+  - sdl2-mixer
+  - sdl2-image
 
 default-extensions:
   - TupleSections

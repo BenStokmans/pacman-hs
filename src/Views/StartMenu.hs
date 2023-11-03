@@ -1,6 +1,6 @@
 module Views.StartMenu where
 
-import Assets (Assets(Assets, emuFont, pacFont))
+import Assets (Assets(Assets, emuFont, pacFont, gearIconBlue, gearIconWhite))
 import Control.Monad.Random (MonadRandom(getRandomR), Rand, RandomGen, when)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
@@ -11,13 +11,14 @@ import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), Sp
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getGhostSpawnPoint, getSpawnPoint, processWalls)
 import Prompt (errorPrompt)
-import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize)
-import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt, gameGridInfo)
+import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize, defaultButtonImg)
+import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo)
 import Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>), takeBaseName)
 import Text.Read (readMaybe)
+import qualified SDL.Mixer as Mixer
 
 selectMapButton :: Float -> Rectangle
 selectMapButton w = Rectangle (0, 70) w 50 10
@@ -33,6 +34,9 @@ newMapButton = Rectangle (-140, -350) 250 50 10
 
 editMapButton :: Rectangle
 editMapButton = Rectangle (150, -350) 300 50 10
+
+settingsButton :: Rectangle
+settingsButton = Rectangle (365, 365) 50 50 10
 
 drawParticles :: GlobalState -> Picture
 drawParticles s = Color (makeColor 0 0 1 0.4) (pictures (map (\((x, y), r) -> translate x y (circleSolid r)) (particles s)))
@@ -57,22 +61,24 @@ updateParticles f s
 
 renderStartMenu :: GlobalState -> IO Picture
 renderStartMenu s = do
-  let xxlEmu = xxl (pacFont (assets s))
+  let ass = assets s
+  let xxlEmu = xxl (pacFont ass)
   titleBg <- renderString (0, 250) xxlEmu black "pacman"
   title <- renderString (0, 250) xxlEmu blue "PACMAN"
-  let lEmu = l (emuFont (assets s))
+  let lEmu = l (emuFont ass)
   drawnStartButton <- defaultButton startButton lEmu "Start new game" (mousePos s)
   drawnQuitButton <- defaultButton quitButton lEmu "Quit game" (mousePos s)
-  let mEmu = m (emuFont (assets s))
+  let mEmu = m (emuFont ass)
   let selectText = "Choose map: " ++ mapName (gameState s)
   (w, _) <- stringSize mEmu selectText
   drawnSelectMapButton <- defaultButton (selectMapButton (w + 40)) mEmu selectText (mousePos s)
   subTitle <- renderString (0, 160) mEmu red "By Ben Stokmans and Geerten Helmers"
   drawnNewMapButton <- defaultButton newMapButton mEmu "Create new map" (mousePos s)
   drawnEditMapButton <- defaultButton editMapButton mEmu "Edit existing map" (mousePos s)
+  let drawnSettingsButton = defaultButtonImg settingsButton (gearIconBlue ass) (gearIconWhite ass) (mousePos s)
   return
     (pictures
-       [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton])
+       [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton, drawnSettingsButton])
 
 emptyMap :: Float -> Float -> LevelMap
 emptyMap w h = LevelMap w h (fr : ors ++ [lr])
@@ -143,6 +149,12 @@ selectMap = do
   return ls
 
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
+handleInputStartMenu (EventKey (Char 'p') _ _ _) s = do
+  Mixer.pause Mixer.AllChannels
+  return s
+handleInputStartMenu (EventKey (Char 'r') _ _ _) s = do
+  Mixer.resume Mixer.AllChannels
+  return s
 handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do
   exitSuccess
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
@@ -192,6 +204,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                   s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}}
                 | otherwise = s
           return ns
+        | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, lastRoute = StartMenu}
         | rectangleHovered (mousePos s) quitButton = do exitSuccess
         | otherwise = do return s
   newState

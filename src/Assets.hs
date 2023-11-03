@@ -10,7 +10,21 @@ import SDL.Font (Font, initialize, load)
 import Struct (Cell, LevelMap, readLevel)
 import System.Directory (canonicalizePath, getDirectoryContents)
 import System.FilePath ((</>), joinPath, takeBaseName)
-import Text.Printf
+import Control.Monad.Fix (fix)
+import Control.Concurrent (forkIO)
+import SDL.Video.Renderer (freeSurface)
+import qualified SDL.Mixer as Mixer
+import qualified SDL.Image as Image
+
+import qualified SDL
+
+import Control.Monad (when)
+import SDL.Raw (rwFromFile)
+import Data.Text.Foreign (withCString)
+import Data.Text (pack)
+import Foreign.C (newCString)
+import Data.String (fromString)
+import Rendering (surfaceToPicture)
 
 type Anim = [Picture]
 
@@ -44,6 +58,8 @@ data Assets = Assets
   , inkySprite :: Picture
   , clydeSprite :: Picture
   , blueGhostSprite :: Picture
+  , gearIconBlue :: Picture
+  , gearIconWhite :: Picture
   }
 
 loadPacSprite :: String -> IO PacManSprite
@@ -54,8 +70,33 @@ loadPacSprite p = do
   right <- loadAnim (p </> "pacman-right")
   return PacManSprite {up = up, down = down, left = left, right = right}
 
+startMusic :: String -> IO ()
+startMusic p = do
+  SDL.initialize [SDL.InitAudio] 
+  Mixer.openAudio (Mixer.Audio 48000 Mixer.FormatS16_LSB Mixer.Stereo) 256
+  sound <- Mixer.load (p </> "theme.wav")
+  Mixer.playForever sound
+  fix $ \loop -> do
+    SDL.delay 50
+    playing <- Mixer.playing Mixer.AllChannels
+    when playing loop
+
+  Mixer.free sound
+  Mixer.closeAudio
+  Mixer.quit
+  SDL.quit
+
+loadImage :: String -> IO Picture
+loadImage s = do
+  svgString <- readFile s
+  surface <- Image.decode (fromString svgString)
+  (_,pic) <- surfaceToPicture surface
+  freeSurface surface
+  return pic
+
 loadAssets :: String -> IO Assets
 loadAssets p = do
+  -- forkIO (startMusic p) -- start music thread
   initialize
   pacFont <- loadFont (p </> "pacman.ttf")
   emuFont <- loadFont (p </> "emulogic.ttf")
@@ -66,6 +107,9 @@ loadAssets p = do
   inkySprite <- loadSprite (p </> "ghosts/inky.png")
   clydeSprite <- loadSprite (p </> "ghosts/clyde.png")
   blueGhostSprite <- loadSprite (p </> "other/blue_ghost.png")
+  gearIconBlue <- loadImage (p </> "gear-solid-blue.svg")
+  gearIconWhite <- loadImage (p </> "gear-solid-white.svg")
+
   return
     Assets
       { pacFont = pacFont
@@ -77,4 +121,6 @@ loadAssets p = do
       , inkySprite = inkySprite
       , clydeSprite = clydeSprite
       , blueGhostSprite = blueGhostSprite
+      , gearIconBlue = gearIconBlue
+      , gearIconWhite = gearIconWhite
       }
