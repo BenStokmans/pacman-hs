@@ -119,6 +119,14 @@ gridSizePx (c, r) gs =
   let (x, y) = windowSize (settings gs)
    in (x * 0.8 * (c / r), y * 0.8 * (r / c))
 
+gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
+gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)
+
+gameGridInfo :: GlobalState -> GridInfo
+gameGridInfo gs =
+  let (x, y) = gameGridDimensions gs
+   in ((x, y), gridSizePx (x, y) gs)
+
 ghostToSprite :: GlobalState -> GhostType -> Picture
 ghostToSprite gs Blinky = blinkySprite $ assets gs
 ghostToSprite gs Pinky = pinkySprite $ assets gs
