@@ -12,13 +12,12 @@ import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getGhostSpawnPoint, getSpawnPoint, processWalls)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize)
-import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt)
+import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu), Prompt(..), Settings(..), defaultPrompt, gameGridInfo)
 import Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>), takeBaseName)
 import Text.Read (readMaybe)
-import Views.GameView (gameGridInfo)
 
 selectMapButton :: Float -> Rectangle
 selectMapButton w = Rectangle (0, 70) w 50 10
