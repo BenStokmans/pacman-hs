@@ -70,6 +70,7 @@ data GameStatus
 
 data GameState = GameState
   { lives :: Int
+  , level :: Int
   , status :: GameStatus
   , prevClock :: Float
   , mapName :: String
@@ -145,6 +146,7 @@ emptyGameState =
     { score = 0
     , pelletCount = 0
     , lives = 0
+    , level = 1
     , status = Paused
     , prevClock = 0
     , mapName = "default"
@@ -158,7 +160,8 @@ emptyGameState =
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
           , lastDirChange = Vec2 0 0
-          , gBehaviourTimer = 0
+          , gModeClock = 0
+          , gFrightenedClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -171,8 +174,9 @@ emptyGameState =
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
           , lastDirChange = Vec2 0 0
-          , gBehaviourTimer = 0
-          , gCurrentBehaviour = Chase
+          , gModeClock = 0
+          , gFrightenedClock = 0
+          , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
           }
@@ -184,7 +188,8 @@ emptyGameState =
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
           , lastDirChange = Vec2 0 0
-          , gBehaviourTimer = 0
+          , gModeClock = 0
+          , gFrightenedClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -197,7 +202,8 @@ emptyGameState =
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
           , lastDirChange = Vec2 0 0
-          , gBehaviourTimer = 0
+          , gModeClock = 0
+          , gFrightenedClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0

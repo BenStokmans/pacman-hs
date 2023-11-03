@@ -54,7 +54,7 @@ import Struct
   , scaleVec2
   , setCell
   )
-import GhostLogic ( updateGhostTarget )
+import GhostLogic ( updateGhostTarget, updateGhostClock )
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -372,7 +372,8 @@ updatePlayerPosition dt s
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
 handleUpdateGameView f gs = do
-  ngs <- updatePlayerAnimState gs
+  let updatedClocks = foldr (\g acc ->updateGhostClock acc f (getGhostActor gs g)) gs ghosts
+  ngs <- updatePlayerAnimState updatedClocks
   let pUpdate = updatePlayerPosition f ngs
   ghostTargetUpdate <- foldrM (\v acc -> updateGhostTarget (getGhostActor acc v) acc) pUpdate ghosts
   return $ foldr (\v acc -> updateGhostPosition f acc (getGhostActor acc v)) ghostTargetUpdate ghosts

@@ -244,7 +244,8 @@ data GhostActor = GhostActor
   , gLocation :: Point
   , gTarget :: Vec2
   , lastDirChange :: Vec2
-  , gBehaviourTimer :: Int
+  , gModeClock :: Float
+  , gFrightenedClock :: Float
   , gCurrentBehaviour :: GhostBehaviour
   , lastModeChange :: Float
   } deriving (Generic, Show)
