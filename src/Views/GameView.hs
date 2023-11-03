@@ -22,7 +22,6 @@ import Map
   , wallSectionToPic
   , wallToSizedSection, getAllowedGhostDirections
   )
-import Pathfinding
 import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx)
 import Struct
@@ -54,6 +53,7 @@ import Struct
   , scaleVec2
   , setCell
   )
+import Pathfinding (getPathLimited, vec2Dist, getAdjacentVecs, getDirectionsLimited)
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
 gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)

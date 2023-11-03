@@ -95,6 +95,7 @@ stringToCellType "P" = GhostSpawn Pinky
 stringToCellType "I" = GhostSpawn Inky
 stringToCellType "C" = GhostSpawn Clyde
 stringToCellType "G" = GhostWall
+stringToCellType "E" = Empty
 stringToCellType _ = Invalid
 
 data Cell =
@@ -118,7 +119,7 @@ instance Eq Cell where
 
 instance Show Cell where
   show :: Cell -> String
-  show (Cell t v) = show t ++ ":" ++ show v
+  show (Cell t _) = show t
 
 data GhostType
   = Blinky
@@ -133,15 +134,10 @@ ghosts = [Blinky, Pinky, Inky, Clyde]
 data LevelMap =
   LevelMap Float Float [[Cell]]
 
-instance Show LevelMap where --TODO: Fix
+instance Show LevelMap where
   show :: LevelMap -> String
-  show m@(LevelMap w h l) = intercalate "\n" $ reverse (map unwords cells)
-    where
-      indeces = map (\y -> map (`Vec2` y) [0 .. w - 1]) [0 .. h - 1]
-      cells = map (map (maybe "E" (\(Cell t _) -> show t) . getCell m)) indeces
+  show m@(LevelMap w h l) = intercalate "\n" $ reverse $ map (unwords . map show) l
 
--- setCell :: LevelMap -> Cell -> LevelMap
--- setCell (LevelMap w h m) c@(Cell _ v1) = LevelMap w h (c : filter (\(Cell _ v2) -> v1 /= v2) m)
 setCell :: LevelMap -> Cell -> LevelMap
 setCell (LevelMap w h cells) c@(Cell _ (Vec2 x y)) = LevelMap w h newCells
   where

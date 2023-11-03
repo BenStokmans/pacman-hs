@@ -166,7 +166,7 @@ renderEditorView gs = do
        show (length cells) ++
        "\nMouse down: " ++
        mouseDebugText ++
-       "\n Grids size: cells: " ++
+       "\nGrids size: cells: " ++
        (let (LevelMap lw lh _) = editorLevel gs
          in show (Vec2 lw lh)) ++
        " pixels: " ++ show w ++ ", " ++ show h)

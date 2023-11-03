@@ -1,7 +1,7 @@
 module Views.StartMenu where
 
 import Assets (Assets(Assets, emuFont, pacFont))
-import Control.Monad.Random (MonadRandom(getRandomR), Rand, RandomGen)
+import Control.Monad.Random (MonadRandom(getRandomR), Rand, RandomGen, when)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
 import FontContainer (FontContainer(..))
@@ -75,14 +75,14 @@ renderStartMenu s = do
     (pictures
        [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton])
 
-emptyMap :: Float -> Float -> LevelMap -- TODO: Fix
+emptyMap :: Float -> Float -> LevelMap
 emptyMap w h = LevelMap w h (fr : ors ++ [lr])
   where
     fr = map (\x -> Cell Wall (Vec2 (fromInteger x :: Float) 0)) [0 .. (round w - 1)]
     ors =
-      concatMap
+      map
         (\y ->
-           [ [Cell Wall (Vec2 0 (fromInteger y :: Float))]
+           concat [ [Cell Wall (Vec2 0 (fromInteger y :: Float))]
            , map (\x -> Cell Empty (Vec2 (fromInteger x :: Float) (fromInteger y :: Float))) [1 .. (round w - 2)]
            , [Cell Wall (Vec2 (w - 1) (fromInteger y :: Float))]
            ])
