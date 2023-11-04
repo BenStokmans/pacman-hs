@@ -23,7 +23,7 @@ import Map
   , wallToSizedSection, getAllowedGhostDirections
   )
 import Pathfinding
-import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell)
+import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell, resize)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo)
 import Struct
   ( Cell(..)
@@ -112,7 +112,7 @@ drawMap gs m@(LevelMap _ _ cells) gi@((col, row), (w, h)) =
   pictures $
   map (\(c, ws) -> Color blue $ translateCell c gi (wallToSizedSection margin t cw ch ws)) (filter (cellHasType Wall . fst) $ cachedWalls gs) ++
   map (\(c, ws) -> Color orange $ translateCell c gi (wallToSizedSection margin t cw ch ws)) (filter (cellHasType GhostWall . fst) $ cachedWalls gs) ++
-  map (\c -> Color pelletColor $ translateCell c gi $ scale 1 (ch / cw) $ circleSolid (cw / 16)) (cellsWithTypeMap Pellet m) ++
+  map (\c -> Color pelletColor $ translateCell c gi $ scale 1 (ch / cw) $ circleSolid (cw / 12)) (cellsWithTypeMap Pellet m) ++
   map (\c -> Color pelletColor $ translateCell c gi $ scale 1 (ch / cw) $ circleSolid (cw / 3)) (cellsWithTypeMap PowerUp m)
   --  map (\c -> translateCell c gi $ scale ((ch/32)*(1+margin*2)*(col/row)) ((cw/32)*(1+margin*2)*(row/col)) $ appleSprite ass) (cellsWithType Apple cells)
   where
@@ -132,21 +132,29 @@ getPlayerAnimation gs
     d = pDirection $ player $ gameState gs
     as = pacSprite $ assets gs
 
+calcSpriteSize :: GridInfo -> Float -> (Float, Float)
+calcSpriteSize gi@((c, r), _) scalar = let (cw, ch) = cellSize gi in (16 * ((cw / 16) * scalar * (c / r)), 16 * ((ch / 16) * scalar * (r / c)))
+    
+calcGhostSize :: GlobalState -> GridInfo -> (Float,Float)
+calcGhostSize gs gi = calcSpriteSize gi ((1 + mazeMargin (settings gs) * 2) * (1 - ghostPadding (settings gs) * 2))
+
+calcPlayerSize :: GlobalState -> GridInfo -> (Float,Float)
+calcPlayerSize gs gi = calcSpriteSize gi ((1 + mazeMargin (settings gs) * 2) * (1 - pacmanPadding (settings gs) * 2))
+
 drawGhost :: GlobalState -> GhostType -> GridInfo -> Point -> Picture
-drawGhost gs gt gi@((c, r), _) (px, py) = translate px py $ scale scalarX scalarY (ghostToSprite gs gt)
-  where
-    (cw, ch) = cellSize gi
-    ghostScalar = (1 + mazeMargin (settings gs) * 2) * (1 - ghostPadding (settings gs) * 2)
-    scalarX = (cw / 16) * ghostScalar * (c / r)
-    scalarY = (ch / 16) * ghostScalar * (r / c)
+drawGhost gs gt gi (px, py) = let (w,h) = calcGhostSize gs gi in translate px py $ resize 16 16 w h (ghostToSprite gs gt)
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
-drawPlayer gs gi@((c, r), _) (px, py) = translate px py $ scale scalarX scalarY (getPlayerAnimation gs !! pFrame (player $ gameState gs))
+drawPlayer gs gi (px, py) = let (w,h) = calcPlayerSize gs gi in translate px py $ resize 16 16 w h (getPlayerAnimation gs !! pFrame (player $ gameState gs))
+
+ghostPlayerCollision :: GlobalState -> GridInfo -> GhostActor -> Bool
+ghostPlayerCollision gs gi ga | abs (px - gx) <= pw/2 + gw/2 && abs (py - gy) <= ph/2 + gh/2 = True
+                              | otherwise = False
   where
-    (cw, ch) = cellSize gi
-    pacmanScalar = (1 + mazeMargin (settings gs) * 2) * (1 - pacmanPadding (settings gs) * 2)
-    scalarX = (cw / 16) * pacmanScalar * (c / r)
-    scalarY = (ch / 16) * pacmanScalar * (r / c)
+    (gw,gh) = calcGhostSize gs gi
+    (pw,ph) = calcPlayerSize gs gi
+    (gx,gy) = gLocation ga
+    (px,py) = pLocation $ player $ gameState gs
 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
@@ -169,21 +177,31 @@ renderGameView gs = do
        show (gDirection $ blinky $ gameState gs) ++
         ", " ++
        show (getAllowedGhostDirections currentLevel (gDirection $ blinky $ gameState gs) (screenToGridPos gi $ gLocation $ blinky $ gameState gs)) ++
+       ", Collision: " ++
+       show (ghostPlayerCollision gs gi $ blinky $ gameState gs) ++
        "\nInky: " ++
        show (screenToGridPos gi $ gLocation $ inky $ gameState gs) ++
        ", " ++
        show (gTarget $ inky $ gameState gs) ++
        ", " ++
        show (gDirection $ inky $ gameState gs) ++
+       ", Collision: " ++
+       show (ghostPlayerCollision gs gi $ inky $ gameState gs) ++
        "\nPinky: " ++
        show (screenToGridPos gi $ gLocation $ pinky $ gameState gs) ++
        ", " ++
        show (gTarget $ pinky $ gameState gs) ++
        ", " ++
        show (gDirection $ pinky $ gameState gs) ++
+       ", Collision: " ++
+       show (ghostPlayerCollision gs gi $ pinky $ gameState gs) ++
        "\nClyde: " ++
        show (screenToGridPos gi $ gLocation $ clyde $ gameState gs) ++
-       ", " ++ show (gTarget $ clyde $ gameState gs) ++ ", " ++ show (gDirection $ clyde $ gameState gs))
+       ", " ++ show (gTarget $ clyde $ gameState gs) ++ 
+       ", " ++ show (gDirection $ clyde $ gameState gs) ++
+       ", Collision: " ++
+       show (ghostPlayerCollision gs gi $ clyde $ gameState gs)
+       )
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let drawnMap = drawMap gs currentLevel gi
   let drawnGhosts = pictures $ map (\t -> drawGhost gs t gi $ gLocation (getGhostActor gs t)) [Blinky, Pinky, Inky, Clyde]
