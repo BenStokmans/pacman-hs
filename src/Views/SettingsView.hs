@@ -2,7 +2,7 @@ module Views.SettingsView where
 
 import Assets (Assets(Assets, emuFont, pacFont))
 import Control.Monad (when, unless)
-import Data.Aeson
+import Data.Aeson ()
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
 import FontContainer (FontContainer(..))

@@ -20,9 +20,9 @@ import Struct
 import Graphics.Gloss (Point)
 import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo)
 import Map (deleteMultiple)
-import Pathfinding
-import Rendering
-import Data.Maybe
+import Pathfinding ( getAdjacentVecs, vec2Dist )
+import Rendering ( gridToScreenPos, screenToGridPos )
+import Data.Maybe ( fromMaybe, mapMaybe )
 import Data.List (minimumBy)
 import Control.Monad.Random (getRandomR)
 import Data.Tree (levels)

@@ -143,17 +143,22 @@ renderStringResize :: Point -> Font -> Color -> String -> Float -> Float -> IO P
 renderStringResize _ _ _ "" _ _ = do
   return blank
 renderStringResize (x, y) f c txt tw th = do
-  sections <- mapM (renderString' f c) (reverse $ lines txt)
+  ((width,height), pic) <- renderMultilineString f c txt
+  do return $ translate x y (translate 0 (height / 2) $ resize width height tw th pic)
+
+renderMultilineString :: Font -> Color -> String -> IO ((Float,Float),Picture)
+renderMultilineString f c s = do
+  sections <- mapM (renderString' f c) (reverse $ lines s)
   let ((width,height), imgs) = foldr (\((w, h), pic) ((cw,ch), pics) -> ((max w cw,ch + h), translate 0 (-ch - (h / 2)) pic : pics)) ((0,0), []) sections
-  do return $ translate x y (translate 0 (height / 2) $ resize width height tw th (pictures imgs))
+  return ((width,height),pictures imgs)
 
 renderString :: Point -> Font -> Color -> String -> IO Picture
 renderString _ _ _ "" = do
   return blank
 renderString (x, y) f c txt = do
   sections <- mapM (renderString' f c) (reverse $ lines txt)
-  let (height, imgs) = foldr (\((_, h), pic) (ch, pics) -> (ch + h, translate 0 (-ch - (h / 2)) pic : pics)) (0, []) sections
-  do return $ translate x y (translate 0 (height / 2) (pictures imgs))
+  ((_,height), pic) <- renderMultilineString f c txt
+  do return $ translate x y (translate 0 (height / 2) pic)
 
 stringSize :: Font -> String -> IO (Float, Float)
 stringSize f "" = do
@@ -181,7 +186,7 @@ copySDLToBitmap surface = do
   dims <- surfaceDimensions surface
   copy <- createRGBSurface (fromIntegral <$> dims) RGBA8888 -- create copy with same dimensions
   surfaceBlit surface Nothing copy Nothing -- copy pixels from surface to new surface in RGBA8888 format
-  lockSurface copy -- aquire lock on the copy
+  lockSurface copy -- acquire lock on the copy
   pixels <- surfacePixels copy -- get pointer to pixels
   let V2 (CInt w) (CInt h) = dims
   let cpSize = fromIntegral $ w * h * 4 -- width * height * 4 (space for R G B A)

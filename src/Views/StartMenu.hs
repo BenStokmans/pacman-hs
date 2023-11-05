@@ -149,12 +149,6 @@ selectMap = do
   return ls
 
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
-handleInputStartMenu (EventKey (Char 'p') _ _ _) s = do
-  Mixer.pause Mixer.AllChannels
-  return s
-handleInputStartMenu (EventKey (Char 'r') _ _ _) s = do
-  Mixer.resume Mixer.AllChannels
-  return s
 handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do
   exitSuccess
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
@@ -170,7 +164,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                 | otherwise = s
           return ns
         | rectangleHovered (mousePos s) startButton = do
-          return -- TODO: make this bit a seperate function, make sure all cases for direction etc are scaleable (start with pathfinding)
+          return -- TODO: make this bit a separate function, make sure all cases for direction etc are scalable (start with pathfinding)
             s
               { route = GameView
               , gameState =
