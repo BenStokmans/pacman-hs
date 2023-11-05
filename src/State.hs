@@ -42,23 +42,15 @@ defaultPrompt =
     , darkenBackground = True
     }
 
-defaultUserSettings :: UserSettings
-defaultUserSettings = UserSettings { musicVolume = 127, debugMode = True } -- TODO: Disable debugmode by default
-
-data UserSettings = UserSettings
-  { 
-    musicVolume :: Int,
-    debugMode :: Bool
-  }
 
 data Settings = Settings
   { windowSize :: (Float, Float)
-  , userSettings :: UserSettings
+  , debugEnabled :: Bool
+  , musicEnabled :: Bool
   , ghostPadding :: Float
   , pacmanPadding :: Float
   , mazeMargin :: Float
   , lineThickness :: Float
-  , enableDebugGrid :: Bool
   , editorGridDimensions :: Vec2
   , ghostTagetCD :: Float
   }
@@ -230,12 +222,12 @@ initState = do
       { settings =
           Settings
             { windowSize = (800, 800)
-            , userSettings = defaultUserSettings
+            , debugEnabled = True
+            , musicEnabled = True
             , ghostPadding = 0.20
             , pacmanPadding = 0.15
             , mazeMargin = 0.35
             , lineThickness = 15
-            , enableDebugGrid = False
             , editorGridDimensions = Vec2 25 25
             , ghostTagetCD = 0.1
             }

@@ -205,20 +205,17 @@ renderGameView gs = do
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let drawnMap = drawMap gs currentLevel gi
   let drawnGhosts = pictures $ map (\t -> drawGhost gs t gi $ gLocation (getGhostActor gs t)) [Blinky, Pinky, Inky, Clyde]
-  let grid =
-        if enableDebugGrid $ settings gs
-          then debugGrid gs
+  let debug =
+        if debugEnabled $ settings gs
+          then pictures [debugGrid gs,debugString, debugGhostTargets gs, debugGhostPath gs]
           else blank
   return
     (pictures
-       [ grid
-       , drawnMap
+       [ drawnMap
        , drawPlayer gs gi (pLocation $ player $ gameState gs)
        , drawnGhosts
-       , debugString
        , scoreString
-       , debugGhostTargets gs
-       , debugGhostPath gs
+       , debug
        ])
 
 keyToDirection :: Direction -> Key -> Direction
@@ -235,8 +232,6 @@ keyToDirection d _ = d
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
 handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) gs = do
   return gs {route = PauseMenu, lastRoute = GameView}
-handleInputGameView (EventKey (Char 'g') _ _ _) gs@(GlobalState {settings = set}) = do
-  return gs {settings = set {enableDebugGrid = not (enableDebugGrid set)}}
 handleInputGameView (EventKey k _ _ _) s = do
   return s {gameState = gs {player = ps {pBufferedInput = bufferedInput, pDirection = direction}}}
   where

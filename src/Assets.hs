@@ -76,6 +76,7 @@ startMusic p = do
   Mixer.openAudio (Mixer.Audio 48000 Mixer.FormatS16_LSB Mixer.Stereo) 256
   sound <- Mixer.load (p </> "theme.wav")
   Mixer.playForever sound
+  Mixer.setVolume 20 Mixer.AllChannels
   fix $ \loop -> do
     SDL.delay 50
     playing <- Mixer.playing Mixer.AllChannels
@@ -96,7 +97,7 @@ loadImage s = do
 
 loadAssets :: String -> IO Assets
 loadAssets p = do
-  -- forkIO (startMusic p) -- start music thread
+  forkIO (startMusic p) -- start music thread
   initialize
   pacFont <- loadFont (p </> "pacman.ttf")
   emuFont <- loadFont (p </> "emulogic.ttf")

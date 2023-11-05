@@ -226,7 +226,7 @@ renderEditorView gs = do
         if previewEditor gs
           then gridPreview
           else gridEditor
-  return (pictures [grid, txt, tools, debugString, previewButton])
+  return (pictures [grid, txt, tools, if debugEnabled $ settings gs then debugString else blank, previewButton])
   where
     dims@((c, r), (w, h)) = getEditorGridInfo gs
     level@(LevelMap _ _ cells) = editorLevel gs
