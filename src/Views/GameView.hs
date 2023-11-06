@@ -142,7 +142,14 @@ calcPlayerSize :: GlobalState -> GridInfo -> (Float,Float)
 calcPlayerSize gs gi = calcSpriteSize gi ((1 + mazeMargin (settings gs) * 2) * (1 - pacmanPadding (settings gs) * 2))
 
 drawGhost :: GlobalState -> GhostActor -> GridInfo -> Point -> Picture
-drawGhost gs ghost gi (px, py) = let (w,h) = calcGhostSize gs gi in translate px py $ resize 16 16 w h (ghostToSprite gs ghost)
+drawGhost gs ghost gi (px, py) | ghostM == Respawning = translate px py $ scale (timer/respawnLength) (timer/respawnLength) sprite
+                               | otherwise = translate px py sprite
+    where
+      ghostM = gCurrentBehaviour ghost
+      (w,h) = calcGhostSize gs gi
+      sprite = resize 16 16 w h (ghostToSprite gs ghost)
+      timer = gRespawnTimer ghost
+      respawnLength = ghostRespawnTimer $ settings gs
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
 drawPlayer gs gi (px, py) = let (w,h) = calcPlayerSize gs gi in translate px py $ resize 16 16 w h (getPlayerAnimation gs !! pFrame (player $ gameState gs))
@@ -375,6 +382,7 @@ updatePlayerPosition dt s
 
 checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
 checkCollisionsForGhost s ghost | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + (200*ks), killingSpree = ks+1 } }
+                                | colliding && gCurrentBehaviour ghost == Respawning = s
                                 | colliding = deadPlayerGS
                                 | otherwise = s
                                 where
@@ -388,7 +396,7 @@ checkCollisionsForGhost s ghost | colliding && gCurrentBehaviour ghost == Fright
                                   spawnPoint = getGhostSpawnPoint level ghostT
                                   respawnPos = gridToScreenPos gi $ getGhostSpawnPoint level ghostT
                                   allowedDirections = filter (\d -> isCellCond level (not . cellHasType Wall) (spawnPoint + dirToVec2 d)) allDirections ++ [gDirection ghost] -- the addition of the current direction is purely a failsafe, this could only happen if a map makes decides to put the ghost in a box
-                                  respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gRespawnTimer = 2, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
+                                  respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
                                   deadGhostGS = updateGhostGlobalState s respawnGhost
 
                                   deadPlayerGS | lives gs == 1 = s { route = StartMenu } -- properly handle game over

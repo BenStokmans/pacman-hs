@@ -54,7 +54,7 @@ data Settings = Settings
   , mazeMargin :: Float
   , lineThickness :: Float
   , editorGridDimensions :: Vec2
-  , ghostTargetCD :: Float
+  , ghostRespawnTimer :: Float
   }
 
 data MenuRoute
@@ -240,7 +240,7 @@ initState = do
             , mazeMargin = 0.35
             , lineThickness = 15
             , editorGridDimensions = Vec2 25 25
-            , ghostTargetCD = 0.1
+            , ghostRespawnTimer = 2
             }
       , gameState = emptyGameState {gMap = gMap}
       , editorLevel = LevelMap 25 25 []

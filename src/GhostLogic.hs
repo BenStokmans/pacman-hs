@@ -17,7 +17,7 @@ import Struct
       Player(pDirection, pLocation),
       Vec2(..) )
 import Graphics.Gloss (Point)
-import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo)
+import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..))
 import Map (deleteMultiple, getAllowedGhostDirections)
 import Pathfinding ( getAdjacentVecs, vec2Dist )
 import Rendering ( gridToScreenPos, screenToGridPos )
@@ -173,17 +173,18 @@ stillFrightened frightenedClock level | level == 1 && frightenedClock < 6 = True
                                      
 
 
-updateGhost :: Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
-updateGhost dt ghost l | ghostM == Respawning && (gRespawnTimer ghost - dt) > 0 = updatedGhost {gRespawnTimer = gRespawnTimer ghost - dt}
-                       | ghostM == Respawning && (gRespawnTimer ghost - dt) <= 0 = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
-                       | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt}
-                       | otherwise = updatedGhost {gCurrentBehaviour = newMode, gFrightenedClock = 0}
+updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
+updateGhost gs dt ghost l | ghostM == Respawning && (gRespawnTimer ghost + dt) < respawnLength = updatedGhost {gRespawnTimer = gRespawnTimer ghost + dt}
+                          | ghostM == Respawning && (gRespawnTimer ghost - dt) >= respawnLength = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
+                          | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt}
+                          | otherwise = updatedGhost {gCurrentBehaviour = newMode, gFrightenedClock = 0}
   where 
     ghostM = gCurrentBehaviour ghost
     newClock = gModeClock ghost + dt
     stayFrightened = stillFrightened (gFrightenedClock ghost) l
     updatedGhost = ghost {gModeClock = newClock}
     newMode = getBehaviour newClock l
+    respawnLength = ghostRespawnTimer $ settings gs
 
 setGhostBehaviour :: GlobalState -> GhostActor -> GhostBehaviour -> GlobalState
 setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour = b, gDirection = direction, lastDirChange = newDirChange }
@@ -195,7 +196,7 @@ setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour
                  | otherwise = lastDirChange ghost
 
 updateGhostClock :: GlobalState -> Float -> GhostActor -> GlobalState
-updateGhostClock s dt ghost = updateGhostGlobalState s $ updateGhost dt ghost l
+updateGhostClock s dt ghost = updateGhostGlobalState s $ updateGhost s dt ghost l
   where ghostT = ghostType ghost
         l = level $ gameState s
 
