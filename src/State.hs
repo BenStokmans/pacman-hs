@@ -3,12 +3,14 @@ module State where
 import Assets (Assets(..), loadAssets)
 import Data.Aeson
 import Data.Map (Map, empty)
-import Data.Text
+import Data.Text hiding (map)
 import GHC.Generics
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
 import Map (WallSection, getSpawnPoint, processWalls)
 import Struct
+import qualified SDL.Mixer as Mixer
+import Control.Monad (unless)
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -52,7 +54,7 @@ data Settings = Settings
   , mazeMargin :: Float
   , lineThickness :: Float
   , editorGridDimensions :: Vec2
-  , ghostTagetCD :: Float
+  , ghostTargetCD :: Float
   }
 
 data MenuRoute
@@ -74,6 +76,7 @@ data GameStatus
 data GameState = GameState
   { lives :: Int
   , level :: Int
+  , killingSpree :: Int
   , status :: GameStatus
   , prevClock :: Float
   , mapName :: String
@@ -131,11 +134,13 @@ gameGridInfo gs =
   let (x, y) = gameGridDimensions gs
    in ((x, y), gridSizePx (x, y) gs)
 
-ghostToSprite :: GlobalState -> GhostType -> Picture
-ghostToSprite gs Blinky = blinkySprite $ assets gs
-ghostToSprite gs Pinky = pinkySprite $ assets gs
-ghostToSprite gs Inky = inkySprite $ assets gs
-ghostToSprite gs Clyde = clydeSprite $ assets gs
+ghostToSprite :: GlobalState -> GhostActor -> Picture
+ghostToSprite gs ghost | gCurrentBehaviour ghost == Frightened && gVelocity ghost > 0 = blueGhostSprite $ assets gs
+                       | ghostT == Blinky = blinkySprite $ assets gs
+                       | ghostT == Pinky = pinkySprite $ assets gs
+                       | ghostT == Inky = inkySprite $ assets gs
+                       | ghostT == Clyde = clydeSprite $ assets gs
+              where ghostT = ghostType ghost
 
 getGhostActor :: GlobalState -> GhostType -> GhostActor
 getGhostActor gs Blinky = blinky $ gameState gs
@@ -143,12 +148,16 @@ getGhostActor gs Pinky = pinky $ gameState gs
 getGhostActor gs Inky = inky $ gameState gs
 getGhostActor gs Clyde = clyde $ gameState gs
 
+ghostActors :: GlobalState -> [GhostActor]
+ghostActors gs = map (getGhostActor gs) [Blinky, Pinky, Inky, Clyde]
+
 emptyGameState :: GameState
 emptyGameState =
   GameState
     { score = 0
     , pelletCount = 0
-    , lives = 0
+    , lives = 3
+    , killingSpree = 0
     , level = 1
     , status = Paused
     , prevClock = 0
@@ -159,6 +168,7 @@ emptyGameState =
         GhostActor
           { ghostType = Blinky
           , gVelocity = 75
+          , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
@@ -173,6 +183,7 @@ emptyGameState =
         GhostActor
           { ghostType = Pinky
           , gVelocity = 75
+          , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
@@ -187,6 +198,7 @@ emptyGameState =
         GhostActor
           { ghostType = Inky
           , gVelocity = 75
+          , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
@@ -201,6 +213,7 @@ emptyGameState =
         GhostActor
           { ghostType = Clyde
           , gVelocity = 75
+          , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
           , gTarget = Vec2 0 0
@@ -217,19 +230,17 @@ initState :: IO GlobalState
 initState = do
   assets <- loadAssets "assets"
   gMap <- readLevel "maps/default.txt"
-  return
-    GlobalState
-      { settings =
+  let gs = GlobalState { settings =
           Settings
             { windowSize = (800, 800)
             , debugEnabled = True
-            , musicEnabled = True
+            , musicEnabled = False
             , ghostPadding = 0.20
             , pacmanPadding = 0.15
             , mazeMargin = 0.35
             , lineThickness = 15
             , editorGridDimensions = Vec2 25 25
-            , ghostTagetCD = 0.1
+            , ghostTargetCD = 0.1
             }
       , gameState = emptyGameState {gMap = gMap}
       , editorLevel = LevelMap 25 25 []
@@ -247,3 +258,4 @@ initState = do
       , mouseDown = Nothing
       , previewEditor = False
       }
+  return gs

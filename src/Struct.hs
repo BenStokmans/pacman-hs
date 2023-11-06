@@ -239,13 +239,14 @@ data GhostBehaviour
 data GhostActor = GhostActor
   { ghostType :: GhostType
   , gUpdate :: Float
+  , gRespawnTimer :: Float
   , gVelocity :: Float
   , gDirection :: Direction
   , gLocation :: Point
   , gTarget :: Vec2
   , lastDirChange :: Vec2
   , gModeClock :: Float
-  , gFrightenedClock :: Float
+  , gFrightenedClock :: Float -- TODO: merge frightened clock and respawn timer into one field: "ModeTimer"
   , gCurrentBehaviour :: GhostBehaviour
   , lastModeChange :: Float
   } deriving (Generic, Show)

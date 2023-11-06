@@ -39,7 +39,7 @@ import Rendering
   , stringSize
   )
 import SDL.Font (Font(Font))
-import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..), gridSizePx)
+import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..), gridSizePx, getGhostActor)
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
@@ -218,7 +218,7 @@ renderEditorView gs = do
               if v == outOfBounds
                 then blank
                 else drawGhost gs t dims (gridToScreenPos dims v)) .
-           (\t -> (t, getGhostSpawnPoint level t)))
+           (\t -> (getGhostActor gs t, getGhostSpawnPoint level t)))
           ghosts
   let gridPreview = pictures [wallsPreview, pacmanPreview, ghostPreviews]
   let grid =

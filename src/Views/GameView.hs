@@ -20,9 +20,9 @@ import Map
   , isPastCentre
   , processWalls
   , wallSectionToPic
-  , wallToSizedSection, getAllowedGhostDirections
+  , wallToSizedSection, getAllowedGhostDirections, getSpawnPoint
   )
-import Pathfinding
+import Pathfinding ( getDirectionsLimited, getPathLimited )
 import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell, resize)
 import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo)
 import Struct
@@ -54,7 +54,7 @@ import Struct
   , scaleVec2
   , setCell
   )
-import GhostLogic ( updateGhostTarget, updateGhostClock )
+import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity )
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -134,15 +134,15 @@ getPlayerAnimation gs
 
 calcSpriteSize :: GridInfo -> Float -> (Float, Float)
 calcSpriteSize gi@((c, r), _) scalar = let (cw, ch) = cellSize gi in (16 * ((cw / 16) * scalar * (c / r)), 16 * ((ch / 16) * scalar * (r / c)))
-    
+
 calcGhostSize :: GlobalState -> GridInfo -> (Float,Float)
 calcGhostSize gs gi = calcSpriteSize gi ((1 + mazeMargin (settings gs) * 2) * (1 - ghostPadding (settings gs) * 2))
 
 calcPlayerSize :: GlobalState -> GridInfo -> (Float,Float)
 calcPlayerSize gs gi = calcSpriteSize gi ((1 + mazeMargin (settings gs) * 2) * (1 - pacmanPadding (settings gs) * 2))
 
-drawGhost :: GlobalState -> GhostType -> GridInfo -> Point -> Picture
-drawGhost gs gt gi (px, py) = let (w,h) = calcGhostSize gs gi in translate px py $ resize 16 16 w h (ghostToSprite gs gt)
+drawGhost :: GlobalState -> GhostActor -> GridInfo -> Point -> Picture
+drawGhost gs ghost gi (px, py) = let (w,h) = calcGhostSize gs gi in translate px py $ resize 16 16 w h (ghostToSprite gs ghost)
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
 drawPlayer gs gi (px, py) = let (w,h) = calcPlayerSize gs gi in translate px py $ resize 16 16 w h (getPlayerAnimation gs !! pFrame (player $ gameState gs))
@@ -155,6 +155,21 @@ ghostPlayerCollision gs gi ga | abs (px - gx) <= pw/2 + gw/2 && abs (py - gy) <=
     (pw,ph) = calcPlayerSize gs gi
     (gx,gy) = gLocation ga
     (px,py) = pLocation $ player $ gameState gs
+
+getGhostDebugString :: GlobalState -> GhostType -> String
+getGhostDebugString gs gt = show (screenToGridPos gi $ gLocation ghost) ++
+       ", " ++
+       show (gTarget ghost) ++
+       ", " ++
+       show (gDirection ghost) ++
+        ", " ++
+       show (getAllowedGhostDirections (gMap $ gameState gs) (gDirection ghost) (screenToGridPos gi $ gLocation ghost))  ++
+       ", " ++
+       show (gVelocity ghost)
+       ++ "\n"
+       where
+        gi = gameGridInfo gs
+        ghost = getGhostActor gs gt
 
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
@@ -169,49 +184,23 @@ renderGameView gs = do
        show (mazeMargin $ settings gs) ++
        "\nPac-Man padding: " ++
        show (pacmanPadding $ settings gs) ++
-       "\nBlinky: " ++
-       show (screenToGridPos gi $ gLocation $ blinky $ gameState gs) ++
-       ", " ++
-       show (gTarget $ blinky $ gameState gs) ++
-       ", " ++
-       show (gDirection $ blinky $ gameState gs) ++
-        ", " ++
-       show (getAllowedGhostDirections currentLevel (gDirection $ blinky $ gameState gs) (screenToGridPos gi $ gLocation $ blinky $ gameState gs)) ++
-       ", Collision: " ++
-       show (ghostPlayerCollision gs gi $ blinky $ gameState gs) ++
-       "\nInky: " ++
-       show (screenToGridPos gi $ gLocation $ inky $ gameState gs) ++
-       ", " ++
-       show (gTarget $ inky $ gameState gs) ++
-       ", " ++
-       show (gDirection $ inky $ gameState gs) ++
-       ", Collision: " ++
-       show (ghostPlayerCollision gs gi $ inky $ gameState gs) ++
-       "\nPinky: " ++
-       show (screenToGridPos gi $ gLocation $ pinky $ gameState gs) ++
-       ", " ++
-       show (gTarget $ pinky $ gameState gs) ++
-       ", " ++
-       show (gDirection $ pinky $ gameState gs) ++
-       ", Collision: " ++
-       show (ghostPlayerCollision gs gi $ pinky $ gameState gs) ++
-       "\nClyde: " ++
-       show (screenToGridPos gi $ gLocation $ clyde $ gameState gs) ++
-       ", " ++ show (gTarget $ clyde $ gameState gs) ++ 
-       ", " ++ show (gDirection $ clyde $ gameState gs) ++
-       ", Collision: " ++
-       show (ghostPlayerCollision gs gi $ clyde $ gameState gs)
+       "\nBlinky: " ++ getGhostDebugString gs Blinky ++
+       "Inky: " ++ getGhostDebugString gs Inky ++
+       "Pinky: " ++ getGhostDebugString gs Pinky ++
+       "Clyde: " ++ getGhostDebugString gs Clyde
        )
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let drawnMap = drawMap gs currentLevel gi
-  let drawnGhosts = pictures $ map (\t -> drawGhost gs t gi $ gLocation (getGhostActor gs t)) [Blinky, Pinky, Inky, Clyde]
+  let drawnGhosts = pictures $ map (\t -> let ghost = getGhostActor gs t in drawGhost gs ghost gi $ gLocation ghost) [Blinky, Pinky, Inky, Clyde]
   let debug =
         if debugEnabled $ settings gs
           then pictures [debugGrid gs,debugString, debugGhostTargets gs, debugGhostPath gs]
           else blank
+  let drawnLives = pictures $ map (\v -> translate ((- 375) + 40 * (fromIntegral v :: Float)) (- 375) $ scale 2 2 $ head (right $ pacSprite $ assets gs)) [0..lives (gameState gs)-1]
   return
     (pictures
        [ drawnMap
+       , drawnLives
        , drawPlayer gs gi (pLocation $ player $ gameState gs)
        , drawnGhosts
        , scoreString
@@ -275,7 +264,6 @@ updatePlayerAnimState s
     c = clock s
     p = prevClock gs
 
-
 updateGhostPosition :: Float -> GlobalState -> GhostActor -> GlobalState
 updateGhostPosition dt s ghost = s {gameState = newGameState}
   where
@@ -303,9 +291,10 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
 
     oldChange = lastDirChange ghost
     (newDir, newChange)
+      -- | pastCenter && not (null allowedDirections)
       | oldChange == currentGridPos = (currentDirection, oldChange)
       | gTarget ghost == currentGridPos && not (null allowedDirections) = (head allowedDirections, currentGridPos)
-      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos)
+      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos) -- this doesn't work exactly like I want it to
       | null path = (currentDirection, oldChange)
       | pastCenter && length walls < 2 = (head path, currentGridPos)
       | otherwise = (currentDirection, oldChange)
@@ -324,26 +313,8 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
 
 updatePlayerPosition :: Float -> GlobalState -> GlobalState
 updatePlayerPosition dt s
-  | pastCenter =
-    s
-      { gameState =
-          gs
-            { score = newScore
-            , pelletCount = newPelletCount
-            , player =
-                ps
-                  { pLocation = finalLocation
-                  , pDirection = newDir
-                  , pBufferedInput =
-                      if currentDirection /= newDir
-                        then Nothing
-                        else bufferedInput
-                  , pMoving = finalLocation /= location
-                  }
-            , gMap = newMap
-            }
-      }
-  | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= location}}}
+  | ctype == PowerUp = foldr (\v acc -> setGhostBehaviour acc (getGhostActor acc v) Frightened) newState ghosts
+  | otherwise = newState
   where
     gs = gameState s
     dims@((c, r), (w, h)) = gameGridInfo s
@@ -375,18 +346,66 @@ updatePlayerPosition dt s
     oldScore = score gs
     oldPelletCount = pelletCount gs
     (newScore, newPelletCount, newMap)
-      | ctype == Pellet = (oldScore + 1, oldPelletCount + 1, clearCell m cLoc)
+      | ctype == Pellet = (oldScore + 10, oldPelletCount + 1, clearCell m cLoc)
       | ctype == PowerUp =
-        ( oldScore + 1
+        ( oldScore + 50
         , oldPelletCount
-        , clearCell m cLoc -- clean this up
+        , clearCell m cLoc
          )
       | otherwise = (oldScore, oldPelletCount, m)
+    newState | pastCenter = s { gameState =
+                  gs
+                    { score = newScore
+                    , pelletCount = newPelletCount
+                    , killingSpree = if ctype == PowerUp then 1 else killingSpree gs
+                    , player =
+                        ps
+                          { pLocation = finalLocation
+                          , pDirection = newDir
+                          , pBufferedInput =
+                              if currentDirection /= newDir
+                                then Nothing
+                                else bufferedInput
+                          , pMoving = finalLocation /= location
+                          }
+                    , gMap = newMap
+                    }
+              }
+            | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= location}}}
+
+checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
+checkCollisionsForGhost s ghost | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + (200*ks), killingSpree = ks+1 } }
+                                | colliding = deadPlayerGS
+                                | otherwise = s
+                                where
+                                  gi = gameGridInfo s
+                                  colliding = ghostPlayerCollision s gi ghost
+                                  gs = gameState s
+                                  level = gMap gs
+                                  ks = killingSpree gs
+                                  ghostT = ghostType ghost
+
+                                  spawnPoint = getGhostSpawnPoint level ghostT
+                                  respawnPos = gridToScreenPos gi $ getGhostSpawnPoint level ghostT
+                                  allowedDirections = filter (\d -> isCellCond level (not . cellHasType Wall) (spawnPoint + dirToVec2 d)) allDirections ++ [gDirection ghost] -- the addition of the current direction is purely a failsafe, this could only happen if a map makes decides to put the ghost in a box
+                                  respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gRespawnTimer = 2, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
+                                  deadGhostGS = updateGhostGlobalState s respawnGhost
+
+                                  deadPlayerGS | lives gs == 1 = s { route = StartMenu } -- properly handle game over
+                                               | otherwise = s { gameState = gs {lives = lives gs - 1, player = (player gs) { pLocation = gridToScreenPos gi $ getSpawnPoint level}}}
+
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
 handleUpdateGameView f gs = do
   let updatedClocks = foldr (\g acc ->updateGhostClock acc f (getGhostActor gs g)) gs ghosts
   ngs <- updatePlayerAnimState updatedClocks
   let pUpdate = updatePlayerPosition f ngs
+  -- update ghosts target
   ghostTargetUpdate <- foldrM (\v acc -> updateGhostTarget (getGhostActor acc v) acc) pUpdate ghosts
-  return $ foldr (\v acc -> updateGhostPosition f acc (getGhostActor acc v)) ghostTargetUpdate ghosts
+  -- update ghosts velocity
+  let ghostVelocityUpdate = foldr (\v acc -> updateGhostVelocity acc (getGhostActor acc v)) ghostTargetUpdate ghosts
+  -- update ghosts position
+  let ghostPositionUpdate = foldr (\v acc -> updateGhostPosition f acc (getGhostActor acc v)) ghostVelocityUpdate ghosts
+  -- check for ghosts collision with the player
+  let collisionUpdate = foldr (\v acc -> checkCollisionsForGhost acc (getGhostActor acc v)) ghostPositionUpdate ghosts
+  return collisionUpdate

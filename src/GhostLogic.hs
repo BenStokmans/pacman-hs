@@ -10,16 +10,15 @@ import Struct
       Cell(Cell),
       CellType(Wall),
       Direction(West, North, East, South),
-      GhostActor(gUpdate, gCurrentBehaviour, ghostType, gDirection,
-                 gLocation, gTarget, gFrightenedClock, gModeClock),
-      GhostBehaviour(Frightened, Scatter, Chase),
+      GhostActor(..),
+      GhostBehaviour(..),
       GhostType(..),
       LevelMap(..),
       Player(pDirection, pLocation),
       Vec2(..) )
 import Graphics.Gloss (Point)
 import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo)
-import Map (deleteMultiple)
+import Map (deleteMultiple, getAllowedGhostDirections)
 import Pathfinding ( getAdjacentVecs, vec2Dist )
 import Rendering ( gridToScreenPos, screenToGridPos )
 import Data.Maybe ( fromMaybe, mapMaybe )
@@ -72,18 +71,19 @@ normalizeTarget m@(LevelMap w h _) (Vec2 x y)
                 in ct /= Wall && not (isOutOfBounds l cv))
             current
 
+getRandomElement :: [a] -> IO a
+getRandomElement xs = do
+   i <- getRandomR (0, length xs-1)
+   return $ xs !! i
+
 updateGhostTarget :: GhostActor -> GlobalState -> IO GlobalState
--- lvl 1 pinky leaves house instantly, inky after 30 dots clyde after 90
--- lvl 2 pinky and inky leave instantly, clyde after 50 dots
--- lvl 3 everyone leaves instantly
--- for now everyone always leaves instantly
 updateGhostTarget ghost s
-  | not mustPathfind = do return s
+  | not mustPathfind || gVelocity ghost == 0 = do return s
   | ghostState == Frightened && mustPathfind = do
-    x <- getRandomR (0 :: Integer, round xmax)
-    y <- getRandomR (0 :: Integer, round ymax)
-    return $ newState x y
-  | otherwise = do return $ newState 0 0
+    let allowedDirections = currentDirection : getAllowedGhostDirections m currentDirection currentGridPos
+    rDir <- getRandomElement allowedDirections
+    return $ newState $ currentGridPos + scaleVec2 (dirToVec2 rDir) 2
+  | otherwise = do return $ newState $ currentGridPos + scaleVec2 (dirToVec2 currentDirection) 2
   where
     ghostState = gCurrentBehaviour ghost
     ghostT = ghostType ghost
@@ -108,17 +108,22 @@ updateGhostTarget ghost s
               (\d -> getCell m (currentGridPos + dirToVec2 d))
               (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) <
       2
-    t x y
+    t v
       | ghostState == Scatter = calculateScatterTarget ghostT (xmax, ymax)
       | ghostState == Chase = calculateChaseTarget ghostT s
-      | ghostState == Frightened = Vec2 (fromIntegral x :: Float) (fromIntegral y :: Float)
-    newState x y
-      | ghostT == Blinky = s {gameState = gs {blinky = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
-      | ghostT == Pinky = s {gameState = gs {pinky = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
-      | ghostT == Inky = s {gameState = gs {inky = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
-      | ghostT == Clyde = s {gameState = gs {clyde = ghost {gTarget = normalizeTarget m $ t x y, gUpdate = clock s}}}
+      | ghostState == Frightened = v
+      | otherwise = currentGridPos
+    newState v = updateGhostGlobalState s $ ghost {gTarget = normalizeTarget m $ t v, gUpdate = clock s}
 
+updateGhostGameState :: GameState -> GhostActor -> GameState
+updateGhostGameState gs ghost | ghostT == Blinky = gs {blinky = ghost}
+                              | ghostT == Pinky = gs {pinky = ghost}
+                              | ghostT == Inky = gs {inky = ghost}
+                              | ghostT == Clyde = gs {clyde = ghost}
+                              where ghostT = ghostType ghost
 
+updateGhostGlobalState :: GlobalState -> GhostActor -> GlobalState
+updateGhostGlobalState gs ghost = gs { gameState = updateGhostGameState (gameState gs) ghost }
 
 getBehaviour :: Float -> Int -> GhostBehaviour
 getBehaviour clock level | level == 1 && clock < 7 = Scatter
@@ -169,17 +174,47 @@ stillFrightened frightenedClock level | level == 1 && frightenedClock < 6 = True
 
 
 updateGhost :: Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
-updateGhost dt ghost l | ghostM == Frightened && stayFrightened = ghost {gFrightenedClock = gFrightenedClock ghost + dt}
-                       | otherwise = ghost {gModeClock = newClock, gCurrentBehaviour = getBehaviour newClock l, gFrightenedClock = 0}
+updateGhost dt ghost l | ghostM == Respawning && (gRespawnTimer ghost - dt) > 0 = updatedGhost {gRespawnTimer = gRespawnTimer ghost - dt}
+                       | ghostM == Respawning && (gRespawnTimer ghost - dt) <= 0 = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
+                       | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt}
+                       | otherwise = updatedGhost {gCurrentBehaviour = newMode, gFrightenedClock = 0}
   where 
     ghostM = gCurrentBehaviour ghost
     newClock = gModeClock ghost + dt
     stayFrightened = stillFrightened (gFrightenedClock ghost) l
+    updatedGhost = ghost {gModeClock = newClock}
+    newMode = getBehaviour newClock l
+
+setGhostBehaviour :: GlobalState -> GhostActor -> GhostBehaviour -> GlobalState
+setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour = b, gDirection = direction, lastDirChange = newDirChange }
+  where 
+    ghostT = ghostType ghost
+    direction | b == Frightened = oppositeDirection $ gDirection ghost
+              | otherwise = gDirection ghost
+    newDirChange | b == Frightened = screenToGridPos (gameGridInfo s) (gLocation ghost)
+                 | otherwise = lastDirChange ghost
 
 updateGhostClock :: GlobalState -> Float -> GhostActor -> GlobalState
-updateGhostClock s dt ghost | ghostT == Blinky = s {gameState = (gameState s) {blinky = updateGhost dt ghost l}}
-                            | ghostT == Pinky = s {gameState = (gameState s) {pinky = updateGhost dt ghost l}}
-                            | ghostT == Inky = s {gameState = (gameState s) {inky = updateGhost dt ghost l}}
-                            | ghostT == Clyde = s {gameState = (gameState s) {clyde = updateGhost dt ghost l}}
+updateGhostClock s dt ghost = updateGhostGlobalState s $ updateGhost dt ghost l
   where ghostT = ghostType ghost
         l = level $ gameState s
+
+getGhostVelocity ::  GlobalState -> GhostActor -> Float
+-- lvl 1 pinky leaves house instantly, inky after 30 dots clyde after 90
+-- lvl 2 pinky and inky leave instantly, clyde after 50 dots
+-- lvl 3 everyone leaves instantly
+getGhostVelocity s ghost | behaviour == Respawning = 0
+                         | l == 1 && ghostT == Inky && pellets < 30 = 0
+                         | l == 1 && ghostT == Clyde && pellets < 90 = 0
+                         | l == 2 && ghostT == Clyde && pellets < 50 = 0
+                         | behaviour == Frightened = 60 -- FIXME: correct speed
+                         | otherwise = 75
+  where
+    ghostT = ghostType ghost
+    gs = gameState s
+    l = level gs
+    pellets = pelletCount gs
+    behaviour = gCurrentBehaviour ghost
+
+updateGhostVelocity :: GlobalState -> GhostActor -> GlobalState
+updateGhostVelocity s ghost = let nv = getGhostVelocity s ghost in updateGhostGlobalState s ghost {gVelocity = nv}

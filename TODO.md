@@ -1,0 +1,12 @@
+- [x] Make pacman die and lose lives
+- [x] Fix frightened mode
+- [x] Add respawn timers for ghosts
+- [x] Clean up ghost logic
+- [x] Draw lives display to the screen
+- [ ] Fix ghost reversing in warp tunnels
+- [ ] Make level logic for ghost respawn timers
+- [ ] Fix music / add more sound effects
+- [ ] Implement game saving
+- [ ] Fix game recreating map when restarting a game
+- [ ] Make pellets respawn if they've all been consumed
+- [ ] Implement more level logic

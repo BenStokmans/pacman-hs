@@ -77,6 +77,8 @@ startMusic p = do
   sound <- Mixer.load (p </> "theme.wav")
   Mixer.playForever sound
   Mixer.setVolume 20 Mixer.AllChannels
+  Mixer.pause Mixer.AllChannels --FIXME: move or something
+
   fix $ \loop -> do
     SDL.delay 50
     playing <- Mixer.playing Mixer.AllChannels
@@ -107,7 +109,7 @@ loadAssets p = do
   pinkySprite <- loadSprite (p </> "ghosts/pinky.png")
   inkySprite <- loadSprite (p </> "ghosts/inky.png")
   clydeSprite <- loadSprite (p </> "ghosts/clyde.png")
-  blueGhostSprite <- loadSprite (p </> "other/blue_ghost.png")
+  blueGhostSprite <- loadSprite (p </> "ghosts/blue_ghost.png")
   gearIconBlue <- loadImage (p </> "gear-solid-blue.svg")
   gearIconWhite <- loadImage (p </> "gear-solid-white.svg")
 
