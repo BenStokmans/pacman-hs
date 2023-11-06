@@ -12,3 +12,4 @@
 - [ ] Fix game recreating map when restarting a game
 - [ ] Make pellets respawn if they've all been consumed
 - [ ] Implement more level logic
+- [ ] Add map validation
