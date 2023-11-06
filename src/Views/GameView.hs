@@ -395,7 +395,7 @@ checkCollisionsForGhost s ghost | colliding && gCurrentBehaviour ghost == Fright
 
                                   spawnPoint = getGhostSpawnPoint level ghostT
                                   respawnPos = gridToScreenPos gi $ getGhostSpawnPoint level ghostT
-                                  allowedDirections = filter (\d -> isCellCond level (not . cellHasType Wall) (spawnPoint + dirToVec2 d)) allDirections ++ [gDirection ghost] -- the addition of the current direction is purely a failsafe, this could only happen if a map makes decides to put the ghost in a box
+                                  allowedDirections = filter (\d -> isCellCond level (not . cellHasType Wall) (spawnPoint + dirToVec2 d)) allDirections ++ [gDirection ghost] -- the addition of the current direction is purely a failsafe, this could only happen if a map maker decides to put the ghost in a box
                                   respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
                                   deadGhostGS = updateGhostGlobalState s respawnGhost
 

@@ -135,7 +135,7 @@ gameGridInfo gs =
    in ((x, y), gridSizePx (x, y) gs)
 
 ghostToSprite :: GlobalState -> GhostActor -> Picture
-ghostToSprite gs ghost | gCurrentBehaviour ghost == Frightened && gVelocity ghost > 0 = blueGhostSprite $ assets gs
+ghostToSprite gs ghost | gCurrentBehaviour ghost == Frightened = blueGhostSprite $ assets gs
                        | ghostT == Blinky = blinkySprite $ assets gs
                        | ghostT == Pinky = pinkySprite $ assets gs
                        | ghostT == Inky = inkySprite $ assets gs

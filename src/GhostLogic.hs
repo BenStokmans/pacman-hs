@@ -15,14 +15,14 @@ import Struct
       GhostType(..),
       LevelMap(..),
       Player(pDirection, pLocation),
-      Vec2(..) )
+      Vec2(..), cellHasType, isCellCond )
 import Graphics.Gloss (Point)
 import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..))
 import Map (deleteMultiple, getAllowedGhostDirections)
 import Pathfinding ( getAdjacentVecs, vec2Dist )
 import Rendering ( gridToScreenPos, screenToGridPos )
 import Data.Maybe ( fromMaybe, mapMaybe )
-import Data.List (minimumBy)
+import Data.List (minimumBy, delete)
 import Control.Monad.Random (getRandomR)
 import Data.Tree (levels)
 import Data.IntMap (update)
@@ -72,6 +72,7 @@ normalizeTarget m@(LevelMap w h _) (Vec2 x y)
             current
 
 getRandomElement :: [a] -> IO a
+getRandomElement [] = error "getRandomElement: empty list"
 getRandomElement xs = do
    i <- getRandomR (0, length xs-1)
    return $ xs !! i
@@ -80,9 +81,9 @@ updateGhostTarget :: GhostActor -> GlobalState -> IO GlobalState
 updateGhostTarget ghost s
   | not mustPathfind || gVelocity ghost == 0 = do return s
   | ghostState == Frightened && mustPathfind = do
-    let allowedDirections = currentDirection : getAllowedGhostDirections m currentDirection currentGridPos
+    let allowedDirections = filter (\d -> isCellCond m (not . cellHasType Wall) (currentGridPos + dirToVec2 d)) (delete (oppositeDirection currentDirection) allDirections)
     rDir <- getRandomElement allowedDirections
-    return $ newState $ currentGridPos + scaleVec2 (dirToVec2 rDir) 2
+    return $ newState $ currentGridPos + scaleVec2 (dirToVec2 rDir) 2 -- the arbitrary scaling here is hacky but it works
   | otherwise = do return $ newState $ currentGridPos + scaleVec2 (dirToVec2 currentDirection) 2
   where
     ghostState = gCurrentBehaviour ghost

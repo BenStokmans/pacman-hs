@@ -4,6 +4,7 @@
 - [x] Clean up ghost logic
 - [x] Draw lives display to the screen
 - [x] Add correct scoring for pellets and power pellets
+- [x] Add small respawn animation for ghosts
 - [ ] Fix ghost reversing in warp tunnels
 - [ ] Make level logic for ghost respawn timers
 - [ ] Fix music / add more sound effects
