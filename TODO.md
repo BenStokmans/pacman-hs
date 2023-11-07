@@ -13,3 +13,6 @@
 - [ ] Make pellets respawn if they've all been consumed
 - [ ] Implement more level logic
 - [ ] Add map validation
+- [ ] Look into frightened duration (add ghost blink)
+- [ ] Add kill ghost sequence/animation/whatever
+- [ ] Add score string when killing ghost (see above)

@@ -9,7 +9,7 @@ import Data.List (delete, minimumBy)
 import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
 import FontContainer (FontContainer(..))
 import GHC.Base (undefined)
-import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, makeColor, orange, pictures, red, scale, translate, white)
+import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, makeColor, orange, pictures, red, scale, translate, white, rectangleWire)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
 import Map
   ( calcNextGhostPosition
@@ -24,7 +24,7 @@ import Map
   )
 import Pathfinding ( getDirectionsLimited, getPathLimited )
 import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell, resize)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo)
+import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo, ghostActors)
 import Struct
   ( Cell(..)
   , CellType(..)
@@ -155,9 +155,10 @@ drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
 drawPlayer gs gi (px, py) = let (w,h) = calcPlayerSize gs gi in translate px py $ resize 16 16 w h (getPlayerAnimation gs !! pFrame (player $ gameState gs))
 
 ghostPlayerCollision :: GlobalState -> GridInfo -> GhostActor -> Bool
-ghostPlayerCollision gs gi ga | abs (px - gx) <= pw/2 + gw/2 && abs (py - gy) <= ph/2 + gh/2 = True
+ghostPlayerCollision gs gi ga | abs (px - gx) <= (pw/2 + gw/2)*(1-leniency) && abs (py - gy) <= (ph/2 + gh/2)*(1-leniency) = True
                               | otherwise = False
   where
+    leniency = collisionLeniency $ settings gs
     (gw,gh) = calcGhostSize gs gi
     (pw,ph) = calcPlayerSize gs gi
     (gx,gy) = gLocation ga
@@ -178,32 +179,50 @@ getGhostDebugString gs gt = show (screenToGridPos gi $ gLocation ghost) ++
         gi = gameGridInfo gs
         ghost = getGhostActor gs gt
 
+drawGhostsBoundingBox :: GlobalState -> Picture
+drawGhostsBoundingBox gs = Color white $ pictures $ map (\g -> let (gx,gy) = gLocation g in translate gx gy $ rectangleWire gw gh) $ ghostActors gs
+    where (gw,gh) = calcGhostSize gs (gameGridInfo gs)
+  
+drawPlayerBoundingBox :: GlobalState -> Picture
+drawPlayerBoundingBox gs = Color white $ translate px py $ rectangleWire pw ph
+    where 
+      (px,py) = pLocation $ player $ gameState gs
+      (pw,ph) = calcPlayerSize gs (gameGridInfo gs)
+
+getDebugPicture :: GlobalState -> IO Picture
+getDebugPicture gs = do
+  debugString <- renderStringTopRight
+    (400, 400)
+    (s (emuFont (assets gs)))
+    green
+    ("Maze margin: " ++
+      show (mazeMargin $ settings gs) ++
+      "\nPac-Man padding: " ++
+      show (pacmanPadding $ settings gs) ++
+      "\nBlinky: " ++ getGhostDebugString gs Blinky ++
+      "Inky: " ++ getGhostDebugString gs Inky ++
+      "Pinky: " ++ getGhostDebugString gs Pinky ++
+      "Clyde: " ++ getGhostDebugString gs Clyde
+      )
+  let debugs = [
+          debugGrid gs,
+          debugString,
+          drawPlayerBoundingBox gs,
+          drawGhostsBoundingBox gs,
+          debugGhostTargets gs,
+          debugGhostPath gs
+          ]
+  return $ if debugEnabled $ settings gs then pictures debugs else blank
+
 renderGameView :: GlobalState -> IO Picture
 renderGameView gs = do
   let currentLevel = gMap $ gameState gs
   let gi = gameGridInfo gs
-  debugString <-
-    renderStringTopRight
-      (400, 400)
-      (s (emuFont (assets gs)))
-      green
-      ("Maze margin: " ++
-       show (mazeMargin $ settings gs) ++
-       "\nPac-Man padding: " ++
-       show (pacmanPadding $ settings gs) ++
-       "\nBlinky: " ++ getGhostDebugString gs Blinky ++
-       "Inky: " ++ getGhostDebugString gs Inky ++
-       "Pinky: " ++ getGhostDebugString gs Pinky ++
-       "Clyde: " ++ getGhostDebugString gs Clyde
-       )
   scoreString <- renderStringTopLeft (-400, 400) (FontContainer.m (emuFont (assets gs))) white $ "Score: " ++ show (score $ gameState gs)
   let drawnMap = drawMap gs currentLevel gi
   let drawnGhosts = pictures $ map (\t -> let ghost = getGhostActor gs t in drawGhost gs ghost gi $ gLocation ghost) [Blinky, Pinky, Inky, Clyde]
-  let debug =
-        if debugEnabled $ settings gs
-          then pictures [debugGrid gs,debugString, debugGhostTargets gs, debugGhostPath gs]
-          else blank
   let drawnLives = pictures $ map (\v -> translate ((- 375) + 40 * (fromIntegral v :: Float)) (- 375) $ scale 2 2 $ head (right $ pacSprite $ assets gs)) [0..lives (gameState gs)-1]
+  debug <- getDebugPicture gs
   return
     (pictures
        [ drawnMap
@@ -381,7 +400,7 @@ updatePlayerPosition dt s
             | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= location}}}
 
 checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
-checkCollisionsForGhost s ghost | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + (200*ks), killingSpree = ks+1 } }
+checkCollisionsForGhost s ghost | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + (200*(2^ks)), killingSpree = ks+1 } }
                                 | colliding && gCurrentBehaviour ghost == Respawning = s
                                 | colliding = deadPlayerGS
                                 | otherwise = s

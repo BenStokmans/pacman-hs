@@ -55,6 +55,7 @@ data Settings = Settings
   , lineThickness :: Float
   , editorGridDimensions :: Vec2
   , ghostRespawnTimer :: Float
+  , collisionLeniency :: Float -- an arbitrary value by which to reduce hitbox size
   }
 
 data MenuRoute
@@ -241,6 +242,7 @@ initState = do
             , lineThickness = 15
             , editorGridDimensions = Vec2 25 25
             , ghostRespawnTimer = 2
+            , collisionLeniency = 0.2
             }
       , gameState = emptyGameState {gMap = gMap}
       , editorLevel = LevelMap 25 25 []
