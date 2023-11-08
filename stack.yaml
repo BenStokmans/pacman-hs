@@ -9,10 +9,9 @@ extra-deps:
     commit: acbdfd864b7e574dfbe1595fbdcd154563b2a0ef 
   - tinyfiledialogs-0.2.1.0
   - GLFW-b-1.4.8.4@sha256:b35242b401ac3235753f2bdfdfd07981f531e1d0457928caafb1db3801df40bc,2284
-  - git: https://github.com/locallycompact/sdl2-mixer.git
-    commit: 0c13ee0d06edd76fa5c19c46b7b9a3b9fc9889d3 
-  - git: https://github.com/BenStokmans/sdl2-image.git
-    commit: 397715f086db7c732c1225a9ff7059e6cfa8d825 
+  - git: https://github.com/BenStokmans/sdl2-extra
+    commit: 1d862e719c335e13a1fca8a5b41dc3e4b121c40b 
 
 allow-newer-deps: 
   - hindent
+  - sdl2-extra

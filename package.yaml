@@ -10,7 +10,7 @@ dependencies:
   - base >= 4.17
   - gloss
   - sdl2
-  - sdl2-ttf
+  - sdl2-extra
   - gloss-juicy
   - text
   - filepath
@@ -23,8 +23,6 @@ dependencies:
   - linear
   - gloss-rendering
   - aeson
-  - sdl2-mixer
-  - sdl2-image
 
 default-extensions:
   - TupleSections
