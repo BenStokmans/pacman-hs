@@ -164,7 +164,7 @@ emptyGameState =
     , prevClock = 0
     , mapName = "default"
     , gMap = LevelMap 0 0 []
-    , player = Player {pVelocity = 80, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
+    , player = Player {pVelocity = 110, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
     , blinky =
         GhostActor
           { ghostType = Blinky

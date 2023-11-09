@@ -209,8 +209,8 @@ getGhostVelocity s ghost | behaviour == Respawning = 0
                          | l == 1 && ghostT == Inky && pellets < 30 = 0
                          | l == 1 && ghostT == Clyde && pellets < 90 = 0
                          | l == 2 && ghostT == Clyde && pellets < 50 = 0
-                         | behaviour == Frightened = 60 -- FIXME: correct speed
-                         | otherwise = 75
+                         | behaviour == Frightened = 80 -- FIXME: correct speed
+                         | otherwise = 100
   where
     ghostT = ghostType ghost
     gs = gameState s

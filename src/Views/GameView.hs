@@ -266,7 +266,7 @@ handleInputGameView _ s = do
 updatePlayerAnimState :: GlobalState -> IO GlobalState
 updatePlayerAnimState s
   | not $ pMoving ps = do return s {gameState = gs {prevClock = p + (c - p)}}
-  | c - p >= 0.1 = do
+  | c - p >= 0.06 = do
     return
       s
         { gameState =
