@@ -12,7 +12,7 @@ import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getGhostSpawnPoint, getSpawnPoint, processWalls, validateLevel)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize, defaultButtonImg)
-import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo, emptyGameState)
+import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView, LeaderBoardView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo, emptyGameState)
 import Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation, pDirection), Vec2(..), readLevel, getCells, getCellWithType, PowerUp (PowerPellet), getCellsWithTypes, cellHasType, cellHasTypes, dirToVec2, filterLevelVec2s, allDirections, adjacentVecs, Direction (..), headMaybe)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
@@ -209,7 +209,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                 | otherwise = s {prompt = errorPrompt "Invalid map!"}
           return ns
         | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = [StartMenu]}
-        | rectangleHovered (mousePos s) leaderBoardButton = do return s {route = SettingsView, history = [StartMenu]}
+        | rectangleHovered (mousePos s) leaderBoardButton = do return s {route = LeaderBoardView, history = [StartMenu]}
         | rectangleHovered (mousePos s) quitButton = do exitSuccess
         | otherwise = do return s
   newState

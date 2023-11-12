@@ -83,6 +83,7 @@ data MenuRoute
   | GameOverMenu
   | SettingsView
   | DebugSettingsMenu
+  | LeaderBoardView
   deriving (Eq, Show)
 
 data GameStatus

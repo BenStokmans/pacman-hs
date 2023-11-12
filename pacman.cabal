@@ -34,6 +34,7 @@ library
       Views.DebugSettingsMenu
       Views.EditorView
       Views.GameView
+      Views.LeaderBoardView
       Views.PauseMenu
       Views.SettingsView
       Views.StartMenu

@@ -15,6 +15,7 @@ import Views.PauseMenu (handleInputPauseMenu, handleUpdatePauseMenu, renderPause
 import Views.StartMenu (handleInputStartMenu, handleUpdateStartMenu, renderStartMenu)
 import Views.SettingsView (handleUpdateSettingsView, handleInputSettingsView, renderSettingsView)
 import Views.DebugSettingsMenu (renderDebugMenu, handleInputDebugMenu, handleUpdateDebugMenu)
+import Views.LeaderBoardView (handleInputLeaderBoardView, renderLeaderBoardView, handleUpdateLeaderBoardView)
 
 handleRender :: GlobalState -> IO Picture
 handleRender s@(GlobalState {route = r, prompt = p}) = do
@@ -29,6 +30,7 @@ handleRender s@(GlobalState {route = r, prompt = p}) = do
       | r == PauseMenu = renderPauseMenu s
       | r == SettingsView = renderSettingsView s
       | r == DebugSettingsMenu = renderDebugMenu s
+      | r == LeaderBoardView = renderLeaderBoardView s
       | otherwise = error "Route not implemented"
     pImage
       | isJust p = renderPrompt s (fromMaybe emptyPrompt p)
@@ -74,6 +76,7 @@ handleInput e@(EventKey k Down _ _) s =
       | r == PauseMenu = handleInputPauseMenu promptEvent
       | r == SettingsView = handleInputSettingsView promptEvent
       | r == DebugSettingsMenu = handleInputDebugMenu promptEvent
+      | r == LeaderBoardView = handleInputLeaderBoardView promptEvent
       | otherwise = error "Route not implemented"
 handleInput e@(EventKey (SpecialKey KeyUnknown) Up _ _) s -- for some reason when the user lets go of a number key its reported as unknown
  = do
@@ -103,4 +106,5 @@ handleUpdate f s@(GlobalState {route = r, prompt = p}) = do
       | r == PauseMenu = handleUpdatePauseMenu f
       | r == SettingsView = handleUpdateSettingsView f
       | r == DebugSettingsMenu = handleUpdateDebugMenu f
+      | r == LeaderBoardView = handleUpdateLeaderBoardView f
       | otherwise = error "Route not implemented"
