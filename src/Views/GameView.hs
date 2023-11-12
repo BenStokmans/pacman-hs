@@ -369,7 +369,7 @@ confirmHighScorePrompt s v
   | v /= "" = do
     let newState = s {highScores = insert v (score $ gameState s) (highScores s)}
     writeFile "assets/highscores.json" (show (encode $ highScores newState))
-    return newState {route = StartMenu}
+    return newState {route = StartMenu, prompt = Nothing}
   | otherwise = do return s {route = StartMenu, prompt = Nothing}
   where
     set = settings s
