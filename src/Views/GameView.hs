@@ -92,6 +92,17 @@ getFruitScore s | l == 1             = 100
   where
     l = level $ gameState s
 
+speedConstant :: Float -- pps (pixels per second), source: original pacman
+speedConstant = 75.75757625 -- on grid with 8x8 pixel cells
+
+calculateGameSpeed :: GlobalState -> Direction -> Float -> Float -- directional speed calculation
+calculateGameSpeed gs dir speed = speed * speedScalar * speedConstant * globalSpeedScalar (settings gs)
+  where
+    gi = gameGridInfo gs
+    (cw,ch) = cellSize gi
+    speedScalar | dir == North || dir == South = ch/8
+                | otherwise = cw/8
+
 debugGhostPath :: GlobalState -> Picture
 debugGhostPath s =
   pictures $
@@ -353,7 +364,7 @@ updateAnimationClocks s d = s { gameState = gs { ghostKillAnimationTimer = ghost
 updatePlayerAnimState :: GlobalState -> GlobalState
 updatePlayerAnimState s
   | not $ pMoving ps = s {gameState = gs {prevClock = p + (c - p)}}
-  | c - p >= 0.06 = s
+  | c - p >= animFrameCooldown = s
         { gameState =
             gs
               { player =
@@ -368,6 +379,7 @@ updatePlayerAnimState s
         }
   | otherwise = s
   where
+    animFrameCooldown = 8/calculateGameSpeed s (pDirection ps) (pVelocity ps)
     gs = gameState s
     ps = player gs
     anim = getPlayerAnimation s
@@ -385,7 +397,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
     currentDirection = gDirection ghost
     location = gLocation ghost
     currentGridPos = screenToGridPos dims location
-    distMoved = dt * gVelocity ghost
+    distMoved = calculateGameSpeed s currentDirection (gVelocity ghost) * dt
     nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
     wrappedPos = calcWrappedPosition dims currentDirection location
     pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
@@ -431,7 +443,7 @@ updatePlayerPosition dt s
     currentDirection = pDirection ps
     location = pLocation ps
     currentGridPos = screenToGridPos dims location
-    distMoved = dt * pVelocity ps
+    distMoved = calculateGameSpeed s currentDirection (pVelocity ps) * dt
     nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
     wrappedPos = calcWrappedPosition dims currentDirection location
     pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos

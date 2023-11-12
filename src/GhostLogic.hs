@@ -152,27 +152,38 @@ getBehaviour clock level | level == 1 && clock < 7 = Scatter
                          | level > 4 && clock <= 1092 + 1/60 = Scatter
                          | otherwise = Chase
 
-stillFrightened :: Float -> Int -> Bool
-stillFrightened frightenedClock level | level == 1 && frightenedClock < 6 = True
-                                      | level == 2 && frightenedClock < 5 = True
-                                      | level == 3 && frightenedClock < 4 = True
-                                      | level == 4 && frightenedClock < 3 = True
-                                      | level == 5 && frightenedClock < 2 = True
-                                      | level == 6 && frightenedClock < 5 = True
-                                      | level == 7 && frightenedClock < 2 = True
-                                      | level == 8 && frightenedClock < 2 = True
-                                      | level == 9 && frightenedClock < 1 = True
-                                      | level == 10 && frightenedClock < 5 = True
-                                      | level == 11 && frightenedClock < 2 = True
-                                      | level == 12 && frightenedClock < 1 = True
-                                      | level == 13 && frightenedClock < 1 = True
-                                      | level == 14 && frightenedClock < 3 = True
-                                      | level == 15 && frightenedClock < 1 = True
-                                      | level == 16 && frightenedClock < 1 = True
-                                      | level == 18 && frightenedClock < 1 = True
-                                      | otherwise = False
-                                     
+levelToFrightenDuration :: Int -> Float
+levelToFrightenDuration level | level == 1 = 6
+                              | level == 2 = 5
+                              | level == 3 = 4
+                              | level == 4 = 3
+                              | level == 5 = 2
+                              | level == 6 = 5
+                              | level == 7 = 2
+                              | level == 8 = 2
+                              | level == 9 = 1
+                              | level == 10 = 5
+                              | level == 11 = 2
+                              | level == 12 = 1
+                              | level == 13 = 1
+                              | level == 14 = 3
+                              | level == 15 = 1
+                              | level == 16 = 1
+                              | level == 18 = 1
+                              | otherwise = 0
 
+levelToBlinkCount :: Int -> Float
+levelToBlinkCount level | level <= 8 = 5
+                        | level == 9 = 3
+                        | level == 10 || level == 11 = 5
+                        | level == 12 || level == 13 = 3
+                        | level == 14 = 5
+                        | level == 15 || level == 16 = 3
+                        | level == 18 = 3
+                        | otherwise = 0
+                                     
+stillFrightened :: Float -> Float -> Int -> Bool
+stillFrightened frightenedClock blinkDuration level = levelToFrightenDuration level < (frightenedClock + (blinkDuration * levelToBlinkCount level))  
 
 updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
 updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = updatedGhost {gUpdate = 0, lastDirChange = outOfBounds}
@@ -183,7 +194,7 @@ updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = up
   where 
     ghostM = gCurrentBehaviour ghost
     newClock = gModeClock ghost + dt
-    stayFrightened = stillFrightened (gFrightenedClock ghost) l
+    stayFrightened = stillFrightened (ghostBlinkLength $ settings gs) (gFrightenedClock ghost) l
     updatedGhost = ghost {gModeClock = newClock, gUpdate = gUpdate ghost + dt}
     newMode = getBehaviour newClock l
     respawnLength = ghostRespawnTimer $ settings gs
@@ -210,8 +221,8 @@ getGhostVelocity s ghost | behaviour == Respawning = 0
                          | l == 1 && ghostT == Inky && pellets < 30 = 0
                          | l == 1 && ghostT == Clyde && pellets < 90 = 0
                          | l == 2 && ghostT == Clyde && pellets < 50 = 0
-                         | behaviour == Frightened = 80 -- FIXME: correct speed
-                         | otherwise = 100
+                         | behaviour == Frightened = 0.5 -- FIXME: correct speed
+                         | otherwise = 0.75
   where
     ghostT = ghostType ghost
     gs = gameState s

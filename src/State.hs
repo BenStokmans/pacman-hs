@@ -64,10 +64,12 @@ data Settings = Settings
   , pacmanPadding :: Float
   , mazeMargin :: Float
   , lineThickness :: Float
+  , globalSpeedScalar :: Float
   , editorGridDimensions :: Vec2
   , ghostRespawnTimer :: Float
   , collisionLeniency :: Float -- an arbitrary value by which to reduce hitbox size
   , ghostStuckTimeout :: Float
+  , ghostBlinkLength :: Float
   }
 
 data MenuRoute
@@ -187,11 +189,11 @@ emptyGameState =
     , prevClock = 0
     , pellets = []
     , gMap = LevelMap 0 0 []
-    , player = Player {pVelocity = 110, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
+    , player = Player {pVelocity = 0.8, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
     , blinky =
         GhostActor
           { ghostType = Blinky
-          , gVelocity = 75
+          , gVelocity = 0
           , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
@@ -199,6 +201,7 @@ emptyGameState =
           , lastDirChange = Vec2 0 0
           , gModeClock = 0
           , gFrightenedClock = 0
+          , gAnimClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -206,7 +209,7 @@ emptyGameState =
     , pinky =
         GhostActor
           { ghostType = Pinky
-          , gVelocity = 75
+          , gVelocity = 0
           , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
@@ -214,6 +217,7 @@ emptyGameState =
           , lastDirChange = Vec2 0 0
           , gModeClock = 0
           , gFrightenedClock = 0
+          , gAnimClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -221,7 +225,7 @@ emptyGameState =
     , inky =
         GhostActor
           { ghostType = Inky
-          , gVelocity = 75
+          , gVelocity = 0
           , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
@@ -229,6 +233,7 @@ emptyGameState =
           , lastDirChange = Vec2 0 0
           , gModeClock = 0
           , gFrightenedClock = 0
+          , gAnimClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -236,7 +241,7 @@ emptyGameState =
     , clyde =
         GhostActor
           { ghostType = Clyde
-          , gVelocity = 75
+          , gVelocity = 0
           , gRespawnTimer = 0
           , gDirection = North
           , gLocation = (-1000, -1000)
@@ -244,6 +249,7 @@ emptyGameState =
           , lastDirChange = Vec2 0 0
           , gModeClock = 0
           , gFrightenedClock = 0
+          , gAnimClock = 0
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -266,6 +272,7 @@ initState = do
               , enableHitboxes = True
               , enableGameText = True
             }
+            , globalSpeedScalar = 1.0
             , musicEnabled = False
             , ghostPadding = 0.20
             , pacmanPadding = 0.15
@@ -276,6 +283,7 @@ initState = do
             , ghostRespawnTimer = 2
             , collisionLeniency = 0.2
             , ghostStuckTimeout = 2
+            , ghostBlinkLength = 0.5
             }
       , gameState = emptyGameState
       , gameLevelName = "default"
