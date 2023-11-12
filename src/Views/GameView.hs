@@ -53,7 +53,7 @@ import Struct
   , scaleVec2
   , setCell, getCellsWithType, cellHasTypes, setCells, adjacentVecs, filterLevelVec2s, headMaybe
   )
-import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState, hasFrightenedGhost )
+import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState, hasFrightenedGhost, inWarpTunnel )
 import Data.Aeson (encode)
 import Data.Map (insert)
 
@@ -237,7 +237,9 @@ getGhostDebugString gs gt = show (screenToGridPos gi $ gLocation ghost) ++
         ", " ++
        show (getAllowedGhostDirections (gMap $ gameState gs) (gDirection ghost) (screenToGridPos gi $ gLocation ghost))  ++
        ", " ++
-       show (gVelocity ghost)
+       show (gVelocity ghost) ++
+       ", " ++
+       show (inWarpTunnel gs ghost)
        ++ "\n"
        where
         gi = gameGridInfo gs

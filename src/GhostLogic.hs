@@ -37,16 +37,16 @@ calculateScatterTarget gt s
   | gt == Pinky = Vec2 0 ymax
   | gt == Inky = Vec2 xmax 0
   | gt == Clyde = Vec2 1 1
-    where 
+    where
       ((xmax, ymax), _) = gameGridInfo s
       gs = gameState s
-      
+
 
 calculateChaseTarget :: GhostType -> GlobalState -> Vec2
 calculateChaseTarget gt s
   | gt == Blinky = pLoc
   | gt == Pinky = pLoc + scaleVec2 pDir 4
-  | gt == Inky = blinkyPos + scaleVec2 (pLoc + scaleVec2 pDir 2 - blinkyPos) 2 
+  | gt == Inky = blinkyPos + scaleVec2 (pLoc + scaleVec2 pDir 2 - blinkyPos) 2
   | gt == Clyde && vec2Dist pLoc clydePos < 64 = calculateScatterTarget Clyde s
   | otherwise = pLoc
   where
@@ -137,18 +137,18 @@ getBehaviour clock level | level == 1 && clock < 7 = Scatter
                          | level == 1 && clock < 27 = Chase
                          | level == 1 && clock < 34 = Scatter
                          | level == 1 && clock < 54 = Chase
-                         | level == 1 && clock < 59 = Scatter 
+                         | level == 1 && clock < 59 = Scatter
                          | level == 1 && clock < 79 = Chase
                          | level == 1 && clock < 84 = Scatter
                          | level == 1 && clock >= 84 = Chase
-                         | level > 1 && level <= 4 && clock < 7 = Scatter 
-                         | level > 1 && level <= 4 && clock < 27 = Chase 
-                         | level > 1 && level <= 4 && clock < 34 = Scatter 
-                         | level > 1 && level <= 4 && clock < 54 = Chase 
-                         | level > 1 && level <= 4 && clock < 59 = Scatter 
-                         | level > 1 && level <= 4 && clock < 1092 = Chase 
-                         | level > 1 && level <= 4 && clock <= 1092 + 1/60 = Scatter 
-                         | level > 1 && level <= 4 && clock > 1092 + 1/60 = Chase 
+                         | level > 1 && level <= 4 && clock < 7 = Scatter
+                         | level > 1 && level <= 4 && clock < 27 = Chase
+                         | level > 1 && level <= 4 && clock < 34 = Scatter
+                         | level > 1 && level <= 4 && clock < 54 = Chase
+                         | level > 1 && level <= 4 && clock < 59 = Scatter
+                         | level > 1 && level <= 4 && clock < 1092 = Chase
+                         | level > 1 && level <= 4 && clock <= 1092 + 1/60 = Scatter
+                         | level > 1 && level <= 4 && clock > 1092 + 1/60 = Chase
                          | level > 4 && clock < 5 = Scatter
                          | level > 4 && clock < 25 = Chase
                          | level > 4 && clock < 30 = Scatter
@@ -187,9 +187,9 @@ levelToBlinkCount level | level <= 8 = 5
                         | level == 15 || level == 16 = 3
                         | level == 18 = 3
                         | otherwise = 0
-                                     
+
 stillFrightened :: Float -> Float -> Int -> Bool
-stillFrightened frightenedClock blinkDuration level = frightenedClock < levelToFrightenDuration level + (blinkDuration * levelToBlinkCount level) 
+stillFrightened frightenedClock blinkDuration level = frightenedClock < levelToFrightenDuration level + (blinkDuration * levelToBlinkCount level)
 
 updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
 updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = updatedGhost {gUpdate = 0, lastDirChange = outOfBounds}
@@ -197,7 +197,7 @@ updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = up
                           | ghostM == Respawning && (gRespawnTimer ghost - dt) >= respawnLength = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
                           | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt, gBlink = blink, gAnimClock = newAnimClock}
                           | otherwise = updatedGhost {gCurrentBehaviour = newMode, gFrightenedClock = 0}
-  where 
+  where
     ghostM = gCurrentBehaviour ghost
     newClock = gModeClock ghost + dt
     blinkLength = ghostBlinkLength $ settings gs
@@ -215,7 +215,7 @@ updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = up
 
 setGhostBehaviour :: GlobalState -> GhostActor -> GhostBehaviour -> GlobalState
 setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour = b, gDirection = direction, lastDirChange = newDirChange, gBlink = False, gAnimClock = 0 }
-  where 
+  where
     ghostT = ghostType ghost
     direction | b == Frightened = oppositeDirection $ gDirection ghost
               | otherwise = gDirection ghost
@@ -230,7 +230,7 @@ updateGhostClock s dt ghost = updateGhostGlobalState s $ updateGhost s dt ghost 
 getFrightSpeed :: Int -> Float
 getFrightSpeed level | level == 1 = 0.5
                      | level < 5 = 0.55
-                     | otherwise = 0.6 
+                     | otherwise = 0.6
 
 getChaseSpeed :: Int -> Float
 getChaseSpeed level | level == 1 = 0.75
@@ -251,10 +251,10 @@ getElroyOnePallets l | l == 1 = 20
 getElroyTwoPallets :: Int -> Int
 getElroyTwoPallets l = getElroyOnePallets l `div` 2
 
-hasElroyBoost :: Int -> Int -> Bool 
-hasElroyBoost l p = p < getElroyOnePallets l 
+hasElroyBoost :: Int -> Int -> Bool
+hasElroyBoost l p = p < getElroyOnePallets l
 
-hasElroyTwoBoost :: Int -> Int -> Bool 
+hasElroyTwoBoost :: Int -> Int -> Bool
 hasElroyTwoBoost l p = p < getElroyTwoPallets l
 
 elroyBoost :: Int -> Int -> Float
@@ -262,7 +262,19 @@ elroyBoost l p | hasElroyTwoBoost l p = 0.1
                | hasElroyBoost l p = 0.05
                | otherwise = 0
 
-getGhostVelocity ::  GlobalState -> GhostActor -> Float
+castRay :: LevelMap -> Vec2 -> (Vec2 -> Bool) -> Direction -> Vec2
+castRay m v f d | isOutOfBounds m v = outOfBounds
+                | f v = v
+                | otherwise = castRay m (v + dirToVec2 d) f d
+
+inWarpTunnel :: GlobalState -> GhostActor -> Bool
+inWarpTunnel gs ga = castRay m loc (isCellCond m (cellHasType Wall)) dir == outOfBounds
+  where
+    m = gameLevel gs
+    loc = screenToGridPos (gameGridInfo gs) (gLocation ga)
+    dir = gDirection ga
+
+getGhostVelocity :: GlobalState -> GhostActor -> Float
 -- lvl 1 pinky leaves house instantly, inky after 30 dots clyde after 90
 -- lvl 2 pinky and inky leave instantly, clyde after 50 dots
 -- lvl 3 everyone leaves instantly
@@ -282,9 +294,9 @@ getGhostVelocity s ghost | behaviour == Respawning = 0
 
 updateGhostVelocity :: GlobalState -> GhostActor -> GlobalState
 updateGhostVelocity s ghost = let nv = getGhostVelocity s ghost in updateGhostGlobalState s ghost {
-                  gVelocity = nv, 
+                  gVelocity = nv,
                   lastDirChange = if gVelocity ghost == 0 && nv /= gVelocity ghost then outOfBounds else lastDirChange ghost -- make sure ghosts don't get stuck in spawn
                   }
 
-hasFrightenedGhost :: GlobalState -> Bool 
+hasFrightenedGhost :: GlobalState -> Bool
 hasFrightenedGhost s = any (\g -> gCurrentBehaviour g == Frightened) (ghostActors s)
