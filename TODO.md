@@ -8,8 +8,7 @@
 - [x] Fix ghost reversing in warp tunnels
 - [x] Make level logic for ghost respawn timers
 - [x] Fix music
-- [ ] Add more sound effects
-- [ ] Implement leaderboard
+- [x] Implement leaderboard
 - [x] Fix game recreating map when restarting a game
 - [x] Make pellets respawn if they've all been consumed
 - [x] Implement more level logic

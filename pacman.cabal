@@ -23,14 +23,16 @@ library
   exposed-modules:
       Assets
       FontContainer
-      GhostLogic
-      Map
-      Pathfinding
+      GameLogic.GameLogic
+      GameLogic.GhostLogic
+      GameLogic.Map
+      GameLogic.Pathfinding
+      GameLogic.PlayerLogic
+      GameLogic.Struct
       Prompt
       Rendering
       Router
       State
-      Struct
       Views.DebugSettingsMenu
       Views.EditorView
       Views.GameView

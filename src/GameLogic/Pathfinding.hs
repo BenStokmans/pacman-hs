@@ -1,8 +1,8 @@
-module Pathfinding where
+module GameLogic.Pathfinding where
 
 import Data.List (delete, maximumBy, minimumBy, sortBy)
 import Data.Maybe (isJust)
-import Struct
+import GameLogic.Struct
   ( Cell(Cell)
   , CellType(Empty, Wall)
   , Direction(East, North, South, West)

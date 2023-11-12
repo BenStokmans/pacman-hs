@@ -7,8 +7,8 @@ import Data.Text hiding (empty, map)
 import GHC.Generics
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
-import Map (WallSection, getSpawnPoint, processWalls)
-import Struct
+import GameLogic.Map (WallSection, getSpawnPoint, processWalls)
+import GameLogic.Struct
 import qualified SDL.Mixer as Mixer
 import Control.Monad (unless)
 import Data.String (fromString)
@@ -114,7 +114,7 @@ data GameState = GameState
   , inky :: GhostActor
   , blinky :: GhostActor
   , clyde :: GhostActor -- the four ghost
-  } deriving (Generic, Show)
+  }
 
 data EditorTool
   = WallTool

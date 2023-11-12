@@ -1,33 +1,64 @@
-module GhostLogic where
-import Struct
-    ( allDirections,
-      cellsWithType,
-      dirToVec2,
-      getCell,
-      isOutOfBounds,
-      oppositeDirection,
-      scaleVec2,
-      Cell(Cell),
-      CellType(Wall),
-      Direction(West, North, East, South),
-      GhostActor(..),
-      GhostBehaviour(..),
-      GhostType(..),
-      LevelMap(..),
+module GameLogic.GhostLogic where
+import GameLogic.Struct
+    ( GhostActor(gLocation, gModeClock, gRespawnTimer, gBlink,
+                 gAnimClock, gVelocity, gTarget, gUpdate, ghostType,
+                 gFrightenedClock, gDirection, lastDirChange, gCurrentBehaviour),
+      GhostBehaviour(Respawning, Scatter, Chase, Frightened),
       Player(pDirection, pLocation),
-      Vec2(..), cellHasType, isCellCond, outOfBounds, isCellType, getCellWithType )
-import Graphics.Gloss (Point)
-import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..), ghostActors)
-import Map (deleteMultiple, getAllowedGhostDirections, getAdjacent)
-import Pathfinding ( getAdjacentVecs, vec2Dist )
-import Rendering ( gridToScreenPos, screenToGridPos )
-import Data.Maybe ( fromMaybe, mapMaybe )
-import Data.List (minimumBy, delete)
-import Control.Monad.Random (getRandomR)
-import Data.Tree (levels)
-import Data.IntMap (update)
+      LevelMap(..),
+      GhostType(..),
+      Cell(Cell),
+      CellType(GhostWall, Wall),
+      Vec2(..),
+      Direction(..),
+      headMaybe,
+      allDirections,
+      adjacentVecs,
+      oppositeDirection,
+      outOfBounds,
+      scaleVec2,
+      dirToVec2,
+      dummyCell,
+      cellsWithType,
+      cellHasType,
+      cellHasTypes,
+      ghosts,
+      getCellWithType,
+      isCellCond,
+      isCellType,
+      filterLevelVec2s,
+      isOutOfBounds,
+      getCell,
+      getCellType )
+import State
+    ( GlobalState(gameState, clock, settings, gameLevel),
+      GameState(pauseGameTimer, blinky, pinky, inky, clyde, level,
+                pelletCount, gMap, lives, player, godMode, score, killingSpree),
+      Settings(ghostStuckTimeout, ghostBlinkLength, ghostRespawnTimer),
+      gameGridInfo,
+      ghostActors,
+      getGhostActor )
+import GameLogic.Pathfinding
+    ( getAdjacentVecs,
+      getDirectionsLimited,
+      getTraveledDirection,
+      vec2Dist )
+import Rendering ( gridToScreenPos, screenToGridPos, cellSize )
 import Data.Ord (clamp)
-import Data.Data (ConstrRep(FloatConstr))
+import Data.List ( minimumBy, delete )
+import Data.Maybe ( fromMaybe, mapMaybe )
+import Control.Monad.Random ( MonadRandom(getRandomR) )
+import GameLogic.Map
+    ( deleteMultiple,
+      getAllowedGhostDirections,
+      getAdjacent,
+      getSpawnPoint,
+      getGhostSpawnPoint,
+      isPastCentre,
+      calcWrappedPosition,
+      calcNextGhostPosition )
+import GameLogic.GameLogic
+    ( calculateGameSpeed, ghostPlayerCollision )
 
 calculateScatterTarget :: GhostType -> GlobalState -> Vec2 -- after certain amount of dots blinky goes to chase even in scatter
 calculateScatterTarget gt s
@@ -307,3 +338,71 @@ updateGhostVelocity s ghost = let nv = getGhostVelocity s ghost in updateGhostGl
 
 hasFrightenedGhost :: GlobalState -> Bool
 hasFrightenedGhost s = any (\g -> gCurrentBehaviour g == Frightened) (ghostActors s)
+
+updateGhostPosition :: Float -> GlobalState -> GhostActor -> GlobalState
+updateGhostPosition dt s ghost = s {gameState = newGameState}
+  where
+    gs = gameState s
+    dims@((c, r), (w, h)) = gameGridInfo s
+    (wc, hc) = cellSize dims
+    m@(LevelMap lw lh cells) = gMap gs
+    currentDirection = gDirection ghost
+    location = gLocation ghost
+    currentGridPos = screenToGridPos dims location
+    distMoved = calculateGameSpeed s currentDirection (gVelocity ghost) * dt
+    nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
+    wrappedPos = calcWrappedPosition dims currentDirection location
+    pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
+    newLoc@(nx, ny) = calcNextGhostPosition currentDirection nextCellType pastCenter wrappedPos distMoved
+    (cx, cy) = gridToScreenPos dims currentGridPos
+    Cell ctype cLoc = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
+    walls = cellsWithType
+           Wall
+           (mapMaybe
+              (\d -> getCell m (currentGridPos + dirToVec2 d))
+              (deleteMultiple allDirections [oppositeDirection currentDirection, currentDirection]))
+    path = fromMaybe [currentDirection] $ getDirectionsLimited m (oppositeDirection currentDirection) currentGridPos (gTarget ghost) True
+    allowedDirections = getAllowedGhostDirections m currentDirection currentGridPos
+
+    oldChange = lastDirChange ghost
+    (newDir, newChange)
+      -- | pastCenter && not (null allowedDirections)
+      | oldChange == currentGridPos = (currentDirection, oldChange)
+      | gTarget ghost == currentGridPos && not (null allowedDirections) = (head allowedDirections, currentGridPos)
+      | gTarget ghost == currentGridPos && null allowedDirections && isOutOfBounds m (currentGridPos + dirToVec2 currentDirection) = (currentDirection, oldChange)
+      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos) -- this doesn't work exactly like I want it to
+      | null path = (currentDirection, oldChange)
+      | pastCenter && length walls < 2 = (head path, currentGridPos)
+      | otherwise = (currentDirection, oldChange)
+    pastCentreLocation
+      | newDir == North || newDir == South = (cx, ny)
+      | otherwise = (nx, cy)
+    finalLocation
+      | currentDirection /= newDir = pastCentreLocation
+      | otherwise = newLoc
+    newGhost = ghost {gLocation = finalLocation, gDirection = newDir, lastDirChange = newChange, gUpdate = if finalLocation /= location then 0 else gUpdate ghost}
+    newGameState = updateGhostGameState gs newGhost
+
+
+checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
+checkCollisionsForGhost s ghost | godMode gs = s
+                                | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + 200*(2^(ks-1)), killingSpree = ks+1, pauseGameTimer = 1 } }
+                                | colliding && gCurrentBehaviour ghost == Respawning = s
+                                | colliding = foldr (\g ts -> updateGhostGlobalState ts (getGhostActor ts g) {gLocation = gridToScreenPos gi $ getGhostSpawnPoint level g}) deadPlayerGS ghosts
+                                | otherwise = s
+                                where
+                                  gi = gameGridInfo s
+                                  colliding = ghostPlayerCollision s gi ghost
+                                  gs = gameState s
+                                  level = gMap gs
+                                  ks = killingSpree gs
+                                  ghostT = ghostType ghost
+
+                                  spawnPoint = getGhostSpawnPoint level ghostT
+                                  respawnPos = gridToScreenPos gi $ getGhostSpawnPoint level ghostT
+                                  allowedDirections = filter (\d -> isCellCond level (not . cellHasType Wall) (spawnPoint + dirToVec2 d)) allDirections ++ [gDirection ghost] -- the addition of the current direction is purely a failsafe, this could only happen if a map maker decides to put the ghost in a box
+                                  respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
+                                  deadGhostGS = updateGhostGlobalState s respawnGhost
+
+                                  deadPlayerGS | lives gs == 1 = s { gameState = gs { lives = 0, pauseGameTimer = 2, player = (player gs) { pLocation = (-1000,-1000)}} } -- properly handle game over
+                                               | otherwise = s { gameState = gs {lives = lives gs - 1, killingSpree = 0, pauseGameTimer = 1, player = (player gs) { pLocation = gridToScreenPos gi $ getSpawnPoint level, pDirection = fromMaybe North $ headMaybe $ map (getTraveledDirection (getSpawnPoint level)) $ filterLevelVec2s level (not . cellHasTypes [Wall,GhostWall]) $ adjacentVecs (getSpawnPoint level)}}}

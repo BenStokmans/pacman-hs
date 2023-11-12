@@ -7,7 +7,7 @@ import FontContainer (FontContainer(..))
 import Graphics.Gloss (Picture(..), black, blank, blue, green, pictures, rectangleSolid, red, translate, white)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(LeftButton), SpecialKey(..))
 import Rendering (Rectangle(..), defaultButton, rectangleHovered, renderString, stringSize, thickRectangle)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), defaultPrompt)
+import State (GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), defaultPrompt, Settings (..))
 
 emptyPrompt :: Prompt
 emptyPrompt = Prompt {}
@@ -65,7 +65,7 @@ renderPrompt s p = do
     pictures
       ([ box
        , t
-       , ks
+       , if debugEnabled $ settings s then ks else blank
        , if showConfirmButton p
            then drawnOkayButton
            else blank

@@ -1,9 +1,7 @@
-module Struct where
+module GameLogic.Struct where
 
-import Data.Aeson
 import Data.List (intercalate)
 import Data.Maybe (mapMaybe)
-import GHC.Generics (Generic)
 import Graphics.Gloss (Point)
 
 type GridInfo = ((Float, Float), (Float, Float))
@@ -255,7 +253,7 @@ data Player = Player
   , pFrame :: Int
   , pBufferedInput :: Maybe Direction
   , pMoving :: Bool
-  } deriving (Generic, Show)
+  }
 
 data GhostBehaviour
   = Scatter
@@ -280,4 +278,4 @@ data GhostActor = GhostActor
   , gBlink :: Bool
   , gCurrentBehaviour :: GhostBehaviour
   , lastModeChange :: Float
-  } deriving (Generic, Show)
+  }

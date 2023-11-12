@@ -1,4 +1,4 @@
-module Map where
+module GameLogic.Map where
 
 import Codec.Picture.Metadata (Keys(Source), Value(Double))
 import Data.List (intercalate)
@@ -7,7 +7,7 @@ import Graphics.Gloss (Picture(..), Point, blank, circleSolid, pictures, rotate,
 import Graphics.Gloss.Data.Color (green, red, white, yellow)
 import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
 import Rendering (cellSize, gridToScreenPos, resize)
-import Struct
+import GameLogic.Struct
   ( Cell(Cell)
   , CellType(..)
   , Direction(East, North, South, West)

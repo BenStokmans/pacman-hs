@@ -37,7 +37,7 @@ import SDL.Video.Renderer
   , surfacePixels
   , unlockSurface
   )
-import Struct (Cell(..), GridInfo, Vec2(..))
+import GameLogic.Struct (Cell(..), GridInfo, Vec2(..))
 import Text.Printf (printf)
 
 data Rectangle =
@@ -45,6 +45,15 @@ data Rectangle =
 
 cellSize :: GridInfo -> (Float, Float) --cell size in px
 cellSize ((c, r), (w, h)) = (w / c, h / r)
+
+calcSpriteSize :: GridInfo -> (Float, Float) -> Float -> (Float, Float)
+calcSpriteSize gi@((c, r), _) (w, h) scalar = let (cw, ch) = cellSize gi in (w * (cw / w * scalar * (c / r)), h * (ch / h * scalar * (r / c)))
+
+calcSprite16Size :: GridInfo -> Float -> (Float, Float)
+calcSprite16Size gi = calcSpriteSize gi (16,16)
+
+calcSprite32Size :: GridInfo -> Float -> (Float, Float)
+calcSprite32Size gi = calcSpriteSize gi (32,32)
 
 gridToScreenPos :: GridInfo -> Vec2 -> Point -- get position screen from grid position
 gridToScreenPos gi@(dim, (w, h)) (Vec2 x y) =

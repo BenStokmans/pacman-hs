@@ -9,17 +9,17 @@ import Graphics.Gloss (Picture(..), black, blue, circleSolid, makeColor, picture
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(KeyEsc))
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
-import Map (getGhostSpawnPoint, getSpawnPoint, processWalls, validateLevel)
+import GameLogic.Map (getGhostSpawnPoint, getSpawnPoint, processWalls, validateLevel)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize, defaultButtonImg)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView, LeaderBoardView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo, emptyGameState)
-import Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation, pDirection), Vec2(..), readLevel, getCells, getCellWithType, PowerUp (PowerPellet), getCellsWithTypes, cellHasType, cellHasTypes, dirToVec2, filterLevelVec2s, allDirections, adjacentVecs, Direction (..), headMaybe)
+import GameLogic.Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation, pDirection), Vec2(..), readLevel, getCells, getCellWithType, PowerUp (PowerPellet), getCellsWithTypes, cellHasType, cellHasTypes, dirToVec2, filterLevelVec2s, allDirections, adjacentVecs, Direction (..), headMaybe)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>), takeBaseName)
 import Text.Read (readMaybe)
 import qualified SDL.Mixer as Mixer
-import Pathfinding (getTraveledDirection)
+import GameLogic.Pathfinding (getTraveledDirection)
 
 selectMapButton :: Float -> Rectangle
 selectMapButton w = Rectangle (0, 70) w 50 10

@@ -1,62 +1,93 @@
-{-# LANGUAGE BlockArguments #-}
-
 module Views.GameView where
-
-import Assets (Anim(..), Assets(..), PacManSprite(..))
-import Control.Monad.Random
-import Data.Foldable (foldrM)
-import Data.List (delete, minimumBy)
-import Data.Maybe (fromMaybe, isJust, isNothing, mapMaybe)
-import FontContainer (FontContainer(..))
-import GHC.Base (undefined)
-import Graphics.Gloss (Color, Picture(Color, Line), Point, blank, blue, circleSolid, green, makeColor, orange, pictures, red, scale, translate, white, rectangleWire, black)
-import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(..))
-import Map
-  ( calcNextGhostPosition
-  , calcNextPlayerPosition
-  , calcWrappedPosition
-  , deleteMultiple
-  , getGhostSpawnPoint
-  , isPastCentre
-  , processWalls
-  , wallSectionToPic
-  , wallToSizedSection, getAllowedGhostDirections, getSpawnPoint
-  )
-import Pathfinding ( getDirectionsLimited, getPathLimited, getTraveledDirection )
-import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell, resize, renderString)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo, ghostActors, DebugSettings (..), Prompt (..), defaultPrompt)
-import Struct
-  ( Cell(..)
-  , CellType(..)
-  , Direction(..)
-  , GhostActor(..)
-  , GhostBehaviour(..)
-  , GhostType(..)
-  , GridInfo
-  , LevelMap(..)
-  , Player(..)
-  , Vec2(..)
-  , allDirections
-  , cellHasType
-  , cellsWithType
-  , clearCell
-  , dirToVec2
-  , dummyCell
-  , getCell
-  , getCellCond
-  , getCellType
-  , ghosts
-  , isCellCond
-  , isOutOfBounds
-  , oppositeDirection
-  , outOfBounds
-  , scaleVec2
-  , setCell, getCellsWithType, cellHasTypes, setCells, adjacentVecs, filterLevelVec2s, headMaybe
-  )
-import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState, hasFrightenedGhost, inWarpTunnel )
+import State
+    ( GlobalState(gameState, cachedWalls, lastClock, assets, history,
+                  settings, highScores, route, prompt, clock),
+      GameState(pauseGameTimer, pelletCount, totalPelletCount, gMap,
+                killingSpree, godMode, level, score, lives, player, prevClock),
+      Settings(debugEnabled, lineThickness, ghostRespawnTimer,
+               fruitPadding, mazeMargin, pacmanPadding, debugSettings),
+      gameGridInfo,
+      ghostActors,
+      MenuRoute(StartMenu, PauseMenu, GameView, LeaderBoardView),
+      DebugSettings(enableGameText, enableHitboxes, enableGrid,
+                    enableGhostPath, enableGhostText, enableGhostTarget),
+      Prompt(closeAction, promptText, promptValue, confirmAction),
+      defaultPrompt,
+      ghostToSprite,
+      getGhostActor )
+import Graphics.Gloss
+    ( blue,
+      green,
+      orange,
+      red,
+      white,
+      blank,
+      circleSolid,
+      pictures,
+      rectangleWire,
+      scale,
+      translate,
+      makeColor,
+      Color,
+      Picture(Color),
+      Point )
+import GameLogic.Struct
+    ( GhostActor(gLocation, gCurrentBehaviour, gRespawnTimer, gTarget,
+                 gDirection, gVelocity),
+      GhostBehaviour(Respawning),
+      Player(pFrame, pLocation, pBufferedInput, pDirection, pVelocity,
+             pMoving),
+      LevelMap(..),
+      GhostType(..),
+      CellType(PowerUp, Wall, GhostWall, Pellet),
+      Direction(..),
+      GridInfo,
+      oppositeDirection,
+      cellHasType,
+      ghosts,
+      getCellsWithType )
+import Assets
+    ( Assets(emuFont, cherrySprite, strawBerrySprite, appleSprite,
+             melonSprite, galaxianSprite, bellSprite, keySprite, pacSprite),
+      PacManSprite(right, down, left, up),
+      Anim )
+import Graphics.Gloss.Interface.IO.Game
+    ( Key(Char, SpecialKey),
+      Event(EventKey),
+      SpecialKey(KeyEsc, KeyUp, KeyDown, KeyLeft, KeyRight) )
 import Data.Map (insert)
-import Data.Text.Lazy.IO (writeFile)
+import GameLogic.GhostLogic
+    ( updateGhostTarget,
+      updateGhostClock,
+      inWarpTunnel,
+      updateGhostVelocity,
+      updateGhostPosition,
+      checkCollisionsForGhost )
+import GameLogic.PlayerLogic
+    ( updatePlayerVelocity, updatePlayerPosition )
+import Data.Foldable (foldrM)
+import GameLogic.GameLogic
+    ( calculateGameSpeed,
+      calcGhostSize,
+      calcPlayerSize,
+      fruitAvailable )
 import Data.Aeson.Text (encodeToLazyText)
+import qualified Data.Text.Lazy.IO
+import Rendering
+    ( calcSprite32Size,
+      gridToScreenPos,
+      drawGrid,
+      screenToGridPos,
+      translateCell,
+      resize,
+      renderStringTopRight,
+      renderStringTopLeft,
+      renderString,
+      cellSize )
+import FontContainer ( FontContainer(m, s, l) )
+import GameLogic.Map
+    ( getAllowedGhostDirections, getSpawnPoint, wallToSizedSection )
+import GameLogic.Pathfinding ( getPathLimited )
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -82,29 +113,6 @@ getFruit s | l == 1             = cherrySprite a
   where
     l = level $ gameState s
     a = assets s
-
-getFruitScore :: GlobalState -> Int
-getFruitScore s | l == 1             = 100
-                | l == 2             = 300
-                | l == 3  || l == 4  = 500
-                | l == 5  || l == 6  = 700
-                | l == 7  || l == 7  = 1000
-                | l == 9  || l == 10 = 2000
-                | l == 11 || l == 12 = 3000
-                | otherwise          = 5000
-  where
-    l = level $ gameState s
-
-speedConstant :: Float -- pps (pixels per second), source: original pacman
-speedConstant = 75.75757625 -- on grid with 8x8 pixel cells
-
-calculateGameSpeed :: GlobalState -> Direction -> Float -> Float -- directional speed calculation
-calculateGameSpeed gs dir speed = speed * speedScalar * speedConstant * globalSpeedScalar (settings gs)
-  where
-    gi = gameGridInfo gs
-    (cw,ch) = cellSize gi
-    speedScalar | dir == North || dir == South = ch/8
-                | otherwise = cw/8
 
 debugGhostPath :: GlobalState -> Picture
 debugGhostPath s =
@@ -169,21 +177,6 @@ getPlayerAnimation gs
     d = pDirection $ player $ gameState gs
     as = pacSprite $ assets gs
 
-calcSpriteSize :: GridInfo -> (Float, Float) -> Float -> (Float, Float)
-calcSpriteSize gi@((c, r), _) (w, h) scalar = let (cw, ch) = cellSize gi in (w * (cw / w * scalar * (c / r)), h * (ch / h * scalar * (r / c)))
-
-calcSprite16Size :: GridInfo -> Float -> (Float, Float)
-calcSprite16Size gi = calcSpriteSize gi (16,16)
-
-calcSprite32Size :: GridInfo -> Float -> (Float, Float)
-calcSprite32Size gi = calcSpriteSize gi (32,32)
-
-calcGhostSize :: GlobalState -> GridInfo -> (Float,Float)
-calcGhostSize gs gi = calcSprite16Size gi ((1 + mazeMargin (settings gs) * 2) * (1 - ghostPadding (settings gs) * 2))
-
-calcPlayerSize :: GlobalState -> GridInfo -> (Float,Float)
-calcPlayerSize gs gi = calcSprite16Size gi ((1 + mazeMargin (settings gs) * 2) * (1 - pacmanPadding (settings gs) * 2))
-
 drawGhost :: GlobalState -> GhostActor -> GridInfo -> Point -> Picture
 drawGhost gs ghost gi (px, py) | ghostM == Respawning = translate px py $ scale (timer/respawnLength) (timer/respawnLength) sprite
                                | otherwise = translate px py sprite
@@ -193,9 +186,6 @@ drawGhost gs ghost gi (px, py) | ghostM == Respawning = translate px py $ scale 
       sprite = resize 16 16 w h (ghostToSprite gs ghost)
       timer = gRespawnTimer ghost
       respawnLength = ghostRespawnTimer $ settings gs
-
-fruitAvailable :: GlobalState -> Bool
-fruitAvailable s = let gs = gameState s in not (fruitEaten gs || (fromIntegral (pelletCount gs) :: Float) < (fromIntegral (totalPelletCount gs) :: Float) / 2)
 
 drawFruit :: GlobalState -> GridInfo -> Picture
 drawFruit s gi | fruitAvailable s = translate x y $ resize 32 32 w h $ getFruit s
@@ -207,27 +197,6 @@ drawFruit s gi | fruitAvailable s = translate x y $ resize 32 32 w h $ getFruit 
 
 drawPlayer :: GlobalState -> GridInfo -> Point -> Picture
 drawPlayer gs gi (px, py) = let (w,h) = calcPlayerSize gs gi in translate px py $ resize 16 16 w h (getPlayerAnimation gs !! pFrame (player $ gameState gs))
-
-ghostPlayerCollision :: GlobalState -> GridInfo -> GhostActor -> Bool
-ghostPlayerCollision gs gi ga | abs (px - gx) <= (pw/2 + gw/2)*(1-leniency) && abs (py - gy) <= (ph/2 + gh/2)*(1-leniency) = True
-                              | otherwise = False
-  where
-    leniency = collisionLeniency $ settings gs
-    (gw,gh) = calcGhostSize gs gi
-    (pw,ph) = calcPlayerSize gs gi
-    (gx,gy) = gLocation ga
-    (px,py) = pLocation $ player $ gameState gs
-
-fruitPlayerCollision :: GlobalState -> GridInfo -> Bool
-fruitPlayerCollision s gi | not $ fruitAvailable s = False
-                          | abs (px - fx) <= pw/2 + fw/2 && abs (py - fy) <= ph/2 + fh/2 = True
-                          | otherwise = False
-  where
-    gs = gameState s
-    (fw,fh) = calcSprite32Size gi (1 - fruitPadding (settings s))
-    (pw,ph) = calcPlayerSize s gi
-    (fx,fy) = gridToScreenPos gi $ getSpawnPoint $ gMap gs
-    (px,py) = pLocation $ player $ gameState s
 
 getGhostDebugString :: GlobalState -> GhostType -> String
 getGhostDebugString gs gt = show (screenToGridPos gi $ gLocation ghost) ++
@@ -417,175 +386,10 @@ updatePlayerAnimState s
     c = clock s
     p = prevClock gs
 
-updateGhostPosition :: Float -> GlobalState -> GhostActor -> GlobalState
-updateGhostPosition dt s ghost = s {gameState = newGameState}
-  where
-    gs = gameState s
-    dims@((c, r), (w, h)) = gameGridInfo s
-    (wc, hc) = cellSize dims
-    m@(LevelMap lw lh cells) = gMap gs
-    currentDirection = gDirection ghost
-    location = gLocation ghost
-    currentGridPos = screenToGridPos dims location
-    distMoved = calculateGameSpeed s currentDirection (gVelocity ghost) * dt
-    nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
-    wrappedPos = calcWrappedPosition dims currentDirection location
-    pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
-    newLoc@(nx, ny) = calcNextGhostPosition currentDirection nextCellType pastCenter wrappedPos distMoved
-    (cx, cy) = gridToScreenPos dims currentGridPos
-    Cell ctype cLoc = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
-    walls = cellsWithType
-           Wall
-           (mapMaybe
-              (\d -> getCell m (currentGridPos + dirToVec2 d))
-              (deleteMultiple allDirections [oppositeDirection currentDirection, currentDirection]))
-    path = fromMaybe [currentDirection] $ getDirectionsLimited m (oppositeDirection currentDirection) currentGridPos (gTarget ghost) True
-    allowedDirections = getAllowedGhostDirections m currentDirection currentGridPos
-
-    oldChange = lastDirChange ghost
-    (newDir, newChange)
-      -- | pastCenter && not (null allowedDirections)
-      | oldChange == currentGridPos = (currentDirection, oldChange)
-      | gTarget ghost == currentGridPos && not (null allowedDirections) = (head allowedDirections, currentGridPos)
-      | gTarget ghost == currentGridPos && null allowedDirections && isOutOfBounds m (currentGridPos + dirToVec2 currentDirection) = (currentDirection, oldChange)
-      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos) -- this doesn't work exactly like I want it to
-      | null path = (currentDirection, oldChange)
-      | pastCenter && length walls < 2 = (head path, currentGridPos)
-      | otherwise = (currentDirection, oldChange)
-    pastCentreLocation
-      | newDir == North || newDir == South = (cx, ny)
-      | otherwise = (nx, cy)
-    finalLocation
-      | currentDirection /= newDir = pastCentreLocation
-      | otherwise = newLoc
-    newGhost = ghost {gLocation = finalLocation, gDirection = newDir, lastDirChange = newChange, gUpdate = if finalLocation /= location then 0 else gUpdate ghost}
-    newGameState = updateGhostGameState gs newGhost
-
-updatePlayerPosition :: Float -> GlobalState -> GlobalState
-updatePlayerPosition dt s
-  | ctype == PowerUp = foldr (\v acc -> setGhostBehaviour acc (getGhostActor acc v) Frightened) newState ghosts
-  | otherwise = newState
-  where
-    gs = gameState s
-    dims@((c, r), (w, h)) = gameGridInfo s
-    (wc, hc) = cellSize dims
-    m@(LevelMap lw lh cells) = gMap gs
-    ps = player gs
-    currentDirection = pDirection ps
-    location = pLocation ps
-    currentGridPos = screenToGridPos dims location
-    distMoved = calculateGameSpeed s currentDirection (pVelocity ps) * dt
-
-    nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
-    wrappedPos = calcWrappedPosition dims currentDirection location
-    pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
-    newLoc@(nx, ny) = calcNextPlayerPosition currentDirection nextCellType pastCenter wrappedPos distMoved
-    (cx, cy) = gridToScreenPos dims currentGridPos
-    Cell ctype cLoc = fromMaybe dummyCell (getCell m currentGridPos) -- it is assumed that it is not nothing
-    bufferedInput = pBufferedInput ps
-    canTurn =
-      maybe False (\d -> isCellCond m (not . cellHasTypes [Wall,GhostWall]) (currentGridPos + dirToVec2 d)) bufferedInput
-    newDir
-      | canTurn = fromMaybe North bufferedInput
-      | otherwise = currentDirection
-    newDirLocation
-      | newDir == North || newDir == South = (cx, ny)
-      | otherwise = (nx, cy)
-    finalLocation
-      | currentDirection /= newDir = newDirLocation
-      | otherwise = newLoc
-    oldScore = score gs
-    oldPelletCount = pelletCount gs
-    (newScore, newPelletCount, newMap)
-      | ctype == Pellet = (oldScore + 10, oldPelletCount + 1, clearCell m cLoc)
-      | ctype == PowerUp =
-        ( oldScore + 50
-        , oldPelletCount + 1
-        , clearCell m cLoc
-         )
-      | otherwise = (oldScore, oldPelletCount, m)
-    respawnPellets = newPelletCount >= totalPelletCount gs
-    eatFruit = fruitPlayerCollision s dims
-    pelletGameState | newPelletCount >= totalPelletCount gs = gs { pelletCount = 0, gMap = setCells newMap (pellets gs), fruitEaten = False, level = level gs + 1 }
-                    | otherwise = gs { pelletCount = newPelletCount, fruitEaten = fruitEaten gs || eatFruit, gMap = newMap }
-
-    newState | pastCenter = s { gameState =
-                  pelletGameState
-                    { score = if eatFruit then newScore + getFruitScore s else newScore
-                    , killingSpree = if ctype == PowerUp then 1 else killingSpree gs
-                    , player =
-                        ps
-                          { pLocation = finalLocation
-                          , pDirection = newDir
-                          , pBufferedInput =
-                              if currentDirection /= newDir
-                                then Nothing
-                                else bufferedInput
-                          , pMoving = finalLocation /= location
-                          }
-                    }
-              }
-            | otherwise = s {gameState = gs {player = ps {pLocation = newLoc, pMoving = newLoc /= location}}}
-
-checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
-checkCollisionsForGhost s ghost | godMode gs = s
-                                | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + 200*(2^(ks-1)), killingSpree = ks+1, pauseGameTimer = 1 } }
-                                | colliding && gCurrentBehaviour ghost == Respawning = s
-                                | colliding = foldr (\g ts -> updateGhostGlobalState ts (getGhostActor ts g) {gLocation = gridToScreenPos gi $ getGhostSpawnPoint level g}) deadPlayerGS ghosts
-                                | otherwise = s
-                                where
-                                  gi = gameGridInfo s
-                                  colliding = ghostPlayerCollision s gi ghost
-                                  gs = gameState s
-                                  level = gMap gs
-                                  ks = killingSpree gs
-                                  ghostT = ghostType ghost
-
-                                  spawnPoint = getGhostSpawnPoint level ghostT
-                                  respawnPos = gridToScreenPos gi $ getGhostSpawnPoint level ghostT
-                                  allowedDirections = filter (\d -> isCellCond level (not . cellHasType Wall) (spawnPoint + dirToVec2 d)) allDirections ++ [gDirection ghost] -- the addition of the current direction is purely a failsafe, this could only happen if a map maker decides to put the ghost in a box
-                                  respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
-                                  deadGhostGS = updateGhostGlobalState s respawnGhost
-
-                                  deadPlayerGS | lives gs == 1 = s { gameState = gs { lives = 0, pauseGameTimer = 2, player = (player gs) { pLocation = (-1000,-1000)}} } -- properly handle game over
-                                               | otherwise = s { gameState = gs {lives = lives gs - 1, killingSpree = 0, pauseGameTimer = 1, player = (player gs) { pLocation = gridToScreenPos gi $ getSpawnPoint level, pDirection = fromMaybe North $ headMaybe $ map (getTraveledDirection (getSpawnPoint level)) $ filterLevelVec2s level (not . cellHasTypes [Wall,GhostWall]) $ adjacentVecs (getSpawnPoint level)}}}
-
-getPlayerVelocity :: GlobalState -> Float
-getPlayerVelocity s | hfg && isOnPellet = frightPacDotSpd
-                    | hfg = frightPacSpd
-                    | isOnPellet = pacDotSpd
-                    | otherwise = pacSpd
-  where
-    ps = player gs
-    gi = gameGridInfo s
-    gs = gameState s
-    l = level gs
-    isOnPellet = isCellCond (gMap gs) (cellHasType Pellet) (screenToGridPos gi (pLocation ps)) 
-    hfg = hasFrightenedGhost s
-    frightPacDotSpd | l == 1 = 0.79
-                    | l < 5 = 0.83
-                    | otherwise = 0.87
-    frightPacSpd | l == 1 = 0.9
-                 | l < 5 = 0.95
-                 | otherwise = 1
-    pacDotSpd | l == 1 = 0.71
-              | l < 5 = 0.79
-              | l < 21 = 0.87
-              | otherwise = 0.79
-    pacSpd | l == 1 = 0.8
-           | l < 5 || l > 20 = 0.9
-           | otherwise = 1
-
-updatePlayerVelocity :: GlobalState -> GlobalState
-updatePlayerVelocity s = s {gameState = gs{player = ps {pVelocity = getPlayerVelocity s}}}
-  where
-    gs = gameState s
-    ps = player gs
-
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
 handleUpdateGameView f gs = do
   let updatedAnimationClocks = updateAnimationClocks gs f
-  let updatedClocks = foldr (\g acc ->updateGhostClock acc f (getGhostActor gs g)) updatedAnimationClocks ghosts
+  let updatedClocks = foldr (\g acc -> updateGhostClock acc f (getGhostActor gs g)) updatedAnimationClocks ghosts
   let ngs = updatePlayerAnimState updatedClocks
   let updatedPlayerVelocity = updatePlayerVelocity ngs
   let pUpdate = updatePlayerPosition f updatedPlayerVelocity

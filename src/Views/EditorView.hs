@@ -23,7 +23,7 @@ import Graphics.Gloss
   )
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
-import Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection, validateLevel)
+import GameLogic.Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection, validateLevel)
 import Rendering
   ( Rectangle(Rectangle)
   , cellSize
@@ -40,7 +40,7 @@ import Rendering
   )
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), gridSizePx, getGhostActor)
-import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
+import GameLogic.Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
 import Views.GameView (debugGrid, drawGhost, drawMap, drawPlayer, getGhostColor, pelletColor)
