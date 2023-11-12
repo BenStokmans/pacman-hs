@@ -13,7 +13,7 @@
 - [x] Fix game recreating map when restarting a game
 - [x] Make pellets respawn if they've all been consumed
 - [ ] Implement more level logic
-- [ ] Add map validation
-- [ ] Look into frightened duration (add ghost blink)
+- [x] Add map validation
+- [x] Look into frightened duration (add ghost blink)
 - [x] Add kill ghost sequence/animation/whatever
 - [x] Add score string when killing ghost (see above)

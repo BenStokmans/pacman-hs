@@ -23,7 +23,7 @@ import Graphics.Gloss
   )
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
-import Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection)
+import Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection, validateLevel)
 import Rendering
   ( Rectangle(Rectangle)
   , cellSize
@@ -39,13 +39,14 @@ import Rendering
   , stringSize
   )
 import SDL.Font (Font(Font))
-import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(blink), Settings(..), gridSizePx, getGhostActor)
+import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), gridSizePx, getGhostActor)
 import Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
 import Views.GameView (debugGrid, drawGhost, drawMap, drawPlayer, getGhostColor, pelletColor)
 import Views.PauseMenu (saveEditorLevel)
 import Views.StartMenu (drawParticles, updateParticles)
+import Prompt (errorPrompt)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x, y) w h = do
@@ -305,9 +306,10 @@ handleInputEditorView (EventKey (Char 'v') _ _ _) gs = do
 handleInputEditorView (EventKey (Char c) _ _ _) gs = do
   return gs {editorTool = charToTool (editorTool gs) c}
 handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) gs
-  | rectangleHovered (mousePos gs) saveButton = do
-    saveEditorLevel gs
-    return gs
+  | rectangleHovered (mousePos gs) saveButton && validateLevel (editorLevel gs) = do
+                                                  saveEditorLevel gs
+                                                  return gs
+  | rectangleHovered (mousePos gs) saveButton = do return gs {prompt = let Just p = errorPrompt "Invalid map!\nPlease place all \nspawn points for \nthe ghosts and pacman" in Just $ p {closeAction = \state _ -> do return state {route = EditorView, prompt = Nothing}}}
   | rectangleHovered (mousePos gs) $ previewButton mx (-h / 2 - 30) = do return gs {previewEditor = not $ previewEditor gs}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 260) 25 25 0 = do return gs {editorTool = WallTool}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 220) 25 25 0 = do return gs {editorTool = SpawnTool}

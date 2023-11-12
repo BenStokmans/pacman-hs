@@ -1,9 +1,9 @@
 module State where
 
 import Assets (Assets(..), loadAssets)
-import Data.Aeson
+import Data.Aeson (decode)
 import Data.Map (Map, empty)
-import Data.Text hiding (map)
+import Data.Text hiding (empty, map)
 import GHC.Generics
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
@@ -11,6 +11,9 @@ import Map (WallSection, getSpawnPoint, processWalls)
 import Struct
 import qualified SDL.Mixer as Mixer
 import Control.Monad (unless)
+import Data.String (fromString)
+import Data.Maybe (fromMaybe)
+import Control.Exception.Base (try, catch)
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -22,8 +25,8 @@ data Prompt = Prompt
   , blinkInterval :: Float
   , lastBlink :: Float
   , blink :: Bool
-  , confirmAction :: GlobalState -> String -> GlobalState
-  , closeAction :: GlobalState -> String -> GlobalState
+  , confirmAction :: GlobalState -> String -> IO GlobalState
+  , closeAction :: GlobalState -> String -> IO GlobalState
   , darkenBackground :: Bool
   }
 
@@ -39,8 +42,8 @@ defaultPrompt =
     , blinkInterval = 0.3
     , lastBlink = 0
     , blink = True
-    , confirmAction = const
-    , closeAction = const
+    , confirmAction = \x _ -> do return x
+    , closeAction = \x _ -> do return x
     , darkenBackground = True
     }
 
@@ -94,7 +97,7 @@ data GameState = GameState
   , level :: Int
   , godMode :: Bool
   , killingSpree :: Int
-  , ghostKillAnimationTimer :: Float
+  , pauseGameTimer :: Float
   , status :: GameStatus
   , prevClock :: Float
   , gMap :: LevelMap
@@ -109,9 +112,6 @@ data GameState = GameState
   , blinky :: GhostActor
   , clyde :: GhostActor -- the four ghost
   } deriving (Generic, Show)
-
-instance ToJSON GameState where
-  toJSON (GameState {score = score, lives = lives}) = object ["score" .= score, "lives" .= lives]
 
 data EditorTool
   = WallTool
@@ -142,6 +142,7 @@ data GlobalState = GlobalState
   , lastClock :: Float
   , mouseDown :: Maybe MouseButton
   , cachedWalls :: [(Cell, WallSection)]
+  , highScores :: Map String Int
   }
 
 gridSizePx :: (Float, Float) -> GlobalState -> (Float, Float) -- grid size in pixels onscreen
@@ -182,7 +183,7 @@ emptyGameState =
     , godMode = False
     , pelletCount = 0
     , totalPelletCount = 0
-    , ghostKillAnimationTimer = 0
+    , pauseGameTimer = 0
     , lives = 3
     , fruitEaten = False
     , killingSpree = 0
@@ -262,10 +263,20 @@ emptyGameState =
           }
     }
 
+
+readHandler :: IOError -> IO String 
+readHandler e = return ""
+
+readHighScores :: IO (Map String Int)
+readHighScores = do
+  text <- catch (readFile "assets/highscores.json") readHandler
+  return $ fromMaybe empty (decode (fromString text) :: Maybe (Map String Int))
+
 initState :: IO GlobalState
 initState = do
   assets <- loadAssets "assets"
   gMap <- readLevel "maps/default.txt"
+  highScores <- readHighScores
   let gs = GlobalState { settings =
           Settings
             { windowSize = (800, 800)
@@ -309,5 +320,6 @@ initState = do
       , editorGhost = Blinky
       , mouseDown = Nothing
       , previewEditor = False
+      , highScores = highScores
       }
   return gs

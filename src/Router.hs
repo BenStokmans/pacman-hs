@@ -57,7 +57,7 @@ handleInput (EventMotion p) s = do
 handleInput e@(EventKey k Down _ _) s =
   if k `notElem` keys s
     then do
-      let ps = promptState s
+      ps <- promptState s
       ns <- newState ps
       return ns {keys = k : keys s}
     else do
@@ -66,7 +66,7 @@ handleInput e@(EventKey k Down _ _) s =
     r = route s
     (promptEvent, promptState)
       | isJust $ prompt s = (dummyEvent, handleInputPrompt e)
-      | otherwise = (e, const s)
+      | otherwise = (e, \_ -> do return s)
     newState
       | r == StartMenu = handleInputStartMenu promptEvent
       | r == GameView = handleInputGameView promptEvent

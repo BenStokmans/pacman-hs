@@ -12,12 +12,14 @@ import Graphics.Gloss.Interface.IO.Game (Event(..), Key(MouseButton), MouseButto
 import Graphics.Gloss.Interface.IO.Interact (Key(..))
 import Graphics.UI.TinyFileDialogs (saveFileDialog)
 import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, defaultButtonImg)
-import State (GameState(..), GlobalState(..), MenuRoute(..))
+import State (GameState(..), GlobalState(..), MenuRoute(..), closeAction)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Views.StartMenu (drawParticles, updateParticles, settingsButton)
 import Struct (tailNull)
+import Map (validateLevel)
+import Prompt (errorPrompt)
 
 continueButton :: Rectangle
 continueButton = Rectangle (0, 0) 400 100 10
@@ -37,7 +39,7 @@ renderPauseMenu gs = do
   drawnMainMenuButton <- defaultButton mainMenuButton lEmu "Main Menu" mPos
   let saveText =
         if head (history gs) == GameView
-          then "game"
+          then "undefined"
           else "map"
   drawnSaveButton <- defaultButton saveButton lEmu ("Save " ++ saveText) mPos
   let ass = assets gs
@@ -51,21 +53,15 @@ saveEditorLevel s = do
   let fName = maybe "" unpack file
   when (isJust file) $ writeFile fName (show $ editorLevel s)
 
-saveGameState :: GlobalState -> IO ()
-saveGameState s = do
-  ws <- getCurrentDirectory
-  file <- saveFileDialog (pack "save game") (pack $ ws </> "maps/game.txt") [pack "*.json"] (pack "game save")
-  let fName = maybe "" unpack file
-  when (isJust file) $ writeFile fName (show (encode $ gameState s))
 
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
 handleInputPauseMenu (EventKey (SpecialKey KeyEsc) _ _ _) s = do
   return s {route = head (history s), history = tailNull (history s)}
 handleInputPauseMenu (EventKey (MouseButton LeftButton) _ _ _) s
   | continueButtonHover = do return s {route = head his, history = tailNull his}
+  | saveButtonHover && head his == EditorView && not (validateLevel $ editorLevel s) = do return s {prompt = let Just p = errorPrompt "Invalid map!\nPlease place all \nspawn points for \nthe ghosts and pacman" in Just $ p {closeAction = \state _ -> do return state {route = PauseMenu, prompt = Nothing}}}
   | saveButtonHover = do
     when (head his == EditorView) $ saveEditorLevel s
-    when (head his == GameView) $ saveGameState s
     return s --TODO implement saving of game state
   | mainMenuButtonHover = do return s {route = StartMenu}
   | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = PauseMenu : his}

@@ -189,7 +189,7 @@ updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor --TODO: o
 updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = updatedGhost {gUpdate = 0, lastDirChange = outOfBounds}
                           | ghostM == Respawning && (gRespawnTimer ghost + dt) < respawnLength = updatedGhost {gRespawnTimer = gRespawnTimer ghost + dt}
                           | ghostM == Respawning && (gRespawnTimer ghost - dt) >= respawnLength = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
-                          | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt}
+                          | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt, gBlink = blink, gAnimClock = newAnimClock}
                           | otherwise = updatedGhost {gCurrentBehaviour = newMode, gFrightenedClock = 0}
   where 
     ghostM = gCurrentBehaviour ghost
@@ -202,10 +202,10 @@ updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = up
     animClock = gAnimClock ghost
     progressedAnimClock | animClock > 0 = animClock - dt
                         | otherwise = 0
-    (blink,newAnimClock) | not stayFrightened = (False,0)
-                         | gFrightenedClock ghost - levelToFrightenDuration l <= 0 = (False, 0)
-                         | newAnimClock <= 0 = (not $ gBlink ghost,blinkLength)
-                         | otherwise = (False,0)
+    (blink,newAnimClock) | not stayFrightened = (gBlink ghost,progressedAnimClock)
+                         | gFrightenedClock ghost - levelToFrightenDuration l <= 0 = (gBlink ghost, progressedAnimClock)
+                         | progressedAnimClock <= 0 = (not $ gBlink ghost,blinkLength/2)
+                         | otherwise = (gBlink ghost,progressedAnimClock)
 
 setGhostBehaviour :: GlobalState -> GhostActor -> GhostBehaviour -> GlobalState
 setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour = b, gDirection = direction, lastDirChange = newDirChange, gBlink = False, gAnimClock = 0 }

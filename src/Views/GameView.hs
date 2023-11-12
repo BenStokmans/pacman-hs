@@ -22,9 +22,9 @@ import Map
   , wallSectionToPic
   , wallToSizedSection, getAllowedGhostDirections, getSpawnPoint
   )
-import Pathfinding ( getDirectionsLimited, getPathLimited )
-import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell, resize)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo, ghostActors, DebugSettings (..))
+import Pathfinding ( getDirectionsLimited, getPathLimited, getTraveledDirection )
+import Rendering (cellSize, drawGrid, gridToScreenPos, renderStringTopLeft, renderStringTopRight, screenToGridPos, translateCell, resize, renderString)
+import State (GameState(..), GlobalState(..), MenuRoute(..), Settings(..), getGhostActor, ghostToSprite, gridSizePx, gameGridInfo, ghostActors, DebugSettings (..), Prompt (..), defaultPrompt)
 import Struct
   ( Cell(..)
   , CellType(..)
@@ -51,9 +51,11 @@ import Struct
   , oppositeDirection
   , outOfBounds
   , scaleVec2
-  , setCell, getCellsWithType, cellHasTypes, setCells
+  , setCell, getCellsWithType, cellHasTypes, setCells, adjacentVecs, filterLevelVec2s, headMaybe
   )
 import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState )
+import Data.Aeson (encode)
+import Data.Map (insert)
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -312,7 +314,8 @@ renderGameView s = do
   let drawnLives = pictures $ map (\v -> translate ((- 375) + 40 * (fromIntegral v :: Float)) (- 375) $ scale 2 2 $ head (right $ pacSprite $ assets s)) [0..lives gs-1]
   let drawnLevelFruit = translate 375 (-375) $ getFruit s
   let pl = pLocation $ player gs
-  drawnKillText <- if ghostKillAnimationTimer gs > 0 then renderStringTopLeft pl (m (emuFont (assets s))) white $ show (200*2^(killingSpree gs - 2)) else return blank
+  gameOverString <- if lives gs == 0 then renderString (0,0) (l (emuFont (assets s))) red "GAME OVER" else do return blank
+  drawnKillText <- if pauseGameTimer gs > 0 && killingSpree gs > 0 then renderStringTopLeft pl (m (emuFont (assets s))) white $ show (200*2^(killingSpree gs - 2)) else return blank
   debug <- getDebugPicture s
   return
     (pictures
@@ -325,6 +328,7 @@ renderGameView s = do
        , debug
        , drawnKillText
        , drawnLevelFruit
+       , gameOverString
        ])
 
 keyToDirection :: Direction -> Key -> Direction
@@ -357,8 +361,33 @@ handleInputGameView (EventKey k _ _ _) s = return s {gameState = gs {player = ps
       | otherwise = newDir -- technically not proper but it works
 handleInputGameView _ s = return s
 
+saveGameState :: GlobalState -> IO ()
+saveGameState s = do writeFile "assets/highscores.json" (show (encode $ highScores s))
+
+confirmHighScorePrompt :: GlobalState -> String -> IO GlobalState
+confirmHighScorePrompt s v
+  | v /= "" = do
+    let newState = s {highScores = insert v (score $ gameState s) (highScores s)}
+    writeFile "assets/highscores.json" (show (encode $ highScores newState))
+    return newState {route = StartMenu}
+  | otherwise = do return s {route = StartMenu}
+  where
+    set = settings s
+
+
 updateAnimationClocks :: GlobalState -> Float -> GlobalState
-updateAnimationClocks s d = s { gameState = gs { ghostKillAnimationTimer = ghostKillAnimationTimer gs - d } }
+updateAnimationClocks s d | pauseGameTimer gs <= 0 && lives gs == 0 = s
+              { prompt =
+                  Just
+                    defaultPrompt
+                      { promptText = "Enter your name: "
+                      , promptValue = "name"
+                      , confirmAction = confirmHighScorePrompt
+                      , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
+                      },
+                gameState = gs { pauseGameTimer = 999}
+              }
+              | otherwise = s { gameState = gs { pauseGameTimer = pauseGameTimer gs - d } }
   where
     gs = gameState s
 
@@ -499,7 +528,7 @@ updatePlayerPosition dt s
 
 checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
 checkCollisionsForGhost s ghost | godMode gs = s
-                                | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + 200*(2^(ks-1)), killingSpree = ks+1, ghostKillAnimationTimer = 1 } }
+                                | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + 200*(2^(ks-1)), killingSpree = ks+1, pauseGameTimer = 1 } }
                                 | colliding && gCurrentBehaviour ghost == Respawning = s
                                 | colliding = deadPlayerGS
                                 | otherwise = s
@@ -517,8 +546,8 @@ checkCollisionsForGhost s ghost | godMode gs = s
                                   respawnGhost = ghost { gLocation = gridToScreenPos gi $ getGhostSpawnPoint level ghostT, gCurrentBehaviour = Respawning, gFrightenedClock = 0, gDirection = head allowedDirections, lastDirChange = spawnPoint }
                                   deadGhostGS = updateGhostGlobalState s respawnGhost
 
-                                  deadPlayerGS | lives gs == 1 = s { route = StartMenu } -- properly handle game over
-                                               | otherwise = s { gameState = gs {lives = lives gs - 1, player = (player gs) { pLocation = gridToScreenPos gi $ getSpawnPoint level}}}
+                                  deadPlayerGS | lives gs == 1 = s { gameState = gs { lives = 0, pauseGameTimer = 2, player = (player gs) { pLocation = (-1000,-1000)}} } -- properly handle game over
+                                               | otherwise = s { gameState = gs {lives = lives gs - 1, killingSpree = 0, pauseGameTimer = 1, player = (player gs) { pLocation = gridToScreenPos gi $ getSpawnPoint level, pDirection = fromMaybe North $ headMaybe $ map (getTraveledDirection (getSpawnPoint level)) $ filterLevelVec2s level (not . cellHasTypes [Wall,GhostWall]) $ adjacentVecs (getSpawnPoint level)}}}
 
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
@@ -535,4 +564,4 @@ handleUpdateGameView f gs = do
   let ghostPositionUpdate = foldr (\v acc -> updateGhostPosition f acc (getGhostActor acc v)) ghostVelocityUpdate ghosts
   -- check for ghosts collision with the player
   let collisionUpdate = foldr (\v acc -> checkCollisionsForGhost acc (getGhostActor acc v)) ghostPositionUpdate ghosts
-  return $ if ghostKillAnimationTimer (gameState updatedAnimationClocks) > 0 then updatedAnimationClocks else collisionUpdate
+  return $ if pauseGameTimer (gameState updatedAnimationClocks) > 0 then updatedAnimationClocks else collisionUpdate

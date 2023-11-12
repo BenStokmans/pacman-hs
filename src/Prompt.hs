@@ -20,7 +20,7 @@ errorPrompt s =
       , promptText = s
       , showTextField = False
       , showConfirmButton = False
-      , closeAction = \state _ -> state {route = StartMenu, prompt = Nothing}
+      , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
       }
 
 okayButton :: Prompt -> Rectangle
@@ -81,12 +81,11 @@ renderPrompt s p = do
     value = promptValue p
     c = clock s
 
-handleInputPrompt :: Event -> GlobalState -> GlobalState
+handleInputPrompt :: Event -> GlobalState -> IO GlobalState
 handleInputPrompt (EventKey (SpecialKey KeyEsc) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = value, closeAction = close})}) =
   close s value
 handleInputPrompt (EventKey (SpecialKey KeyBackspace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
-  s
-    { prompt =
+  do return $ s { prompt =
         Just
           p
             { promptValue =
@@ -96,16 +95,16 @@ handleInputPrompt (EventKey (SpecialKey KeyBackspace) _ _ _) s@(GlobalState {pro
             }
     }
 handleInputPrompt (EventKey (SpecialKey KeySpace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
-  s {prompt = Just p {promptValue = pv ++ " "}}
+  do return $ s {prompt = Just p {promptValue = pv ++ " "}}
 handleInputPrompt (EventKey (Char k) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
-  s {prompt = Just p {promptValue = pv ++ [k]}}
+  do return $ s {prompt = Just p {promptValue = pv ++ [k]}}
 handleInputPrompt (EventKey (MouseButton LeftButton) _ _ _) s@(GlobalState {prompt = Just p@(Prompt { promptValue = value
                                                                                                     , confirmAction = confirm
                                                                                                     , closeAction = close
                                                                                                     })})
   | rectangleHovered (mousePos s) (okayButton p) = confirm s value
   | rectangleHovered (mousePos s) (closeButton p) = close s value
-handleInputPrompt _ s = s
+handleInputPrompt _ s = do return s
 
 handleUpdatePrompt :: Float -> GlobalState -> Prompt -> IO GlobalState
 handleUpdatePrompt f s p

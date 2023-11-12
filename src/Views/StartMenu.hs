@@ -9,7 +9,7 @@ import Graphics.Gloss (Picture(..), black, blue, circleSolid, makeColor, picture
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(KeyEsc))
 import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
-import Map (getGhostSpawnPoint, getSpawnPoint, processWalls)
+import Map (getGhostSpawnPoint, getSpawnPoint, processWalls, validateLevel)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize, defaultButtonImg)
 import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo, emptyGameState)
@@ -95,29 +95,23 @@ emptyMap w h = LevelMap w h (fr : ors ++ [lr])
         [1 .. (round h - 2)]
     lr = map (\x -> Cell Wall (Vec2 (fromInteger x :: Float) (h - 1))) [0 .. (round w - 1)]
 
-confirmHeightPrompt :: GlobalState -> String -> GlobalState
+confirmHeightPrompt :: GlobalState -> String -> IO GlobalState
 confirmHeightPrompt s v
-  | isJust heightInt =
-    let (Vec2 w _) = editorGridDimensions set
-     in s
-          { settings = set {editorGridDimensions = Vec2 w height}
+  | isJust heightInt = do return $ let (Vec2 w _) = editorGridDimensions set in s { settings = set {editorGridDimensions = Vec2 w height}
           , editorLevel = emptyMap w height
           , prompt = Nothing
           , route = EditorView
           , cachedWalls = processWalls $ editorLevel s
           }
-  | otherwise = s {prompt = errorPrompt $ "Invalid width: \n" ++ show v}
+  | otherwise = do return s {prompt = errorPrompt $ "Invalid width: \n" ++ show v}
   where
     set = settings s
     heightInt = readMaybe v :: Maybe Int
     height = maybe 0 (\v -> fromIntegral v :: Float) heightInt
 
-confirmWidthPrompt :: GlobalState -> String -> GlobalState
+confirmWidthPrompt :: GlobalState -> String -> IO GlobalState
 confirmWidthPrompt s v
-  | isJust widthInt =
-    let (Vec2 _ y) = editorGridDimensions set
-     in s
-          { settings = set {editorGridDimensions = Vec2 width y}
+  | isJust widthInt = do return $  let (Vec2 _ y) = editorGridDimensions set in s { settings = set {editorGridDimensions = Vec2 width y}
           , prompt =
               Just
                 defaultPrompt
@@ -125,10 +119,10 @@ confirmWidthPrompt s v
                   , promptText = "Enter grid height:"
                   , promptValue = show (round y)
                   , confirmAction = confirmHeightPrompt
-                  , closeAction = \state _ -> state {route = StartMenu, prompt = Nothing}
+                  , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
                   }
           }
-  | otherwise = s {prompt = errorPrompt $ "Invalid height: \n" ++ show v}
+  | otherwise = do return s {prompt = errorPrompt $ "Invalid height: \n" ++ show v}
   where
     set = settings s
     widthInt = readMaybe v :: Maybe Int
@@ -186,8 +180,8 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
         | rectangleHovered (mousePos s) (selectMapButton (w + 40)) = do
           mMap <- selectMap
           let ns
-                | Just (m, name) <- mMap = s {gameLevel = m, gameLevelName = name}
-                | otherwise = s
+                | Just (m, name) <- mMap = if validateLevel m then s {gameLevel = m, gameLevelName = name} else s {prompt = errorPrompt "Invalid map!"}
+                | otherwise = s {prompt = errorPrompt "Invalid map!"}
           return ns
         | rectangleHovered (mousePos s) startButton = do return $ startGame s
         | rectangleHovered (mousePos s) newMapButton = do
@@ -201,15 +195,14 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                           let (Vec2 x _) = editorGridDimensions $ settings s
                            in show (round x)
                       , confirmAction = confirmWidthPrompt
-                      , closeAction = \state _ -> state {route = StartMenu, prompt = Nothing}
+                      , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
                       }
               }
         | rectangleHovered (mousePos s) editMapButton = do
           mMap <- selectMap
           let ns
-                | Just (m@(LevelMap w h _), _) <- mMap =
-                  s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}}
-                | otherwise = s
+                | Just (m@(LevelMap w h _), _) <- mMap = if validateLevel m then s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}} else s {prompt = errorPrompt "Invalid map!"}
+                | otherwise = s {prompt = errorPrompt "Invalid map!"}
           return ns
         | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = [StartMenu]}
         | rectangleHovered (mousePos s) quitButton = do exitSuccess
