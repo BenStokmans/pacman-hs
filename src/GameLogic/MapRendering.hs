@@ -1,4 +1,4 @@
-module GameLogic.Map where
+module GameLogic.MapRendering where
 
 import Codec.Picture.Metadata (Keys(Source), Value(Double))
 import Data.List (intercalate)
@@ -6,63 +6,18 @@ import Data.Maybe (isJust, isNothing, mapMaybe)
 import Graphics.Gloss (Picture(..), Point, blank, circleSolid, pictures, rotate, thickArc, thickCircle, translate)
 import Graphics.Gloss.Data.Color (green, red, white, yellow)
 import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
-import Rendering (cellSize, gridToScreenPos, resize)
-import GameLogic.Struct
-  ( Cell(Cell)
-  , CellType(..)
-  , Direction(East, North, South, West)
-  , GhostType(..)
-  , GridInfo
-  , LevelMap(LevelMap)
-  , Vec2(Vec2)
-  , allDirections
-  , cellHasType
-  , cellsWithType
-  , dirToVec2
-  , getCellWithType
-  , getCells
-  , getWall
-  , mapHeight
-  , mapWidth
-  , outOfBounds
-  , scaleVec2
-  , setCells, oppositeDirection, isCellCond, getCell, ghosts
-  )
-
--- Level is only valid when it has all spawnpoints and there is nothing out of bounds or null. 
-validateLevel :: LevelMap -> Bool
-validateLevel m@(LevelMap w h cells) = w > 0 && h > 0 && not (null cells) && all (isJust . getCell m) (zipWith Vec2 [0..w-1] [0..h-1]) && getSpawnPoint m /= outOfBounds && notElem outOfBounds (map (getGhostSpawnPoint m) ghosts)
-
-getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
-getSpawnPoint' (LevelMap w h cs) f
-  | null ss = outOfBounds
-  | otherwise = foldr (\x c -> c + scaleVec2 x sc) (Vec2 0 0) ss
-  where
-    ss = map (\(Cell _ v) -> v) (filter f (concat cs))
-    sc = 1 / fromIntegral (length ss) :: Float
-
-getSpawnPoint :: LevelMap -> Vec2
-getSpawnPoint l = getSpawnPoint' l (cellHasType Spawn)
-
-getGhostSpawnPoint :: LevelMap -> GhostType -> Vec2
-getGhostSpawnPoint l gt =
-  getSpawnPoint'
-    l
-    (\case
-       (Cell (GhostSpawn t) _) -> t == gt
-       _ -> False)
-
-getDiags :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> [Cell]
-getDiags f l c@(Cell t pos) = mapMaybe (f l . (pos +)) [Vec2 1 1, Vec2 (-1) (-1), Vec2 1 (-1), Vec2 (-1) 1]
-
-getAdjacent :: (LevelMap -> Vec2 -> Maybe Cell) -> LevelMap -> Cell -> [Cell]
-getAdjacent f l c@(Cell t pos) = mapMaybe (f l . (\d -> pos + dirToVec2 d)) allDirections
-
-deleteMultiple :: Eq a => [a] -> [a] -> [a]
-deleteMultiple [] _ = []
-deleteMultiple (x:xs) ys
-  | x `elem` ys = deleteMultiple xs ys
-  | otherwise = x : deleteMultiple xs ys
+import GameLogic.MapLogic
+    ( LevelMap(..),
+      Cell(..),
+      CellType(GhostWall),
+      Vec2(..),
+      Direction(..),
+      dirToVec2,
+      getWall,
+      getCellWithType,
+      getDiags,
+      getAdjacent,
+      deleteMultiple )
 
 data WallType
   = StraightOne
@@ -87,11 +42,6 @@ data WallSection =
 instance Eq WallSection where
   (==) :: WallSection -> WallSection -> Bool
   (WallSection t1 d1) == (WallSection t2 d2) = t1 == t2 && d1 == d2
-
-wallToSizedSection :: Float -> Float -> Float -> Float -> WallSection -> Picture
-wallToSizedSection m t nw nh ws =
-  let (ow, oh) = defaultSize
-   in resize ow oh nw nh (wallSectionToPic m t ow oh ws)
 
 defaultSize :: (Float, Float)
 defaultSize = (100, 100)
@@ -250,39 +200,3 @@ processGhostWalls m@(LevelMap _ _ l) =
 
 processWalls :: LevelMap -> [(Cell, WallSection)]
 processWalls m@(LevelMap _ _ l) = processWalls' getWall m ++ processGhostWalls m
-
-isPastCentre :: GridInfo -> Direction -> Vec2 -> Point -> Bool
-isPastCentre gi d v@(Vec2 vx vy) (x, y)
-  | d == North = cy <= y
-  | d == East = cx <= x
-  | d == South = cy >= y
-  | d == West = cx >= x
-  where
-    (cx, cy) = gridToScreenPos gi v
-
-calcWrappedPosition :: GridInfo -> Direction -> Point -> Point
-calcWrappedPosition gi@(_, (w, h)) d (x, y)
-  | d == North && y >= h / 2 = (x, -h / 2 + hc / 2)
-  | d == South && y <= -h / 2 = (x, h / 2 - hc / 2)
-  | d == East && x >= w / 2 = (-w / 2 + wc / 2, y)
-  | d == West && x <= -w / 2 = (w / 2 - wc / 2, y)
-  | otherwise = (x, y)
-  where
-    (wc, hc) = cellSize gi
-
-calcNextPosition' :: Bool -> Direction -> CellType -> Bool -> Point -> Float -> Point
-calcNextPosition' ghost d nextCellType pastCenter (x, y) delta
-  | (nextCellType == Wall || (nextCellType == GhostWall && ghost)) && pastCenter = (x, y)
-  | d == North = (x, y + delta)
-  | d == East = (x + delta, y)
-  | d == South = (x, y - delta)
-  | d == West = (x - delta, y)
-
-calcNextPlayerPosition :: Direction -> CellType -> Bool -> Point -> Float -> Point
-calcNextPlayerPosition = calcNextPosition' False
-
-calcNextGhostPosition :: Direction -> CellType -> Bool -> Point -> Float -> Point
-calcNextGhostPosition = calcNextPosition' False
-
-getAllowedGhostDirections :: LevelMap -> Direction -> Vec2 -> [Direction]
-getAllowedGhostDirections m d v = filter (\d -> isCellCond m (not . cellHasType Wall) (v + dirToVec2 d)) (deleteMultiple allDirections [oppositeDirection d, d])

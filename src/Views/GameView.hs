@@ -14,7 +14,7 @@ import State
       Prompt(closeAction, promptText, promptValue, confirmAction),
       defaultPrompt,
       ghostToSprite,
-      getGhostActor )
+      getGhostActor, GhostActor (..), Player (..), GhostBehaviour (..) )
 import Graphics.Gloss
     ( blue,
       green,
@@ -31,21 +31,7 @@ import Graphics.Gloss
       Color,
       Picture(Color),
       Point )
-import GameLogic.Struct
-    ( GhostActor(gLocation, gCurrentBehaviour, gRespawnTimer, gTarget,
-                 gDirection, gVelocity),
-      GhostBehaviour(Respawning),
-      Player(pFrame, pLocation, pBufferedInput, pDirection, pVelocity,
-             pMoving),
-      LevelMap(..),
-      GhostType(..),
-      CellType(PowerUp, Wall, GhostWall, Pellet),
-      Direction(..),
-      GridInfo,
-      oppositeDirection,
-      cellHasType,
-      ghosts,
-      getCellsWithType )
+import GameLogic.MapLogic
 import Assets
     ( Assets(emuFont, cherrySprite, strawBerrySprite, appleSprite,
              melonSprite, galaxianSprite, bellSprite, keySprite, pacSprite),
@@ -74,20 +60,9 @@ import GameLogic.GameLogic
 import Data.Aeson.Text (encodeToLazyText)
 import qualified Data.Text.Lazy.IO
 import Rendering
-    ( calcSprite32Size,
-      gridToScreenPos,
-      drawGrid,
-      screenToGridPos,
-      translateCell,
-      resize,
-      renderStringTopRight,
-      renderStringTopLeft,
-      renderString,
-      cellSize )
 import FontContainer ( FontContainer(m, s, l) )
-import GameLogic.Map
-    ( getAllowedGhostDirections, getSpawnPoint, wallToSizedSection )
 import GameLogic.Pathfinding ( getPathLimited )
+import GameLogic.Struct
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -254,7 +229,7 @@ getDebugPicture s = do
     (400, 350)
     emuS
     green
-    ("FPS: " ++ show (round $ 1/lastClock s) ++ 
+    ("FPS: " ++ show (round $ 1/lastClock s) ++
      "\nGod: " ++ show (godMode gs) ++
      "\nLevel: " ++ show (level gs) ++
      "\nFruit: " ++ show (fruitAvailable s) ++
@@ -316,9 +291,7 @@ keyToDirection d _ = d
 
 handleInputGameView :: Event -> GlobalState -> IO GlobalState
 handleInputGameView (EventKey (SpecialKey KeyEsc) _ _ _) gs = return gs {route = PauseMenu, history = [GameView]}
-handleInputGameView (EventKey (Char 'g') _ _ _) s = return s {gameState = (gameState s) { godMode = not (godMode $ gameState s) }}
-handleInputGameView (EventKey (Char 'l') _ _ _) s = return s {gameState = (gameState s) { level = level (gameState s) + 1}}
-
+handleInputGameView (EventKey (Char 'g') _ _ _) s = return s {gameState = (gameState s) { godMode = debugEnabled (settings s) && not (godMode $ gameState s)}}
 handleInputGameView (EventKey k _ _ _) s = return s {gameState = gs {player = ps {pBufferedInput = bufferedInput, pDirection = direction}}}
   where
     gs = gameState s

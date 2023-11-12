@@ -4,11 +4,10 @@ import Assets (Assets(..), loadAssets)
 import Data.Aeson (decode, decodeStrict)
 import Data.Map (Map, empty)
 import Data.Text hiding (empty, map)
-import GHC.Generics
 import Graphics.Gloss (Color, Picture, Point, blue)
 import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
-import GameLogic.Map (WallSection, getSpawnPoint, processWalls)
-import GameLogic.Struct
+import GameLogic.MapRendering (WallSection, processWalls)
+import GameLogic.Struct ( GhostType(..) )
 import qualified SDL.Mixer as Mixer
 import Control.Monad (unless)
 import Data.String (fromString)
@@ -16,6 +15,13 @@ import Data.Maybe (fromMaybe)
 import Control.Exception.Base (try, catch)
 import qualified Data.ByteString as Str
 import Data.ByteString (ByteString)
+import GameLogic.MapLogic
+    ( LevelMap(..),
+      Cell,
+      Vec2(..),
+      Direction(North, East),
+      GridInfo,
+      readLevel )
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -123,6 +129,46 @@ data EditorTool
   | GhostTool
   | GhostWallTool
   deriving (Eq)
+
+data PowerUp
+  = Cherry
+  | Apple
+  | PowerPellet
+  deriving (Eq)
+
+data Player = Player
+  { pVelocity :: Float
+  , pDirection :: Direction
+  , pLocation :: Point -- point on screen
+  , pFrame :: Int
+  , pBufferedInput :: Maybe Direction
+  , pMoving :: Bool
+  }
+
+data GhostBehaviour
+  = Scatter
+  | Chase
+  | Idling
+  | Respawning
+  | Frightened
+  deriving (Eq, Show)
+
+data GhostActor = GhostActor
+  { ghostType :: GhostType
+  , gUpdate :: Float
+  , gRespawnTimer :: Float
+  , gVelocity :: Float
+  , gDirection :: Direction
+  , gLocation :: Point
+  , gTarget :: Vec2
+  , lastDirChange :: Vec2
+  , gModeClock :: Float
+  , gFrightenedClock :: Float 
+  , gAnimClock :: Float
+  , gBlink :: Bool
+  , gCurrentBehaviour :: GhostBehaviour
+  , lastModeChange :: Float
+  }
 
 data GlobalState = GlobalState
   { settings :: Settings
@@ -281,7 +327,7 @@ initState = do
   let gs = GlobalState { settings =
           Settings
             { windowSize = (800, 800)
-            , debugEnabled = True
+            , debugEnabled = False
             , debugSettings = DebugSettings {
                 enableGrid = False
               , enableGhostPath = False

@@ -5,9 +5,7 @@ import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import FontContainer (FontContainer(..), loadFont)
 import Graphics.Gloss (Picture(Pictures), blank)
 import Graphics.Gloss.Juicy (loadJuicyJPG, loadJuicyPNG)
-import GameLogic.Map (WallSection, processWalls)
 import SDL.Font (Font, initialize, load)
-import GameLogic.Struct (Cell, LevelMap, readLevel)
 import System.Directory (canonicalizePath, getDirectoryContents)
 import System.FilePath ((</>), joinPath, takeBaseName)
 import Control.Monad.Fix (fix)
@@ -82,7 +80,7 @@ loadPacSprite p = do
 
 startMusic :: String -> IO ()
 startMusic p = do
-  SDL.initialize [SDL.InitAudio] 
+  SDL.initialize [SDL.InitAudio]
   Mixer.openAudio (Mixer.Audio 48000 Mixer.FormatS16_LSB Mixer.Stereo) 256
   sound <- Mixer.load (p </> "theme.wav")
   Mixer.playForever sound

@@ -12,6 +12,7 @@ import State (GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), default
 emptyPrompt :: Prompt
 emptyPrompt = Prompt {}
 
+-- default error prompt format
 errorPrompt :: String -> Maybe Prompt
 errorPrompt s =
   Just
@@ -31,6 +32,7 @@ closeButton :: Prompt -> Rectangle
 closeButton Prompt {showConfirmButton = False} = Rectangle (0, -75) 100 50 10
 closeButton _ = Rectangle (-75, -75) 100 50 10
 
+-- format currently pressed keys
 keysString :: GlobalState -> String
 keysString s = intercalate "," $ map (\(Char k) -> [k]) $ filter f $ keys s
   where
@@ -106,6 +108,7 @@ handleInputPrompt (EventKey (MouseButton LeftButton) _ _ _) s@(GlobalState {prom
   | rectangleHovered (mousePos s) (closeButton p) = close s value
 handleInputPrompt _ s = do return s
 
+-- make sure the cursor blinks at a set interval
 handleUpdatePrompt :: Float -> GlobalState -> Prompt -> IO GlobalState
 handleUpdatePrompt f s p
   | not $ showTextField p = do return s

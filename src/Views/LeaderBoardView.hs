@@ -17,7 +17,7 @@ import Rendering
 import FontContainer (FontContainer(..))
 import Assets (Assets(..))
 import Views.StartMenu (drawParticles, updateParticles)
-import GameLogic.Struct
+import GameLogic.MapLogic
 import Data.Map (toList)
 import Data.List (sortBy)
 

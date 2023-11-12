@@ -6,15 +6,14 @@ import State
                 gMap),
       Settings(fruitPadding, globalSpeedScalar, ghostPadding, mazeMargin,
                pacmanPadding, collisionLeniency),
-      gameGridInfo )
-import GameLogic.Struct
-    ( GhostActor(gLocation),
-      Player(pLocation),
-      Direction(South, North),
-      GridInfo )
-import Rendering
-    ( calcSprite16Size, calcSprite32Size, gridToScreenPos, cellSize )
-import GameLogic.Map (getSpawnPoint)
+      gameGridInfo, GhostActor (..), Player (..) )
+import Rendering ( calcSprite16Size, calcSprite32Size )
+import GameLogic.MapLogic
+    ( Direction(South, North),
+      GridInfo,
+      cellSize,
+      gridToScreenPos,
+      getSpawnPoint )
 
 getFruitScore :: GlobalState -> Int
 getFruitScore s | l == 1             = 100

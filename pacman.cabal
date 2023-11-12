@@ -25,7 +25,8 @@ library
       FontContainer
       GameLogic.GameLogic
       GameLogic.GhostLogic
-      GameLogic.Map
+      GameLogic.MapLogic
+      GameLogic.MapRendering
       GameLogic.Pathfinding
       GameLogic.PlayerLogic
       GameLogic.Struct

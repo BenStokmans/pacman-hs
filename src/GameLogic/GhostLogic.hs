@@ -1,35 +1,6 @@
 module GameLogic.GhostLogic where
-import GameLogic.Struct
-    ( GhostActor(gLocation, gModeClock, gRespawnTimer, gBlink,
-                 gAnimClock, gVelocity, gTarget, gUpdate, ghostType,
-                 gFrightenedClock, gDirection, lastDirChange, gCurrentBehaviour),
-      GhostBehaviour(Respawning, Scatter, Chase, Frightened),
-      Player(pDirection, pLocation),
-      LevelMap(..),
-      GhostType(..),
-      Cell(Cell),
-      CellType(GhostWall, Wall),
-      Vec2(..),
-      Direction(..),
-      headMaybe,
-      allDirections,
-      adjacentVecs,
-      oppositeDirection,
-      outOfBounds,
-      scaleVec2,
-      dirToVec2,
-      dummyCell,
-      cellsWithType,
-      cellHasType,
-      cellHasTypes,
-      ghosts,
-      getCellWithType,
-      isCellCond,
-      isCellType,
-      filterLevelVec2s,
-      isOutOfBounds,
-      getCell,
-      getCellType )
+  
+import GameLogic.MapLogic
 import State
     ( GlobalState(gameState, clock, settings, gameLevel),
       GameState(pauseGameTimer, blinky, pinky, inky, clyde, level,
@@ -37,32 +8,24 @@ import State
       Settings(ghostStuckTimeout, ghostBlinkLength, ghostRespawnTimer),
       gameGridInfo,
       ghostActors,
-      getGhostActor )
+      getGhostActor, GhostActor (..), GhostBehaviour (..), Player (..) )
 import GameLogic.Pathfinding
     ( getAdjacentVecs,
       getDirectionsLimited,
       getTraveledDirection,
       vec2Dist )
-import Rendering ( gridToScreenPos, screenToGridPos, cellSize )
 import Data.Ord (clamp)
 import Data.List ( minimumBy, delete )
 import Data.Maybe ( fromMaybe, mapMaybe )
 import Control.Monad.Random ( MonadRandom(getRandomR) )
-import GameLogic.Map
-    ( deleteMultiple,
-      getAllowedGhostDirections,
-      getAdjacent,
-      getSpawnPoint,
-      getGhostSpawnPoint,
-      isPastCentre,
-      calcWrappedPosition,
-      calcNextGhostPosition )
 import GameLogic.GameLogic
     ( calculateGameSpeed, ghostPlayerCollision )
+import GameLogic.Struct
+import Rendering
 
 -- After certain amount of dots blinky goes to chase even in scatter, this is refered to as "cruise elroy mode" by pacman guru's.
 -- Otherwise the scatter target for each ghost is one of the corners.
-calculateScatterTarget :: GhostType -> GlobalState -> Vec2 
+calculateScatterTarget :: GhostType -> GlobalState -> Vec2
 calculateScatterTarget gt s
   | gt == Blinky && hasElroyBoost (level gs) (pelletCount gs) = Vec2 xmax ymax
   | gt == Blinky = Vec2 xmax ymax
@@ -119,7 +82,7 @@ getRandomElement xs = do
 
 updateGhostTarget :: GhostActor -> GlobalState -> IO GlobalState
 updateGhostTarget ghost s
-  | not mustPathfind || gVelocity ghost == 0 = do return s 
+  | not mustPathfind || gVelocity ghost == 0 = do return s
   | ghostState == Frightened && mustPathfind = do
     let allowedDirections = filter (\d -> isCellCond m (not . cellHasType Wall) (currentGridPos + dirToVec2 d)) (delete (oppositeDirection currentDirection) allDirections)
     rDir <- if null allowedDirections then do return currentDirection else getRandomElement allowedDirections
@@ -229,7 +192,7 @@ stillFrightened frightenedClock blinkDuration level = frightenedClock < levelToF
 
 
 -- Updates all ghost timers and their resulting effects. 
-updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor 
+updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor
 updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = updatedGhost {gUpdate = 0, lastDirChange = outOfBounds}
                           | ghostM == Respawning && (gRespawnTimer ghost + dt) < respawnLength = updatedGhost {gRespawnTimer = gRespawnTimer ghost + dt}
                           | ghostM == Respawning && (gRespawnTimer ghost - dt) >= respawnLength = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
@@ -385,7 +348,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
       | oldChange == currentGridPos = (currentDirection, oldChange)
       | gTarget ghost == currentGridPos && not (null allowedDirections) = (head allowedDirections, currentGridPos)
       | gTarget ghost == currentGridPos && null allowedDirections && isOutOfBounds m (currentGridPos + dirToVec2 currentDirection) = (currentDirection, oldChange)
-      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos) 
+      | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos)
       | null path = (currentDirection, oldChange)
       | pastCenter && length walls < 2 = (head path, currentGridPos)
       | otherwise = (currentDirection, oldChange)

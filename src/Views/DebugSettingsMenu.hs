@@ -18,7 +18,7 @@ import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Views.StartMenu (drawParticles, updateParticles)
 import qualified SDL.Mixer as Mixer
-import GameLogic.Struct (tailNull)
+import GameLogic.MapLogic (tailNull)
 import SDL.Font (Font)
 
 enableDebugButton :: Rectangle

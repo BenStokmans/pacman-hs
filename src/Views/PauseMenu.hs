@@ -17,8 +17,7 @@ import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Views.StartMenu (drawParticles, updateParticles, settingsButton)
-import GameLogic.Struct (tailNull)
-import GameLogic.Map (validateLevel)
+import GameLogic.MapLogic (tailNull, validateLevel)
 import Prompt (errorPrompt)
 
 continueButton :: Rectangle

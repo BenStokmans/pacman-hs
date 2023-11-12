@@ -18,7 +18,7 @@ import System.Exit (exitSuccess)
 import System.FilePath ((</>))
 import Views.StartMenu (drawParticles, updateParticles, settingsButton)
 import qualified SDL.Mixer as Mixer
-import GameLogic.Struct (tailNull)
+import GameLogic.MapLogic (tailNull)
 
 musicButton :: Rectangle
 musicButton = Rectangle (0, 100) 500 100 10

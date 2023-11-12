@@ -48,8 +48,6 @@ dummyEvent :: Event
 dummyEvent = EventKey (SpecialKey KeyF25) Up (Modifiers {}) (0, 0)
 
 handleInput :: Event -> GlobalState -> IO GlobalState
-handleInput (EventKey (Char 'q') _ _ _) _ = do
-  exitSuccess -- comment when not debugging
 handleInput (EventResize (w, h)) s = do
   return s {settings = set {windowSize = (fromIntegral w :: Float, fromIntegral h :: Float)}}
   where

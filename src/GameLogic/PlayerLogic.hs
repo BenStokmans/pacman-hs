@@ -1,36 +1,19 @@
 module GameLogic.PlayerLogic where
-    
+
 import State
     ( GlobalState(gameState),
       GameState(player, totalPelletCount, pellets, level, pelletCount,
                 fruitEaten, gMap, score, killingSpree),
       gameGridInfo,
-      getGhostActor )
-import GameLogic.Struct
-    ( GhostBehaviour(Frightened),
-      Player(pMoving, pVelocity, pDirection, pBufferedInput, pLocation),
-      LevelMap(LevelMap),
-      Cell(Cell),
-      CellType(PowerUp, Wall, GhostWall, Pellet),
-      Direction(South, North),
-      dirToVec2,
-      dummyCell,
-      cellHasType,
-      cellHasTypes,
-      ghosts,
-      clearCell,
-      setCells,
-      isCellCond,
-      getCell,
-      getCellType )
-import Rendering ( gridToScreenPos, screenToGridPos, cellSize )
+      getGhostActor, Player (..), GhostBehaviour (..) )
+import GameLogic.MapLogic
+import Rendering
 import GameLogic.GameLogic
     ( getFruitScore, calculateGameSpeed, fruitPlayerCollision )
 import Data.Maybe ( fromMaybe )
-import GameLogic.Map
-    ( isPastCentre, calcWrappedPosition, calcNextPlayerPosition )
 import GameLogic.GhostLogic
     ( setGhostBehaviour, hasFrightenedGhost )
+import GameLogic.Struct (ghosts)
 
 
 -- player velocity varies based on whether the ghosts are frightened and on whether pacman is eating pellets.
@@ -44,7 +27,7 @@ getPlayerVelocity s | hfg && isOnPellet = frightPacDotSpd
     gi = gameGridInfo s
     gs = gameState s
     l = level gs
-    isOnPellet = isCellCond (gMap gs) (cellHasType Pellet) (screenToGridPos gi (pLocation ps)) 
+    isOnPellet = isCellCond (gMap gs) (cellHasType Pellet) (screenToGridPos gi (pLocation ps))
     hfg = hasFrightenedGhost s
     frightPacDotSpd | l == 1 = 0.79
                     | l < 5 = 0.83

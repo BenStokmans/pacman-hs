@@ -37,15 +37,20 @@ import SDL.Video.Renderer
   , surfacePixels
   , unlockSurface
   )
-import GameLogic.Struct (Cell(..), GridInfo, Vec2(..))
 import Text.Printf (printf)
+import GameLogic.MapLogic
+    ( Cell(..), Vec2(..), GridInfo, cellSize, gridToScreenPos )
+import GameLogic.MapRendering
+    ( WallSection, defaultSize, wallSectionToPic )
 
 data Rectangle =
   Rectangle Point Float Float Float --Centre point, width, height, border thickness
 
-cellSize :: GridInfo -> (Float, Float) --cell size in px
-cellSize ((c, r), (w, h)) = (w / c, h / r)
-
+wallToSizedSection :: Float -> Float -> Float -> Float -> WallSection -> Picture
+wallToSizedSection m t nw nh ws =
+  let (ow, oh) = defaultSize
+   in resize ow oh nw nh (wallSectionToPic m t ow oh ws)
+   
 calcSpriteSize :: GridInfo -> (Float, Float) -> Float -> (Float, Float)
 calcSpriteSize gi@((c, r), _) (w, h) scalar = let (cw, ch) = cellSize gi in (w * (cw / w * scalar * (c / r)), h * (ch / h * scalar * (r / c)))
 
@@ -54,11 +59,6 @@ calcSprite16Size gi = calcSpriteSize gi (16,16)
 
 calcSprite32Size :: GridInfo -> Float -> (Float, Float)
 calcSprite32Size gi = calcSpriteSize gi (32,32)
-
-gridToScreenPos :: GridInfo -> Vec2 -> Point -- get position screen from grid position
-gridToScreenPos gi@(dim, (w, h)) (Vec2 x y) =
-  let (cw, ch) = cellSize gi
-   in (x * cw - (w / 2) + cw / 2, y * ch - (h / 2) + ch / 2)
 
 drawGrid :: GridInfo -> Color -> Picture
 drawGrid gi@((c, r), (w, h)) col =
@@ -153,13 +153,8 @@ renderStringResize _ _ _ "" _ _ = do
   return blank
 renderStringResize (x, y) f c txt tw th = do
   ((width,height), pic) <- renderMultilineString f c txt
+    -- make sure we properly center our rendered string about the center (x,y)
   do return $ translate x y (translate 0 (height / 2) $ resize width height tw th pic)
-
-renderMultilineString :: Font -> Color -> String -> IO ((Float,Float),Picture)
-renderMultilineString f c s = do
-  sections <- mapM (renderString' f c) (reverse $ lines s)
-  let ((width,height), imgs) = foldr (\((w, h), pic) ((cw,ch), pics) -> ((max w cw,ch + h), translate 0 (-ch - (h / 2)) pic : pics)) ((0,0), []) sections
-  return ((width,height),pictures imgs)
 
 renderString :: Point -> Font -> Color -> String -> IO Picture
 renderString _ _ _ "" = do
@@ -167,8 +162,16 @@ renderString _ _ _ "" = do
 renderString (x, y) f c txt = do
   sections <- mapM (renderString' f c) (reverse $ lines txt)
   ((_,height), pic) <- renderMultilineString f c txt
+    -- make sure we properly center our rendered string about the center (x,y)
   do return $ translate x y (translate 0 (height / 2) pic)
 
+renderMultilineString :: Font -> Color -> String -> IO ((Float,Float),Picture)
+renderMultilineString f c s = do
+  sections <- mapM (renderString' f c) (reverse $ lines s)
+  let ((width,height), imgs) = foldr (\((w, h), pic) ((cw,ch), pics) -> ((max w cw,ch + h), translate 0 (-ch - (h / 2)) pic : pics)) ((0,0), []) sections
+  return ((width,height),pictures imgs)
+
+-- calculate string size for a given string s with font f
 stringSize :: Font -> String -> IO (Float, Float)
 stringSize f "" = do
   (_, h) <- stringSize f "f"
@@ -184,6 +187,7 @@ renderString' f c s = do
   freeSurface surface -- if we don't free this surface we leak memory
   return pic
 
+-- convert SDL2 surface to gloss BitMap picture
 surfaceToPicture :: Surface -> IO ((Float, Float), Picture)
 surfaceToPicture surface = do
   bmData <- copySDLToBitmap surface
@@ -199,7 +203,7 @@ copySDLToBitmap surface = do
   pixels <- surfacePixels copy -- get pointer to pixels
   let V2 (CInt w) (CInt h) = dims
   let cpSize = fromIntegral $ w * h * 4 -- width * height * 4 (space for R G B A)
-  dest <- mallocForeignPtrBytes cpSize -- alloc bitmap
+  dest <- mallocForeignPtrBytes cpSize -- allocate bitmap
   withForeignPtr dest $ \destPtr -> copyBytes destPtr (castPtr pixels) cpSize -- copy pixel data to bitmap
   unlockSurface copy
   let bitmap = bitmapDataOfForeignPtr (fromIntegral w) (fromIntegral h) (BitmapFormat TopToBottom PxABGR) dest False -- convert foreign bitmap to gloss bitmap

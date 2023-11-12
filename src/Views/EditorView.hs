@@ -23,30 +23,18 @@ import Graphics.Gloss
   )
 import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
-import GameLogic.Map (WallType, getGhostSpawnPoint, getSpawnPoint, processWalls, wallToSizedSection, validateLevel)
+import GameLogic.MapLogic
 import Rendering
-  ( Rectangle(Rectangle)
-  , cellSize
-  , defaultButton
-  , drawGrid
-  , gridToScreenPos
-  , rectangleHovered
-  , renderButton
-  , renderString
-  , renderString'
-  , renderStringTopLeft
-  , screenToGridPos
-  , stringSize
-  )
 import SDL.Font (Font(Font))
 import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), gridSizePx, getGhostActor)
-import GameLogic.Struct (Cell(..), CellType(..), GhostBehaviour, GhostType(..), GridInfo, LevelMap(LevelMap), Vec2(..), getCell, ghosts, outOfBounds, setCell)
 import System.Exit (exitSuccess)
 import Text.Printf ()
 import Views.GameView (debugGrid, drawGhost, drawMap, drawPlayer, getGhostColor, pelletColor)
 import Views.PauseMenu (saveEditorLevel)
 import Views.StartMenu (drawParticles, updateParticles)
 import Prompt (errorPrompt)
+import GameLogic.Struct
+import GameLogic.MapRendering
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x, y) w h = do
