@@ -338,7 +338,7 @@ initState = do
                       , enableGameText = True
                       }
                 , globalSpeedScalar = 1.0
-                , musicEnabled = False
+                , musicEnabled = True
                 , ghostPadding = 0.20
                 , pacmanPadding = 0.15
                 , fruitPadding = 0.10
