@@ -1,27 +1,20 @@
 module State where
 
 import Assets (Assets(..), loadAssets)
-import Data.Aeson (decode, decodeStrict)
-import Data.Map (Map, empty)
-import Data.Text hiding (empty, map)
-import Graphics.Gloss (Color, Picture, Point, blue)
-import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
-import GameLogic.MapRendering (WallSection, processWalls)
-import GameLogic.Struct ( GhostType(..) )
-import qualified SDL.Mixer as Mixer
+import Control.Exception.Base (catch, try)
 import Control.Monad (unless)
-import Data.String (fromString)
-import Data.Maybe (fromMaybe)
-import Control.Exception.Base (try, catch)
+import Data.Aeson (decode, decodeStrict)
 import qualified Data.ByteString as Str
 import Data.ByteString (ByteString)
-import GameLogic.MapLogic
-    ( LevelMap(..),
-      Cell,
-      Vec2(..),
-      Direction(North, East),
-      GridInfo,
-      readLevel )
+import Data.Map (Map, empty)
+import Data.Maybe (fromMaybe)
+import Data.String (fromString)
+import GameLogic.MapLogic (Cell, Direction(East, North), GridInfo, LevelMap(..), Vec2(..), readLevel)
+import GameLogic.MapRendering (WallSection, processWalls)
+import GameLogic.Struct (GhostType(..))
+import Graphics.Gloss (Color, Picture, Point, blue)
+import Graphics.Gloss.Interface.IO.Game (Key(..), MouseButton, SpecialKey(..))
+import qualified SDL.Mixer as Mixer
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -50,20 +43,23 @@ defaultPrompt =
     , blinkInterval = 0.3
     , lastBlink = 0
     , blink = True
-    , confirmAction = \x _ -> do return x
-    , closeAction = \x _ -> do return x
+    , confirmAction =
+        \x _ -> do
+          return x
+    , closeAction =
+        \x _ -> do
+          return x
     , darkenBackground = True
     }
 
-
-data DebugSettings = DebugSettings {
-  enableGrid :: Bool,
-  enableGhostPath :: Bool,
-  enableGhostText :: Bool,
-  enableGhostTarget :: Bool,
-  enableHitboxes :: Bool,
-  enableGameText :: Bool
-}
+data DebugSettings = DebugSettings
+  { enableGrid :: Bool
+  , enableGhostPath :: Bool
+  , enableGhostText :: Bool
+  , enableGhostTarget :: Bool
+  , enableHitboxes :: Bool
+  , enableGameText :: Bool
+  }
 
 data Settings = Settings
   { windowSize :: (Float, Float)
@@ -163,7 +159,7 @@ data GhostActor = GhostActor
   , gTarget :: Vec2
   , lastDirChange :: Vec2
   , gModeClock :: Float
-  , gFrightenedClock :: Float 
+  , gFrightenedClock :: Float
   , gAnimClock :: Float
   , gBlink :: Bool
   , gCurrentBehaviour :: GhostBehaviour
@@ -207,13 +203,15 @@ gameGridInfo gs =
    in ((x, y), gridSizePx (x, y) gs)
 
 ghostToSprite :: GlobalState -> GhostActor -> Picture
-ghostToSprite gs ghost | gCurrentBehaviour ghost == Frightened && not (gBlink ghost) = blueGhostSprite $ assets gs
-                       | gCurrentBehaviour ghost == Frightened && gBlink ghost = whiteGhostSprite $ assets gs
-                       | ghostT == Blinky = blinkySprite $ assets gs
-                       | ghostT == Pinky = pinkySprite $ assets gs
-                       | ghostT == Inky = inkySprite $ assets gs
-                       | ghostT == Clyde = clydeSprite $ assets gs
-              where ghostT = ghostType ghost
+ghostToSprite gs ghost
+  | gCurrentBehaviour ghost == Frightened && not (gBlink ghost) = blueGhostSprite $ assets gs
+  | gCurrentBehaviour ghost == Frightened && gBlink ghost = whiteGhostSprite $ assets gs
+  | ghostT == Blinky = blinkySprite $ assets gs
+  | ghostT == Pinky = pinkySprite $ assets gs
+  | ghostT == Inky = inkySprite $ assets gs
+  | ghostT == Clyde = clydeSprite $ assets gs
+  where
+    ghostT = ghostType ghost
 
 getGhostActor :: GlobalState -> GhostType -> GhostActor
 getGhostActor gs Blinky = blinky $ gameState gs
@@ -324,49 +322,52 @@ initState = do
   assets <- loadAssets "assets"
   gMap <- readLevel "maps/default.txt"
   highScores <- readHighScores
-  let gs = GlobalState { settings =
-          Settings
-            { windowSize = (800, 800)
-            , debugEnabled = False
-            , debugSettings = DebugSettings {
-                enableGrid = False
-              , enableGhostPath = False
-              , enableGhostText = False
-              , enableGhostTarget = True
-              , enableHitboxes = True
-              , enableGameText = True
-            }
-            , globalSpeedScalar = 1.0
-            , musicEnabled = False
-            , ghostPadding = 0.20
-            , pacmanPadding = 0.15
-            , fruitPadding = 0.10
-            , mazeMargin = 0.35
-            , lineThickness = 15
-            , editorGridDimensions = Vec2 25 25
-            , ghostRespawnTimer = 2
-            , collisionLeniency = 0.2
-            , ghostStuckTimeout = 2
-            , ghostBlinkLength = 0.5
-            }
-      , gameState = emptyGameState
-      , gameLevelName = "default"
-      , lastClock = 1
-      , gameLevel = gMap
-      , editorLevel = LevelMap 25 25 []
-      , cachedWalls = []
-      , route = StartMenu
-      , history = []
-      , assets = assets
-      , mousePos = (0, 0)
-      , particles = []
-      , keys = []
-      , prompt = Nothing
-      , clock = 0
-      , editorTool = WallTool
-      , editorGhost = Blinky
-      , mouseDown = Nothing
-      , previewEditor = False
-      , highScores = highScores
-      }
+  let gs =
+        GlobalState
+          { settings =
+              Settings
+                { windowSize = (800, 800)
+                , debugEnabled = False
+                , debugSettings =
+                    DebugSettings
+                      { enableGrid = False
+                      , enableGhostPath = False
+                      , enableGhostText = False
+                      , enableGhostTarget = True
+                      , enableHitboxes = True
+                      , enableGameText = True
+                      }
+                , globalSpeedScalar = 1.0
+                , musicEnabled = False
+                , ghostPadding = 0.20
+                , pacmanPadding = 0.15
+                , fruitPadding = 0.10
+                , mazeMargin = 0.35
+                , lineThickness = 15
+                , editorGridDimensions = Vec2 25 25
+                , ghostRespawnTimer = 2
+                , collisionLeniency = 0.2
+                , ghostStuckTimeout = 2
+                , ghostBlinkLength = 0.5
+                }
+          , gameState = emptyGameState
+          , gameLevelName = "default"
+          , lastClock = 1
+          , gameLevel = gMap
+          , editorLevel = LevelMap 25 25 []
+          , cachedWalls = []
+          , route = StartMenu
+          , history = []
+          , assets = assets
+          , mousePos = (0, 0)
+          , particles = []
+          , keys = []
+          , prompt = Nothing
+          , clock = 0
+          , editorTool = WallTool
+          , editorGhost = Blinky
+          , mouseDown = Nothing
+          , previewEditor = False
+          , highScores = highScores
+          }
   return gs

@@ -1,11 +1,12 @@
 module Rendering where
 
-import Control.Exception (bracket, bracket_)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Text (intercalate, pack)
 import Data.Word (Word8)
-import Foreign (castPtr, copyBytes, finalizeForeignPtr, mallocForeignPtrBytes, withForeignPtr)
+import Foreign (Word8, castPtr, copyBytes, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.C.Types (CInt(..))
+import GameLogic.MapLogic (Cell(..), GridInfo, Vec2(..), cellSize, gridToScreenPos)
+import GameLogic.MapRendering (WallSection, defaultSize, wallSectionToPic)
 import Graphics.Gloss
   ( Color
   , Picture(Bitmap, Color)
@@ -37,11 +38,6 @@ import SDL.Video.Renderer
   , surfacePixels
   , unlockSurface
   )
-import Text.Printf (printf)
-import GameLogic.MapLogic
-    ( Cell(..), Vec2(..), GridInfo, cellSize, gridToScreenPos )
-import GameLogic.MapRendering
-    ( WallSection, defaultSize, wallSectionToPic )
 
 data Rectangle =
   Rectangle Point Float Float Float --Centre point, width, height, border thickness
@@ -50,15 +46,17 @@ wallToSizedSection :: Float -> Float -> Float -> Float -> WallSection -> Picture
 wallToSizedSection m t nw nh ws =
   let (ow, oh) = defaultSize
    in resize ow oh nw nh (wallSectionToPic m t ow oh ws)
-   
+
 calcSpriteSize :: GridInfo -> (Float, Float) -> Float -> (Float, Float)
-calcSpriteSize gi@((c, r), _) (w, h) scalar = let (cw, ch) = cellSize gi in (w * (cw / w * scalar * (c / r)), h * (ch / h * scalar * (r / c)))
+calcSpriteSize gi@((c, r), _) (w, h) scalar =
+  let (cw, ch) = cellSize gi
+   in (w * (cw / w * scalar * (c / r)), h * (ch / h * scalar * (r / c)))
 
 calcSprite16Size :: GridInfo -> Float -> (Float, Float)
-calcSprite16Size gi = calcSpriteSize gi (16,16)
+calcSprite16Size gi = calcSpriteSize gi (16, 16)
 
 calcSprite32Size :: GridInfo -> Float -> (Float, Float)
-calcSprite32Size gi = calcSpriteSize gi (32,32)
+calcSprite32Size gi = calcSpriteSize gi (32, 32)
 
 drawGrid :: GridInfo -> Color -> Picture
 drawGrid gi@((c, r), (w, h)) col =
@@ -97,10 +95,12 @@ rectangleHovered mouse (Rectangle (x, y) width height _) = pointInBox mouse (sx 
     sy = height / 2
 
 defaultButtonImg :: Rectangle -> Picture -> Picture -> Point -> Picture
-defaultButtonImg r@(Rectangle (x, y) width height thickness) prim sec p = translate x y (pictures [thickRectangle width height thickness color black,img])
+defaultButtonImg r@(Rectangle (x, y) width height thickness) prim sec p =
+  translate x y (pictures [thickRectangle width height thickness color black, img])
   where
-    (color,img) | rectangleHovered p r = (white,sec)
-                | otherwise = (blue,prim)
+    (color, img)
+      | rectangleHovered p r = (white, sec)
+      | otherwise = (blue, prim)
 
 defaultButton :: Rectangle -> Font -> String -> Point -> IO Picture
 defaultButton r f s p = completeButton r f s p blue white
@@ -152,7 +152,7 @@ renderStringResize :: Point -> Font -> Color -> String -> Float -> Float -> IO P
 renderStringResize _ _ _ "" _ _ = do
   return blank
 renderStringResize (x, y) f c txt tw th = do
-  ((width,height), pic) <- renderMultilineString f c txt
+  ((width, height), pic) <- renderMultilineString f c txt
     -- make sure we properly center our rendered string about the center (x,y)
   do return $ translate x y (translate 0 (height / 2) $ resize width height tw th pic)
 
@@ -161,15 +161,16 @@ renderString _ _ _ "" = do
   return blank
 renderString (x, y) f c txt = do
   sections <- mapM (renderString' f c) (reverse $ lines txt)
-  ((_,height), pic) <- renderMultilineString f c txt
+  ((_, height), pic) <- renderMultilineString f c txt
     -- make sure we properly center our rendered string about the center (x,y)
   do return $ translate x y (translate 0 (height / 2) pic)
 
-renderMultilineString :: Font -> Color -> String -> IO ((Float,Float),Picture)
+renderMultilineString :: Font -> Color -> String -> IO ((Float, Float), Picture)
 renderMultilineString f c s = do
   sections <- mapM (renderString' f c) (reverse $ lines s)
-  let ((width,height), imgs) = foldr (\((w, h), pic) ((cw,ch), pics) -> ((max w cw,ch + h), translate 0 (-ch - (h / 2)) pic : pics)) ((0,0), []) sections
-  return ((width,height),pictures imgs)
+  let ((width, height), imgs) =
+        foldr (\((w, h), pic) ((cw, ch), pics) -> ((max w cw, ch + h), translate 0 (-ch - (h / 2)) pic : pics)) ((0, 0), []) sections
+  return ((width, height), pictures imgs)
 
 -- calculate string size for a given string s with font f
 stringSize :: Font -> String -> IO (Float, Float)

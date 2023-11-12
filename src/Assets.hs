@@ -1,28 +1,28 @@
 module Assets where
 
+import Control.Concurrent (forkIO)
+import Control.Monad.Fix (fix)
 import Data.List (isSuffixOf, sort)
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import FontContainer (FontContainer(..), loadFont)
 import Graphics.Gloss (Picture(Pictures), blank)
 import Graphics.Gloss.Juicy (loadJuicyJPG, loadJuicyPNG)
 import SDL.Font (Font, initialize, load)
+import qualified SDL.Image as Image
+import qualified SDL.Mixer as Mixer
+import SDL.Video.Renderer (freeSurface)
 import System.Directory (canonicalizePath, getDirectoryContents)
 import System.FilePath ((</>), joinPath, takeBaseName)
-import Control.Monad.Fix (fix)
-import Control.Concurrent (forkIO)
-import SDL.Video.Renderer (freeSurface)
-import qualified SDL.Mixer as Mixer
-import qualified SDL.Image as Image
 
 import qualified SDL
 
 import Control.Monad (when)
-import SDL.Raw (rwFromFile)
-import Data.Text.Foreign (withCString)
-import Data.Text (pack)
-import Foreign.C (newCString)
 import Data.String (fromString)
+import Data.Text (pack)
+import Data.Text.Foreign (withCString)
+import Foreign.C (newCString)
 import Rendering (surfaceToPicture)
+import SDL.Raw (rwFromFile)
 
 type Anim = [Picture]
 
@@ -86,12 +86,10 @@ startMusic p = do
   Mixer.playForever sound
   Mixer.setVolume 20 Mixer.AllChannels
   Mixer.pause Mixer.AllChannels --FIXME: move or something
-
   fix $ \loop -> do
     SDL.delay 50
     playing <- Mixer.playing Mixer.AllChannels
     when playing loop
-
   Mixer.free sound
   Mixer.closeAudio
   Mixer.quit
@@ -101,7 +99,7 @@ loadImage :: String -> IO Picture
 loadImage s = do
   svgString <- readFile s
   surface <- Image.decode (fromString svgString)
-  (_,pic) <- surfaceToPicture surface
+  (_, pic) <- surfaceToPicture surface
   freeSurface surface
   return pic
 
@@ -119,12 +117,10 @@ loadAssets p = do
   clydeSprite <- loadSprite (p </> "ghosts/clyde.png")
   blueGhostSprite <- loadSprite (p </> "ghosts/blue_ghost.png")
   whiteGhostSprite <- loadSprite (p </> "ghosts/white_ghost.png")
-
   gearIconBlue <- loadImage (p </> "gear-solid-blue.svg")
   gearIconWhite <- loadImage (p </> "gear-solid-white.svg")
   chartIconBlue <- loadImage (p </> "chart-bar-solid-blue.svg")
   chartIconWhite <- loadImage (p </> "chart-bar-solid-white.svg")
-
   cherrySprite <- loadSprite (p </> "fruits/cherry.png")
   strawBerrySprite <- loadSprite (p </> "fruits/strawberry.png")
   orangeSprite <- loadSprite (p </> "fruits/orange.png")
@@ -133,7 +129,6 @@ loadAssets p = do
   galaxianSprite <- loadSprite (p </> "fruits/galaxian.png")
   bellSprite <- loadSprite (p </> "fruits/bell.png")
   keySprite <- loadSprite (p </> "fruits/key.png")
-
   return
     Assets
       { pacFont = pacFont

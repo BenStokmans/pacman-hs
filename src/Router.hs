@@ -1,21 +1,20 @@
 module Router where
 
-import Control.Exception (handle)
 import Data.List (delete)
-import Data.Maybe
+import Data.Maybe (fromMaybe, isJust)
 import Graphics.Gloss (Picture(..), blank, makeColor, pictures, rectangleSolid)
 import Graphics.Gloss.Interface.IO.Game (Event(EventKey, EventMotion, EventResize), Key(..), KeyState(..), Modifiers(..), Picture, SpecialKey(..))
 import Prompt (emptyPrompt, handleInputPrompt, handleUpdatePrompt, renderPrompt)
 import SDL.Audio (PlaybackState(Pause))
 import State (GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), windowSize)
 import System.Exit (exitSuccess)
+import Views.DebugSettingsMenu (handleInputDebugMenu, handleUpdateDebugMenu, renderDebugMenu)
 import Views.EditorView (handleInputEditorView, handleUpdateEditorView, renderEditorView)
 import Views.GameView (handleInputGameView, handleUpdateGameView, renderGameView)
+import Views.LeaderBoardView (handleInputLeaderBoardView, handleUpdateLeaderBoardView, renderLeaderBoardView)
 import Views.PauseMenu (handleInputPauseMenu, handleUpdatePauseMenu, renderPauseMenu)
+import Views.SettingsView (handleInputSettingsView, handleUpdateSettingsView, renderSettingsView)
 import Views.StartMenu (handleInputStartMenu, handleUpdateStartMenu, renderStartMenu)
-import Views.SettingsView (handleUpdateSettingsView, handleInputSettingsView, renderSettingsView)
-import Views.DebugSettingsMenu (renderDebugMenu, handleInputDebugMenu, handleUpdateDebugMenu)
-import Views.LeaderBoardView (handleInputLeaderBoardView, renderLeaderBoardView, handleUpdateLeaderBoardView)
 
 handleRender :: GlobalState -> IO Picture
 handleRender s@(GlobalState {route = r, prompt = p}) = do
@@ -66,7 +65,10 @@ handleInput e@(EventKey k Down _ _) s =
     r = route s
     (promptEvent, promptState)
       | isJust $ prompt s = (dummyEvent, handleInputPrompt e)
-      | otherwise = (e, \_ -> do return s)
+      | otherwise =
+        ( e
+        , \_ -> do
+            return s)
     newState
       | r == StartMenu = handleInputStartMenu promptEvent
       | r == GameView = handleInputGameView promptEvent

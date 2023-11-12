@@ -1,26 +1,69 @@
 module Views.StartMenu where
 
-import Assets (Assets(Assets, emuFont, pacFont, gearIconBlue, gearIconWhite, chartIconBlue, chartIconWhite))
-import Control.Monad.Random (MonadRandom(getRandomR), Rand, RandomGen, when)
+import Assets (Assets(..))
+import Control.Monad.Random (MonadRandom(getRandomR))
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
-import FontContainer (FontContainer(..))
-import Graphics.Gloss (Picture(..), black, blue, circleSolid, makeColor, pictures, red, translate, white)
-import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(..), SpecialKey(KeyEsc))
-import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
+import FontContainer (FontContainer(l, m, xxl))
 import GameLogic.MapLogic
+  ( Cell(Cell)
+  , CellType(Empty, GhostWall, Pellet, PowerUp, Wall)
+  , Direction(North)
+  , LevelMap(..)
+  , Vec2(Vec2)
+  , adjacentVecs
+  , cellHasTypes
+  , filterLevelVec2s
+  , getCellsWithTypes
+  , getGhostSpawnPoint
+  , getSpawnPoint
+  , gridToScreenPos
+  , headMaybe
+  , readLevel
+  , validateLevel
+  )
+import GameLogic.MapRendering (processWalls)
+import GameLogic.Pathfinding (getTraveledDirection)
+import GameLogic.Struct (GhostType(Blinky, Clyde, Inky, Pinky))
+import Graphics.Gloss (Picture(Color), black, blue, circleSolid, makeColor, pictures, red, translate)
+import Graphics.Gloss.Interface.IO.Game
+  ( Event(EventKey)
+  , Key(MouseButton, SpecialKey)
+  , MouseButton(LeftButton)
+  , Picture(Color)
+  , SpecialKey(KeyEsc)
+  , black
+  , blue
+  , circleSolid
+  , makeColor
+  , pictures
+  , red
+  , translate
+  )
+import Graphics.UI.TinyFileDialogs (openFileDialog)
 import Prompt (errorPrompt)
-import Rendering
-import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView, LeaderBoardView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo, emptyGameState, Player (..), GhostActor (..))
+import Rendering (Rectangle(..), defaultButton, defaultButtonImg, rectangleHovered, renderString, stringSize)
+import State
+  ( GameState(blinky, clyde, gMap, inky, pellets, pinky, player,
+          prevClock, totalPelletCount)
+  , GhostActor(gLocation)
+  , GlobalState(assets, cachedWalls, clock, editorLevel, gameLevel,
+            gameLevelName, gameState, history, mousePos, particles, prompt,
+            route, settings)
+  , MenuRoute(EditorView, GameView, LeaderBoardView, SettingsView,
+          StartMenu)
+  , Player(pDirection, pLocation)
+  , Prompt(accentColor, closeAction, confirmAction, promptText,
+       promptValue)
+  , Settings(editorGridDimensions, windowSize)
+  , defaultPrompt
+  , emptyGameState
+  , gameGridInfo
+  )
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>), takeBaseName)
 import Text.Read (readMaybe)
-import qualified SDL.Mixer as Mixer
-import GameLogic.Pathfinding (getTraveledDirection)
-import GameLogic.MapRendering
-import GameLogic.Struct
 
 selectMapButton :: Float -> Rectangle
 selectMapButton w = Rectangle (0, 70) w 50 10
@@ -84,7 +127,18 @@ renderStartMenu s = do
   let drawLeaderBoardButton = defaultButtonImg leaderBoardButton (chartIconBlue ass) (chartIconWhite ass) (mousePos s)
   return
     (pictures
-       [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton, drawnSettingsButton,drawLeaderBoardButton])
+       [ drawParticles s
+       , titleBg
+       , title
+       , subTitle
+       , drawnSelectMapButton
+       , drawnStartButton
+       , drawnQuitButton
+       , drawnNewMapButton
+       , drawnEditMapButton
+       , drawnSettingsButton
+       , drawLeaderBoardButton
+       ])
 
 emptyMap :: Float -> Float -> LevelMap
 emptyMap w h = LevelMap w h (fr : ors ++ [lr])
@@ -93,21 +147,26 @@ emptyMap w h = LevelMap w h (fr : ors ++ [lr])
     ors =
       map
         (\y ->
-           concat [ [Cell Wall (Vec2 0 (fromInteger y :: Float))]
-           , map (\x -> Cell Empty (Vec2 (fromInteger x :: Float) (fromInteger y :: Float))) [1 .. (round w - 2)]
-           , [Cell Wall (Vec2 (w - 1) (fromInteger y :: Float))]
-           ])
+           concat
+             [ [Cell Wall (Vec2 0 (fromInteger y :: Float))]
+             , map (\x -> Cell Empty (Vec2 (fromInteger x :: Float) (fromInteger y :: Float))) [1 .. (round w - 2)]
+             , [Cell Wall (Vec2 (w - 1) (fromInteger y :: Float))]
+             ])
         [1 .. (round h - 2)]
     lr = map (\x -> Cell Wall (Vec2 (fromInteger x :: Float) (h - 1))) [0 .. (round w - 1)]
 
 confirmHeightPrompt :: GlobalState -> String -> IO GlobalState
 confirmHeightPrompt s v
-  | isJust heightInt = do return $ let (Vec2 w _) = editorGridDimensions set in s { settings = set {editorGridDimensions = Vec2 w height}
-          , editorLevel = emptyMap w height
-          , prompt = Nothing
-          , route = EditorView
-          , cachedWalls = processWalls $ editorLevel s
-          }
+  | isJust heightInt = do
+    return $
+      let (Vec2 w _) = editorGridDimensions set
+       in s
+            { settings = set {editorGridDimensions = Vec2 w height}
+            , editorLevel = emptyMap w height
+            , prompt = Nothing
+            , route = EditorView
+            , cachedWalls = processWalls $ editorLevel s
+            }
   | otherwise = do return s {prompt = errorPrompt $ "Invalid width: \n" ++ show v}
   where
     set = settings s
@@ -116,17 +175,23 @@ confirmHeightPrompt s v
 
 confirmWidthPrompt :: GlobalState -> String -> IO GlobalState
 confirmWidthPrompt s v
-  | isJust widthInt = do return $  let (Vec2 _ y) = editorGridDimensions set in s { settings = set {editorGridDimensions = Vec2 width y}
-          , prompt =
-              Just
-                defaultPrompt
-                  { accentColor = blue
-                  , promptText = "Enter grid height:"
-                  , promptValue = show (round y)
-                  , confirmAction = confirmHeightPrompt
-                  , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
-                  }
-          }
+  | isJust widthInt = do
+    return $
+      let (Vec2 _ y) = editorGridDimensions set
+       in s
+            { settings = set {editorGridDimensions = Vec2 width y}
+            , prompt =
+                Just
+                  defaultPrompt
+                    { accentColor = blue
+                    , promptText = "Enter grid height:"
+                    , promptValue = show (round y)
+                    , confirmAction = confirmHeightPrompt
+                    , closeAction =
+                        \state _ -> do
+                          return state {route = StartMenu, prompt = Nothing}
+                    }
+            }
   | otherwise = do return s {prompt = errorPrompt $ "Invalid height: \n" ++ show v}
   where
     set = settings s
@@ -149,29 +214,32 @@ selectMap = do
   return ls
 
 startGame :: GlobalState -> GlobalState
-startGame s = s
-              { route = GameView
-              , history = [StartMenu]
-              , gameState =
-                  gs
-                    { player = ps {pLocation = gridToScreenPos (gameGridInfo s) playerSpawn, pDirection = playerDirection}
-                    , blinky = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Blinky)}
-                    , pinky = (pinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Pinky)}
-                    , inky = (inky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Inky)}
-                    , clyde = (clyde gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Clyde)}
-                    , gMap = level
-                    , pellets = pellets
-                    , totalPelletCount = length pellets
-                    }
-              , cachedWalls = processWalls level
-              }
+startGame s =
+  s
+    { route = GameView
+    , history = [StartMenu]
+    , gameState =
+        gs
+          { player = ps {pLocation = gridToScreenPos (gameGridInfo s) playerSpawn, pDirection = playerDirection}
+          , blinky = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Blinky)}
+          , pinky = (pinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Pinky)}
+          , inky = (inky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Inky)}
+          , clyde = (clyde gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Clyde)}
+          , gMap = level
+          , pellets = pellets
+          , totalPelletCount = length pellets
+          }
+    , cachedWalls = processWalls level
+    }
   where
     level = gameLevel s
     gs = emptyGameState -- initialize new gamestate
     ps = player gs
     pellets = getCellsWithTypes [Pellet, PowerUp] level
     playerSpawn = getSpawnPoint level
-    playerDirection = fromMaybe North $ headMaybe $ map (getTraveledDirection playerSpawn) $ filterLevelVec2s level (not . cellHasTypes [Wall,GhostWall]) $ adjacentVecs playerSpawn
+    playerDirection =
+      fromMaybe North $
+      headMaybe $ map (getTraveledDirection playerSpawn) $ filterLevelVec2s level (not . cellHasTypes [Wall, GhostWall]) $ adjacentVecs playerSpawn
 
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do
@@ -185,7 +253,10 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
         | rectangleHovered (mousePos s) (selectMapButton (w + 40)) = do
           mMap <- selectMap
           let ns
-                | Just (m, name) <- mMap = if validateLevel m then s {gameLevel = m, gameLevelName = name} else s {prompt = errorPrompt "Invalid map!"}
+                | Just (m, name) <- mMap =
+                  if validateLevel m
+                    then s {gameLevel = m, gameLevelName = name}
+                    else s {prompt = errorPrompt "Invalid map!"}
                 | otherwise = s {prompt = errorPrompt "Invalid map!"}
           return ns
         | rectangleHovered (mousePos s) startButton = do return $ startGame s
@@ -200,13 +271,18 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                           let (Vec2 x _) = editorGridDimensions $ settings s
                            in show (round x)
                       , confirmAction = confirmWidthPrompt
-                      , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
+                      , closeAction =
+                          \state _ -> do
+                            return state {route = StartMenu, prompt = Nothing}
                       }
               }
         | rectangleHovered (mousePos s) editMapButton = do
           mMap <- selectMap
           let ns
-                | Just (m@(LevelMap w h _), _) <- mMap = if validateLevel m then s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}} else s {prompt = errorPrompt "Invalid map!"}
+                | Just (m@(LevelMap w h _), _) <- mMap =
+                  if validateLevel m
+                    then s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}}
+                    else s {prompt = errorPrompt "Invalid map!"}
                 | otherwise = s {prompt = errorPrompt "Invalid map!"}
           return ns
         | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = [StartMenu]}

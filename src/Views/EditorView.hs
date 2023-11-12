@@ -1,17 +1,37 @@
 module Views.EditorView where
 
-import Assets (Assets(Assets, emuFont, pacFont))
-import Data.List
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Assets (Assets(..))
 import FontContainer (FontContainer(..))
-import Graphics.Gloss
+import GameLogic.MapLogic
+  ( Cell(Cell)
+  , CellType(Empty, GhostSpawn, GhostWall, Pellet, PowerUp, Spawn,
+         Wall)
+  , GridInfo
+  , LevelMap(LevelMap)
+  , Vec2(Vec2)
+  , cellSize
+  , getCell
+  , getGhostSpawnPoint
+  , getSpawnPoint
+  , gridToScreenPos
+  , outOfBounds
+  , setCell
+  , validateLevel
+  )
+import GameLogic.MapRendering (processWalls)
+import GameLogic.Struct (GhostType(..), ghosts)
+import Graphics.Gloss (Color, Picture(Color), black, blank, blue, green, orange, pictures, rectangleSolid, red, scale, translate, white, yellow)
+import Graphics.Gloss.Interface.IO.Game
   ( Color
-  , Picture(..)
+  , Event(EventKey)
+  , Key(Char, MouseButton, SpecialKey)
+  , MouseButton(LeftButton, RightButton)
+  , Picture(Color)
+  , SpecialKey(KeyDown, KeyEsc, KeySpace, KeyUp)
   , black
   , blank
   , blue
   , green
-  , makeColor
   , orange
   , pictures
   , rectangleSolid
@@ -21,20 +41,31 @@ import Graphics.Gloss
   , white
   , yellow
   )
-import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), KeyState(..), MouseButton(..), SpecialKey(..))
-import GameLogic.MapLogic
-import Rendering
-import SDL.Font (Font(Font))
-import State (EditorTool(..), GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), gridSizePx, getGhostActor)
-import System.Exit (exitSuccess)
-import Text.Printf ()
-import Views.GameView (debugGrid, drawGhost, drawMap, drawPlayer, getGhostColor, pelletColor)
-import Views.PauseMenu (saveEditorLevel)
-import Views.StartMenu (drawParticles, updateParticles)
 import Prompt (errorPrompt)
-import GameLogic.Struct
-import GameLogic.MapRendering
+import Rendering
+  ( Rectangle(..)
+  , defaultButton
+  , drawGrid
+  , rectangleHovered
+  , renderString
+  , renderString'
+  , renderStringTopLeft
+  , screenToGridPos
+  , stringSize
+  )
+import State
+  ( EditorTool(..)
+  , GlobalState(GlobalState, assets, cachedWalls, editorGhost,
+            editorLevel, editorTool, history, keys, mousePos, previewEditor,
+            prompt, route, settings)
+  , MenuRoute(EditorView, PauseMenu)
+  , Prompt(closeAction)
+  , Settings(debugEnabled, editorGridDimensions, windowSize)
+  , getGhostActor
+  , gridSizePx
+  )
+import Views.GameView (drawGhost, drawMap, drawPlayer, getGhostColor, pelletColor)
+import Views.PauseMenu (saveEditorLevel)
 
 generalIcon :: String -> Color -> Color -> GlobalState -> (Float, Float) -> Float -> Float -> IO Picture
 generalIcon s tc bc gs (x, y) w h = do
@@ -215,7 +246,16 @@ renderEditorView gs = do
         if previewEditor gs
           then gridPreview
           else gridEditor
-  return (pictures [grid, txt, tools, if debugEnabled $ settings gs then debugString else blank, previewButton])
+  return
+    (pictures
+       [ grid
+       , txt
+       , tools
+       , if debugEnabled $ settings gs
+           then debugString
+           else blank
+       , previewButton
+       ])
   where
     dims@((c, r), (w, h)) = getEditorGridInfo gs
     level@(LevelMap _ _ cells) = editorLevel gs
@@ -295,9 +335,20 @@ handleInputEditorView (EventKey (Char c) _ _ _) gs = do
   return gs {editorTool = charToTool (editorTool gs) c}
 handleInputEditorView (EventKey (MouseButton LeftButton) _ _ _) gs
   | rectangleHovered (mousePos gs) saveButton && validateLevel (editorLevel gs) = do
-                                                  saveEditorLevel gs
-                                                  return gs
-  | rectangleHovered (mousePos gs) saveButton = do return gs {prompt = let Just p = errorPrompt "Invalid map!\nPlease place all \nspawn points for \nthe ghosts and pacman" in Just $ p {closeAction = \state _ -> do return state {route = EditorView, prompt = Nothing}}}
+    saveEditorLevel gs
+    return gs
+  | rectangleHovered (mousePos gs) saveButton = do
+    return
+      gs
+        { prompt =
+            let Just p = errorPrompt "Invalid map!\nPlease place all \nspawn points for \nthe ghosts and pacman"
+             in Just $
+                p
+                  { closeAction =
+                      \state _ -> do
+                        return state {route = EditorView, prompt = Nothing}
+                  }
+        }
   | rectangleHovered (mousePos gs) $ previewButton mx (-h / 2 - 30) = do return gs {previewEditor = not $ previewEditor gs}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 260) 25 25 0 = do return gs {editorTool = WallTool}
   | rectangleHovered (mousePos gs) $ Rectangle (-350, 220) 25 25 0 = do return gs {editorTool = SpawnTool}

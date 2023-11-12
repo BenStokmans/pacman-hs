@@ -1,9 +1,9 @@
 module GameLogic.MapLogic where
 
-import Graphics.Gloss ( Point )
-import Data.Maybe ( isJust, mapMaybe )
-import Data.List ( intercalate )
-import GameLogic.Struct
+import Data.List (intercalate)
+import Data.Maybe (isJust, mapMaybe)
+import GameLogic.Struct ( GhostType(..), ghosts )
+import Graphics.Gloss (Point)
 
 type GridInfo = ((Float, Float), (Float, Float))
 
@@ -23,8 +23,9 @@ data Direction
   deriving (Eq, Show)
 
 tailNull :: [a] -> [a]
-tailNull xs | null xs = []
-            | otherwise = tail xs
+tailNull xs
+  | null xs = []
+  | otherwise = tail xs
 
 headMaybe :: [a] -> Maybe a
 headMaybe [] = Nothing
@@ -186,7 +187,8 @@ getCellsWithTypes ts = getCellsCond (cellHasTypes ts)
 
 isCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Bool
 isCellCond m f v
-  | Just c <- getCell m v, f c = True
+  | Just c <- getCell m v
+  , f c = True
   | otherwise = False
 
 isCellType :: LevelMap -> CellType -> Vec2 -> Bool
@@ -238,7 +240,12 @@ readLevel f = do
 
 -- Level is only valid when it has all spawnpoints and there is nothing out of bounds or null. 
 validateLevel :: LevelMap -> Bool
-validateLevel m@(LevelMap w h cells) = w > 0 && h > 0 && not (null cells) && all (isJust . getCell m) (zipWith Vec2 [0..w-1] [0..h-1]) && getSpawnPoint m /= outOfBounds && notElem outOfBounds (map (getGhostSpawnPoint m) ghosts)
+validateLevel m@(LevelMap w h cells) =
+  w > 0 &&
+  h > 0 &&
+  not (null cells) &&
+  all (isJust . getCell m) (zipWith Vec2 [0 .. w - 1] [0 .. h - 1]) &&
+  getSpawnPoint m /= outOfBounds && notElem outOfBounds (map (getGhostSpawnPoint m) ghosts)
 
 getSpawnPoint' :: LevelMap -> (Cell -> Bool) -> Vec2
 getSpawnPoint' (LevelMap w h cs) f
@@ -270,7 +277,6 @@ deleteMultiple [] _ = []
 deleteMultiple (x:xs) ys
   | x `elem` ys = deleteMultiple xs ys
   | otherwise = x : deleteMultiple xs ys
-
 
 isPastCentre :: GridInfo -> Direction -> Vec2 -> Point -> Bool
 isPastCentre gi d v@(Vec2 vx vy) (x, y)
@@ -306,4 +312,5 @@ calcNextGhostPosition :: Direction -> CellType -> Bool -> Point -> Float -> Poin
 calcNextGhostPosition = calcNextPosition' False
 
 getAllowedGhostDirections :: LevelMap -> Direction -> Vec2 -> [Direction]
-getAllowedGhostDirections m d v = filter (\d -> isCellCond m (not . cellHasType Wall) (v + dirToVec2 d)) (deleteMultiple allDirections [oppositeDirection d, d])
+getAllowedGhostDirections m d v =
+  filter (\d -> isCellCond m (not . cellHasType Wall) (v + dirToVec2 d)) (deleteMultiple allDirections [oppositeDirection d, d])

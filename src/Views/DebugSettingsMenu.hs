@@ -1,25 +1,19 @@
 module Views.DebugSettingsMenu where
 
-import Assets (Assets(Assets, emuFont, pacFont))
-import Control.Monad (when, unless)
-import Data.Aeson ()
-import Data.Maybe (fromMaybe, isJust)
-import Data.Text (pack, unpack)
-import FontContainer (FontContainer(..))
-import Graphics.Gloss (Picture, blue, pictures, red, white, Point, green, makeColor, Color)
-import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game (Event(..), Key(MouseButton), MouseButton(..), SpecialKey(KeyEsc))
-import Graphics.Gloss.Interface.IO.Interact (Key(..))
-import Graphics.UI.TinyFileDialogs (saveFileDialog)
-import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, renderStringResize, completeButton)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Settings (..), DebugSettings (..))
-import System.Directory (getCurrentDirectory)
-import System.Exit (exitSuccess)
-import System.FilePath ((</>))
-import Views.StartMenu (drawParticles, updateParticles)
-import qualified SDL.Mixer as Mixer
+import Assets (Assets(..))
+import FontContainer (FontContainer(m, xxl))
 import GameLogic.MapLogic (tailNull)
+import Graphics.Gloss (Picture, Point, blue, green, makeColor, pictures, red, white)
+import Graphics.Gloss.Interface.IO.Game (Color, Event(EventKey), Key(MouseButton, SpecialKey), MouseButton(LeftButton), SpecialKey(KeyEsc))
+import Rendering (Rectangle(..), completeButton, defaultButton, rectangleHovered, renderStringResize)
 import SDL.Font (Font)
+import State
+  ( DebugSettings(enableGameText, enableGhostPath, enableGhostTarget,
+              enableGhostText, enableGrid, enableHitboxes)
+  , GlobalState(assets, history, mousePos, route, settings)
+  , Settings(debugEnabled, debugSettings)
+  )
+import Views.StartMenu (drawParticles, updateParticles)
 
 enableDebugButton :: Rectangle
 enableDebugButton = Rectangle (0, 180) 400 50 7
@@ -49,11 +43,24 @@ getSettingText :: Bool -> String -> String
 getSettingText False s = "Enable " ++ s
 getSettingText True s = "Disable " ++ s
 
-gray :: Color
+gray :: Graphics.Gloss.Interface.IO.Game.Color
 gray = makeColor 0.5 0.5 0.5 1
 
 drawSettingsButton :: Bool -> Rectangle -> Font -> Bool -> String -> Point -> IO Picture
-drawSettingsButton dis r f b s p = completeButton r f (getSettingText b s) p (if dis then gray else if b then green else red) (if dis then gray else white)
+drawSettingsButton dis r f b s p =
+  completeButton
+    r
+    f
+    (getSettingText b s)
+    p
+    (if dis
+       then gray
+       else if b
+              then green
+              else red)
+    (if dis
+       then gray
+       else white)
 
 renderDebugMenu :: GlobalState -> IO Picture
 renderDebugMenu gs = do
@@ -63,7 +70,6 @@ renderDebugMenu gs = do
   let sett = settings gs
   let debug = not $ debugEnabled sett
   let ds = debugSettings sett
-
   drawnEnableDebugButton <- drawSettingsButton False enableDebugButton mEmu (debugEnabled sett) "debug" mPos
   drawnEnableGridButton <- drawSettingsButton debug enableGridButton mEmu (enableGrid ds) "grid" mPos
   drawnEnableGhostPathButton <- drawSettingsButton debug enableGhostPathButton mEmu (enableGhostPath ds) "ghost path" mPos
@@ -72,22 +78,34 @@ renderDebugMenu gs = do
   drawnEnableHitboxesButton <- drawSettingsButton debug enableHitboxesButton mEmu (enableHitboxes ds) "hitboxes" mPos
   drawnEnableGameTextButton <- drawSettingsButton debug enableGameTextButton mEmu (enableGameText ds) "game text" mPos
   drawnSaveButton <- defaultButton saveButton mEmu "Save" mPos
-
-  return (pictures [drawParticles gs, title, drawnEnableDebugButton, drawnEnableGridButton, drawnEnableGhostPathButton, drawnEnableGhostTextButton, drawnEnableGhostTargetButton,drawnEnableHitboxesButton,drawnEnableGameTextButton,drawnSaveButton])
+  return
+    (pictures
+       [ drawParticles gs
+       , title
+       , drawnEnableDebugButton
+       , drawnEnableGridButton
+       , drawnEnableGhostPathButton
+       , drawnEnableGhostTextButton
+       , drawnEnableGhostTargetButton
+       , drawnEnableHitboxesButton
+       , drawnEnableGameTextButton
+       , drawnSaveButton
+       ])
 
 handleInputDebugMenu :: Event -> GlobalState -> IO GlobalState
 handleInputDebugMenu (EventKey (SpecialKey KeyEsc) _ _ _) s = do
   return s {route = head (history s), history = tailNull (history s)}
 handleInputDebugMenu (EventKey (MouseButton LeftButton) _ _ _) s
-  | rectangleHovered mPos enableDebugButton = do return s { settings = sett { debugEnabled = not (debugEnabled sett) } }
+  | rectangleHovered mPos enableDebugButton = do return s {settings = sett {debugEnabled = not (debugEnabled sett)}}
   | rectangleHovered mPos saveButton = do return s {route = head his, history = tailNull his}
   | not (debugEnabled sett) = do return s
-  | rectangleHovered mPos enableGridButton = do return s { settings = sett { debugSettings = ds {enableGrid = not (enableGrid ds) }} }
-  | rectangleHovered mPos enableGhostPathButton = do return s { settings = sett { debugSettings = ds {enableGhostPath = not (enableGhostPath ds) }} }
-  | rectangleHovered mPos enableGhostTextButton = do return s { settings = sett { debugSettings = ds {enableGhostText = not (enableGhostText ds) }} }
-  | rectangleHovered mPos enableGhostTargetButton = do return s { settings = sett { debugSettings = ds {enableGhostTarget = not (enableGhostTarget ds) }} }
-  | rectangleHovered mPos enableHitboxesButton = do return s { settings = sett { debugSettings = ds {enableHitboxes = not (enableHitboxes ds) }} }
-  | rectangleHovered mPos enableGameTextButton = do return s { settings = sett { debugSettings = ds {enableGameText = not (enableGameText ds) }} }
+  | rectangleHovered mPos enableGridButton = do return s {settings = sett {debugSettings = ds {enableGrid = not (enableGrid ds)}}}
+  | rectangleHovered mPos enableGhostPathButton = do return s {settings = sett {debugSettings = ds {enableGhostPath = not (enableGhostPath ds)}}}
+  | rectangleHovered mPos enableGhostTextButton = do return s {settings = sett {debugSettings = ds {enableGhostText = not (enableGhostText ds)}}}
+  | rectangleHovered mPos enableGhostTargetButton = do
+    return s {settings = sett {debugSettings = ds {enableGhostTarget = not (enableGhostTarget ds)}}}
+  | rectangleHovered mPos enableHitboxesButton = do return s {settings = sett {debugSettings = ds {enableHitboxes = not (enableHitboxes ds)}}}
+  | rectangleHovered mPos enableGameTextButton = do return s {settings = sett {debugSettings = ds {enableGameText = not (enableGameText ds)}}}
   | otherwise = do return s
   where
     sett = settings s

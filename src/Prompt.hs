@@ -7,7 +7,7 @@ import FontContainer (FontContainer(..))
 import Graphics.Gloss (Picture(..), black, blank, blue, green, pictures, rectangleSolid, red, translate, white)
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(..), MouseButton(LeftButton), SpecialKey(..))
 import Rendering (Rectangle(..), defaultButton, rectangleHovered, renderString, stringSize, thickRectangle)
-import State (GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), defaultPrompt, Settings (..))
+import State (GameState(..), GlobalState(..), MenuRoute(..), Prompt(..), Settings(..), defaultPrompt)
 
 emptyPrompt :: Prompt
 emptyPrompt = Prompt {}
@@ -21,7 +21,9 @@ errorPrompt s =
       , promptText = s
       , showTextField = False
       , showConfirmButton = False
-      , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}
+      , closeAction =
+          \state _ -> do
+            return state {route = StartMenu, prompt = Nothing}
       }
 
 okayButton :: Prompt -> Rectangle
@@ -67,7 +69,9 @@ renderPrompt s p = do
     pictures
       ([ box
        , t
-       , if debugEnabled $ settings s then ks else blank
+       , if debugEnabled $ settings s
+           then ks
+           else blank
        , if showConfirmButton p
            then drawnOkayButton
            else blank
@@ -86,27 +90,30 @@ renderPrompt s p = do
 handleInputPrompt :: Event -> GlobalState -> IO GlobalState
 handleInputPrompt (EventKey (SpecialKey KeyEsc) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = value, closeAction = close})}) =
   close s value
-handleInputPrompt (EventKey (SpecialKey KeyBackspace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
-  do return $ s { prompt =
-        Just
-          p
-            { promptValue =
-                if null pv
-                  then ""
-                  else init pv
-            }
-    }
-handleInputPrompt (EventKey (SpecialKey KeySpace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
-  do return $ s {prompt = Just p {promptValue = pv ++ " "}}
-handleInputPrompt (EventKey (Char k) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) =
-  do return $ s {prompt = Just p {promptValue = pv ++ [k]}}
+handleInputPrompt (EventKey (SpecialKey KeyBackspace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) = do
+  return $
+    s
+      { prompt =
+          Just
+            p
+              { promptValue =
+                  if null pv
+                    then ""
+                    else init pv
+              }
+      }
+handleInputPrompt (EventKey (SpecialKey KeySpace) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) = do
+  return $ s {prompt = Just p {promptValue = pv ++ " "}}
+handleInputPrompt (EventKey (Char k) _ _ _) s@(GlobalState {prompt = Just p@(Prompt {promptValue = pv})}) = do
+  return $ s {prompt = Just p {promptValue = pv ++ [k]}}
 handleInputPrompt (EventKey (MouseButton LeftButton) _ _ _) s@(GlobalState {prompt = Just p@(Prompt { promptValue = value
                                                                                                     , confirmAction = confirm
                                                                                                     , closeAction = close
                                                                                                     })})
   | rectangleHovered (mousePos s) (okayButton p) = confirm s value
   | rectangleHovered (mousePos s) (closeButton p) = close s value
-handleInputPrompt _ s = do return s
+handleInputPrompt _ s = do
+  return s
 
 -- make sure the cursor blinks at a set interval
 handleUpdatePrompt :: Float -> GlobalState -> Prompt -> IO GlobalState

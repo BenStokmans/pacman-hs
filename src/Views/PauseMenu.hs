@@ -1,24 +1,32 @@
 module Views.PauseMenu where
 
-import Assets (Assets(..))
+import Assets (Assets(emuFont, gearIconBlue, gearIconWhite, pacFont))
 import Control.Monad (when)
-import Data.Aeson
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (isJust)
 import Data.Text (pack, unpack)
-import FontContainer (FontContainer(..))
-import Graphics.Gloss (Picture, blue, pictures, red, white)
-import Graphics.Gloss.Data.Point ()
-import Graphics.Gloss.Interface.IO.Game (Event(..), Key(MouseButton), MouseButton(..), SpecialKey(KeyEsc))
-import Graphics.Gloss.Interface.IO.Interact (Key(..))
-import Graphics.UI.TinyFileDialogs (saveFileDialog)
-import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, defaultButtonImg)
-import State (GameState(..), GlobalState(..), MenuRoute(..), closeAction)
-import System.Directory (getCurrentDirectory)
-import System.Exit (exitSuccess)
-import System.FilePath ((</>))
-import Views.StartMenu (drawParticles, updateParticles, settingsButton)
+import FontContainer (FontContainer(l, xxl))
 import GameLogic.MapLogic (tailNull, validateLevel)
+import Graphics.Gloss (Picture, blue, pictures)
+import Graphics.Gloss.Interface.IO.Game
+  ( Event(EventKey)
+  , Key(MouseButton, SpecialKey)
+  , MouseButton(LeftButton)
+  , Picture
+  , SpecialKey(KeyEsc)
+  , blue
+  , pictures
+  )
+import Graphics.UI.TinyFileDialogs (saveFileDialog)
 import Prompt (errorPrompt)
+import Rendering (Rectangle(..), defaultButton, defaultButtonImg, rectangleHovered, renderString)
+import State
+  ( GlobalState(assets, editorLevel, history, mousePos, prompt, route)
+  , MenuRoute(EditorView, GameView, PauseMenu, SettingsView, StartMenu)
+  , Prompt(closeAction)
+  )
+import System.Directory (getCurrentDirectory)
+import System.FilePath ((</>))
+import Views.StartMenu (drawParticles, settingsButton, updateParticles)
 
 continueButton :: Rectangle
 continueButton = Rectangle (0, 0) 400 100 10
@@ -52,13 +60,23 @@ saveEditorLevel s = do
   let fName = maybe "" unpack file
   when (isJust file) $ writeFile fName (show $ editorLevel s)
 
-
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
 handleInputPauseMenu (EventKey (SpecialKey KeyEsc) _ _ _) s = do
   return s {route = head (history s), history = tailNull (history s)}
 handleInputPauseMenu (EventKey (MouseButton LeftButton) _ _ _) s
   | continueButtonHover = do return s {route = head his, history = tailNull his}
-  | saveButtonHover && head his == EditorView && not (validateLevel $ editorLevel s) = do return s {prompt = let Just p = errorPrompt "Invalid map!\nPlease place all \nspawn points for \nthe ghosts and pacman" in Just $ p {closeAction = \state _ -> do return state {route = PauseMenu, prompt = Nothing}}}
+  | saveButtonHover && head his == EditorView && not (validateLevel $ editorLevel s) = do
+    return
+      s
+        { prompt =
+            let Just p = errorPrompt "Invalid map!\nPlease place all \nspawn points for \nthe ghosts and pacman"
+             in Just $
+                p
+                  { closeAction =
+                      \state _ -> do
+                        return state {route = PauseMenu, prompt = Nothing}
+                  }
+        }
   | saveButtonHover = do
     when (head his == EditorView) $ saveEditorLevel s
     return s --TODO implement saving of game state

@@ -3,21 +3,22 @@ module GameLogic.MapRendering where
 import Codec.Picture.Metadata (Keys(Source), Value(Double))
 import Data.List (intercalate)
 import Data.Maybe (isJust, isNothing, mapMaybe)
+import GameLogic.MapLogic
+  ( Cell(..)
+  , CellType(GhostWall)
+  , Direction(..)
+  , LevelMap(..)
+  , Vec2(..)
+  , deleteMultiple
+  , dirToVec2
+  , getAdjacent
+  , getCellWithType
+  , getDiags
+  , getWall
+  )
 import Graphics.Gloss (Picture(..), Point, blank, circleSolid, pictures, rotate, thickArc, thickCircle, translate)
 import Graphics.Gloss.Data.Color (green, red, white, yellow)
 import Graphics.Gloss.Data.Picture (rectangleSolid, scale)
-import GameLogic.MapLogic
-    ( LevelMap(..),
-      Cell(..),
-      CellType(GhostWall),
-      Vec2(..),
-      Direction(..),
-      dirToVec2,
-      getWall,
-      getCellWithType,
-      getDiags,
-      getAdjacent,
-      deleteMultiple )
 
 data WallType
   = StraightOne

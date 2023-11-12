@@ -2,15 +2,7 @@ module GameLogic.Pathfinding where
 
 import Data.List (delete, maximumBy, minimumBy, sortBy)
 import Data.Maybe (isJust)
-import GameLogic.MapLogic
-    ( LevelMap,
-      CellType(Wall),
-      Vec2(..),
-      Direction(..),
-      allDirections,
-      dirToVec2,
-      cellHasType,
-      getCell )
+import GameLogic.MapLogic (CellType(Wall), Direction(..), LevelMap, Vec2(..), allDirections, cellHasType, dirToVec2, getCell)
 
 data AStarNode = AStarNode
   { pos :: Vec2
