@@ -52,7 +52,6 @@ data Assets = Assets
   { pacFont :: FontContainer
   , emuFont :: FontContainer
   , pacSprite :: PacManSprite
-  , appleSprite :: Picture
   , blinkySprite :: Picture
   , pinkySprite :: Picture
   , inkySprite :: Picture
@@ -60,6 +59,14 @@ data Assets = Assets
   , blueGhostSprite :: Picture
   , gearIconBlue :: Picture
   , gearIconWhite :: Picture
+  , cherrySprite :: Picture
+  , strawBerrySprite :: Picture
+  , orangeSprite :: Picture
+  , appleSprite :: Picture
+  , melonSprite :: Picture
+  , galaxianSprite :: Picture
+  , bellSprite :: Picture
+  , keySprite :: Picture
   }
 
 loadPacSprite :: String -> IO PacManSprite
@@ -113,12 +120,20 @@ loadAssets p = do
   gearIconBlue <- loadImage (p </> "gear-solid-blue.svg")
   gearIconWhite <- loadImage (p </> "gear-solid-white.svg")
 
+  cherrySprite <- loadSprite (p </> "fruits/cherry.png")
+  strawBerrySprite <- loadSprite (p </> "fruits/strawberry.png")
+  orangeSprite <- loadSprite (p </> "fruits/orange.png")
+  appleSprite <- loadSprite (p </> "fruits/apple.png")
+  melonSprite <- loadSprite (p </> "fruits/melon.png")
+  galaxianSprite <- loadSprite (p </> "fruits/galaxian.png")
+  bellSprite <- loadSprite (p </> "fruits/bell.png")
+  keySprite <- loadSprite (p </> "fruits/key.png")
+
   return
     Assets
       { pacFont = pacFont
       , emuFont = emuFont
       , pacSprite = pacSprite
-      , appleSprite = appleSprite
       , blinkySprite = blinkySprite
       , pinkySprite = pinkySprite
       , inkySprite = inkySprite
@@ -126,4 +141,12 @@ loadAssets p = do
       , blueGhostSprite = blueGhostSprite
       , gearIconBlue = gearIconBlue
       , gearIconWhite = gearIconWhite
+      , cherrySprite = cherrySprite
+      , strawBerrySprite = strawBerrySprite
+      , orangeSprite = orangeSprite
+      , appleSprite = appleSprite
+      , melonSprite = melonSprite
+      , galaxianSprite = galaxianSprite
+      , bellSprite = bellSprite
+      , keySprite = keySprite
       }

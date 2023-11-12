@@ -293,7 +293,7 @@ charToTool e _ = e
 
 handleInputEditorView :: Event -> GlobalState -> IO GlobalState
 handleInputEditorView (EventKey (SpecialKey KeyEsc) _ _ _) gs = do
-  return gs {route = PauseMenu, lastRoute = EditorView}
+  return gs {route = PauseMenu, history = [EditorView]}
 handleInputEditorView (EventKey (SpecialKey KeyUp) _ _ _) gs@(GlobalState {editorTool = et}) = do
   return gs {editorTool = prevTool et}
 handleInputEditorView (EventKey (SpecialKey KeyDown) _ _ _) gs@(GlobalState {editorTool = et}) = do

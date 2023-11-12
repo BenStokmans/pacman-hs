@@ -7,12 +7,13 @@
 - [x] Add small respawn animation for ghosts
 - [ ] Fix ghost reversing in warp tunnels
 - [ ] Make level logic for ghost respawn timers
-- [ ] Fix music / add more sound effects
+- [x] Fix music
+- [ ] Add more sound effects
 - [ ] Implement game saving
-- [ ] Fix game recreating map when restarting a game
-- [ ] Make pellets respawn if they've all been consumed
+- [x] Fix game recreating map when restarting a game
+- [x] Make pellets respawn if they've all been consumed
 - [ ] Implement more level logic
 - [ ] Add map validation
 - [ ] Look into frightened duration (add ghost blink)
-- [ ] Add kill ghost sequence/animation/whatever
-- [ ] Add score string when killing ghost (see above)
+- [x] Add kill ghost sequence/animation/whatever
+- [x] Add score string when killing ghost (see above)

@@ -15,8 +15,19 @@ data Direction
   | East
   deriving (Eq, Show)
 
+tailNull :: [a] -> [a]
+tailNull xs | null xs = []
+            | otherwise = tail xs
+
+headMaybe :: [a] -> Maybe a
+headMaybe [] = Nothing
+headMaybe xs = Just $ head xs
+
 allDirections :: [Direction]
-allDirections = [North, South, West, East]
+allDirections = [North, East, South, West]
+
+adjacentVecs :: Vec2 -> [Vec2]
+adjacentVecs v = map (\d -> v + dirToVec2 d) allDirections
 
 oppositeDirection :: Direction -> Direction
 oppositeDirection North = South
@@ -104,14 +115,15 @@ data Cell =
 dummyCell :: Cell
 dummyCell = Cell Empty (Vec2 0 0)
 
-cellsWithTypeMap :: CellType -> LevelMap -> [Cell]
-cellsWithTypeMap ct (LevelMap _ _ cells) = filter (cellHasType ct) (concat cells)
-
 cellsWithType :: CellType -> [Cell] -> [Cell]
 cellsWithType ct = filter (cellHasType ct)
 
 cellHasType :: CellType -> Cell -> Bool
 cellHasType ct (Cell t _) = t == ct
+
+-- check if cell has any of the provided types
+cellHasTypes :: [CellType] -> Cell -> Bool
+cellHasTypes ts (Cell t _) = t `elem` ts
 
 instance Eq Cell where
   (==) :: Cell -> Cell -> Bool
@@ -163,16 +175,33 @@ getCellWithType ct m v
   | Just c@(Cell ct _) <- getCell m v = Just c
   | otherwise = Nothing
 
-getCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Maybe Cell
-getCellCond m f v
+getCellCond :: (Cell -> Bool) -> LevelMap -> Vec2 -> Maybe Cell
+getCellCond f m v
   | Just c <- getCell m v
   , f c = Just c
   | otherwise = Nothing
+
+getCellsCond :: (Cell -> Bool) -> LevelMap -> [Cell]
+getCellsCond f (LevelMap _ _ cells) = filter f $ concat cells
+
+getCellsWithType :: CellType -> LevelMap -> [Cell]
+getCellsWithType ct = getCellsCond (cellHasType ct)
+
+getCellsWithTypes :: [CellType] -> LevelMap -> [Cell]
+getCellsWithTypes ts = getCellsCond (cellHasTypes ts)
 
 isCellCond :: LevelMap -> (Cell -> Bool) -> Vec2 -> Bool
 isCellCond m f v
   | Just c <- getCell m v, f c = True
   | otherwise = False
+
+-- filter list of vectors with conditional on potential Cell and returns filtered list of vec2s
+filterLevelVec2s :: LevelMap -> (Cell -> Bool) -> [Vec2] -> [Vec2]
+filterLevelVec2s m f = filter (isCellCond m f)
+
+-- filter list of vectors with conditional on potential Cell and returns filtered containing cells matching conditional
+filterLevelCells :: LevelMap -> (Cell -> Bool) -> [Vec2] -> [Cell]
+filterLevelCells m f = mapMaybe (getCellCond f m)
 
 isOutOfBounds :: LevelMap -> Vec2 -> Bool
 isOutOfBounds (LevelMap w h _) (Vec2 x y) = x < 0 || y < 0 || x >= w || y >= h

@@ -45,10 +45,21 @@ defaultPrompt =
     }
 
 
+data DebugSettings = DebugSettings {
+  enableGrid :: Bool,
+  enableGhostPath :: Bool,
+  enableGhostText :: Bool,
+  enableGhostTarget :: Bool,
+  enableHitboxes :: Bool,
+  enableGameText :: Bool
+}
+
 data Settings = Settings
   { windowSize :: (Float, Float)
   , debugEnabled :: Bool
+  , debugSettings :: DebugSettings
   , musicEnabled :: Bool
+  , fruitPadding :: Float
   , ghostPadding :: Float
   , pacmanPadding :: Float
   , mazeMargin :: Float
@@ -56,6 +67,7 @@ data Settings = Settings
   , editorGridDimensions :: Vec2
   , ghostRespawnTimer :: Float
   , collisionLeniency :: Float -- an arbitrary value by which to reduce hitbox size
+  , ghostStuckTimeout :: Float
   }
 
 data MenuRoute
@@ -65,6 +77,7 @@ data MenuRoute
   | PauseMenu
   | GameOverMenu
   | SettingsView
+  | DebugSettingsMenu
   deriving (Eq, Show)
 
 data GameStatus
@@ -77,13 +90,17 @@ data GameStatus
 data GameState = GameState
   { lives :: Int
   , level :: Int
+  , godMode :: Bool
   , killingSpree :: Int
+  , ghostKillAnimationTimer :: Float
   , status :: GameStatus
   , prevClock :: Float
-  , mapName :: String
   , gMap :: LevelMap
+  , pellets :: [Cell]
   , score :: Int
+  , fruitEaten :: Bool
   , pelletCount :: Int
+  , totalPelletCount :: Int
   , player :: Player -- the player character for pacman
   , pinky :: GhostActor
   , inky :: GhostActor
@@ -113,7 +130,9 @@ data GlobalState = GlobalState
   , particles :: [(Point, Float)]
   , prompt :: Maybe Prompt
   , clock :: Float
-  , lastRoute :: MenuRoute
+  , history :: [MenuRoute]
+  , gameLevelName :: String
+  , gameLevel :: LevelMap
   , editorLevel :: LevelMap
   , editorTool :: EditorTool
   , editorGhost :: GhostType
@@ -128,7 +147,7 @@ gridSizePx (c, r) gs =
    in (x * 0.8 * (c / r), y * 0.8 * (r / c))
 
 gameGridDimensions :: GlobalState -> (Float, Float) -- grid size of map
-gameGridDimensions GlobalState {gameState = GameState {gMap = (LevelMap w h _)}} = (w, h)
+gameGridDimensions GlobalState {gameLevel = (LevelMap w h _)} = (w, h)
 
 gameGridInfo :: GlobalState -> GridInfo
 gameGridInfo gs =
@@ -156,13 +175,17 @@ emptyGameState :: GameState
 emptyGameState =
   GameState
     { score = 0
+    , godMode = False
     , pelletCount = 0
+    , totalPelletCount = 0
+    , ghostKillAnimationTimer = 0
     , lives = 3
+    , fruitEaten = False
     , killingSpree = 0
     , level = 1
     , status = Paused
     , prevClock = 0
-    , mapName = "default"
+    , pellets = []
     , gMap = LevelMap 0 0 []
     , player = Player {pVelocity = 110, pDirection = East, pMoving = False, pLocation = (0, 0), pFrame = 0, pBufferedInput = Nothing}
     , blinky =
@@ -235,20 +258,32 @@ initState = do
           Settings
             { windowSize = (800, 800)
             , debugEnabled = True
+            , debugSettings = DebugSettings {
+                enableGrid = False
+              , enableGhostPath = False
+              , enableGhostText = False
+              , enableGhostTarget = True
+              , enableHitboxes = True
+              , enableGameText = True
+            }
             , musicEnabled = False
             , ghostPadding = 0.20
             , pacmanPadding = 0.15
+            , fruitPadding = 0.10
             , mazeMargin = 0.35
             , lineThickness = 15
             , editorGridDimensions = Vec2 25 25
             , ghostRespawnTimer = 2
             , collisionLeniency = 0.2
+            , ghostStuckTimeout = 2
             }
-      , gameState = emptyGameState {gMap = gMap}
+      , gameState = emptyGameState
+      , gameLevelName = "default"
+      , gameLevel = gMap
       , editorLevel = LevelMap 25 25 []
       , cachedWalls = []
       , route = StartMenu
-      , lastRoute = StartMenu
+      , history = []
       , assets = assets
       , mousePos = (0, 0)
       , particles = []

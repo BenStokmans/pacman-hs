@@ -15,7 +15,7 @@ import Struct
       GhostType(..),
       LevelMap(..),
       Player(pDirection, pLocation),
-      Vec2(..), cellHasType, isCellCond )
+      Vec2(..), cellHasType, isCellCond, outOfBounds )
 import Graphics.Gloss (Point)
 import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..))
 import Map (deleteMultiple, getAllowedGhostDirections)
@@ -175,7 +175,8 @@ stillFrightened frightenedClock level | level == 1 && frightenedClock < 6 = True
 
 
 updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
-updateGhost gs dt ghost l | ghostM == Respawning && (gRespawnTimer ghost + dt) < respawnLength = updatedGhost {gRespawnTimer = gRespawnTimer ghost + dt}
+updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = updatedGhost {gUpdate = 0, lastDirChange = outOfBounds}
+                          | ghostM == Respawning && (gRespawnTimer ghost + dt) < respawnLength = updatedGhost {gRespawnTimer = gRespawnTimer ghost + dt}
                           | ghostM == Respawning && (gRespawnTimer ghost - dt) >= respawnLength = updatedGhost {gRespawnTimer = 0, gCurrentBehaviour = newMode}
                           | ghostM == Frightened && stayFrightened = updatedGhost {gFrightenedClock = gFrightenedClock ghost + dt}
                           | otherwise = updatedGhost {gCurrentBehaviour = newMode, gFrightenedClock = 0}
@@ -183,7 +184,7 @@ updateGhost gs dt ghost l | ghostM == Respawning && (gRespawnTimer ghost + dt) <
     ghostM = gCurrentBehaviour ghost
     newClock = gModeClock ghost + dt
     stayFrightened = stillFrightened (gFrightenedClock ghost) l
-    updatedGhost = ghost {gModeClock = newClock}
+    updatedGhost = ghost {gModeClock = newClock, gUpdate = gUpdate ghost + dt}
     newMode = getBehaviour newClock l
     respawnLength = ghostRespawnTimer $ settings gs
 
@@ -219,4 +220,7 @@ getGhostVelocity s ghost | behaviour == Respawning = 0
     behaviour = gCurrentBehaviour ghost
 
 updateGhostVelocity :: GlobalState -> GhostActor -> GlobalState
-updateGhostVelocity s ghost = let nv = getGhostVelocity s ghost in updateGhostGlobalState s ghost {gVelocity = nv}
+updateGhostVelocity s ghost = let nv = getGhostVelocity s ghost in updateGhostGlobalState s ghost {
+                  gVelocity = nv, 
+                  lastDirChange = if gVelocity ghost == 0 && nv /= gVelocity ghost then outOfBounds else lastDirChange ghost -- make sure ghosts don't get stuck in spawn
+                  }

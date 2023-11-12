@@ -12,13 +12,14 @@ import Graphics.UI.TinyFileDialogs (openFileDialog, saveFileDialog)
 import Map (getGhostSpawnPoint, getSpawnPoint, processWalls)
 import Prompt (errorPrompt)
 import Rendering (Rectangle(Rectangle), completeButton, defaultButton, gridToScreenPos, rectangleHovered, renderButton, renderString, stringSize, defaultButtonImg)
-import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo)
-import Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation), Vec2(..), readLevel)
+import State (GameState(..), GlobalState(..), MenuRoute(EditorView, GameView, StartMenu, SettingsView), Prompt(..), Settings(..), defaultPrompt, gameGridInfo, emptyGameState)
+import Struct (Cell(..), CellType(..), GhostActor(..), GhostType(..), LevelMap(LevelMap), Player(pLocation, pDirection), Vec2(..), readLevel, getCells, getCellWithType, PowerUp (PowerPellet), getCellsWithTypes, cellHasType, cellHasTypes, dirToVec2, filterLevelVec2s, allDirections, adjacentVecs, Direction (..), headMaybe)
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>), takeBaseName)
 import Text.Read (readMaybe)
 import qualified SDL.Mixer as Mixer
+import Pathfinding (getTraveledDirection)
 
 selectMapButton :: Float -> Rectangle
 selectMapButton w = Rectangle (0, 70) w 50 10
@@ -69,7 +70,7 @@ renderStartMenu s = do
   drawnStartButton <- defaultButton startButton lEmu "Start new game" (mousePos s)
   drawnQuitButton <- defaultButton quitButton lEmu "Quit game" (mousePos s)
   let mEmu = m (emuFont ass)
-  let selectText = "Choose map: " ++ mapName (gameState s)
+  let selectText = "Choose map: " ++ gameLevelName s
   (w, _) <- stringSize mEmu selectText
   drawnSelectMapButton <- defaultButton (selectMapButton (w + 40)) mEmu selectText (mousePos s)
   subTitle <- renderString (0, 160) mEmu red "By Ben Stokmans and Geerten Helmers"
@@ -148,35 +149,47 @@ selectMap = do
         | otherwise = Nothing
   return ls
 
+startGame :: GlobalState -> GlobalState
+startGame s = s
+              { route = GameView
+              , history = [StartMenu]
+              , gameState =
+                  gs
+                    { player = ps {pLocation = gridToScreenPos (gameGridInfo s) playerSpawn, pDirection = playerDirection}
+                    , blinky = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Blinky)}
+                    , pinky = (pinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Pinky)}
+                    , inky = (inky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Inky)}
+                    , clyde = (clyde gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint level Clyde)}
+                    , gMap = level
+                    , pellets = pellets
+                    , totalPelletCount = length pellets
+                    }
+              , cachedWalls = processWalls level
+              }
+  where
+    level = gameLevel s
+    gs = emptyGameState -- initialize new gamestate
+    ps = player gs
+    pellets = getCellsWithTypes [Pellet, PowerUp] level
+    playerSpawn = getSpawnPoint level
+    playerDirection = fromMaybe North $ headMaybe $ map (getTraveledDirection playerSpawn) $ filterLevelVec2s level (not . cellHasTypes [Wall,GhostWall]) $ adjacentVecs playerSpawn
+
 handleInputStartMenu :: Event -> GlobalState -> IO GlobalState
 handleInputStartMenu (EventKey (SpecialKey KeyEsc) _ _ _) _ = do
   exitSuccess
 handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
   let gs = gameState s
   let ps = player gs
-  let selectText = "Choose map: " ++ mapName (gameState s)
+  let selectText = "Choose map: " ++ gameLevelName s
   (w, _) <- stringSize (m (emuFont (assets s))) selectText
   let newState
         | rectangleHovered (mousePos s) (selectMapButton (w + 40)) = do
           mMap <- selectMap
           let ns
-                | Just (m, name) <- mMap = s {gameState = gs {gMap = m, mapName = name}}
+                | Just (m, name) <- mMap = s {gameLevel = m, gameLevelName = name}
                 | otherwise = s
           return ns
-        | rectangleHovered (mousePos s) startButton = do
-          return -- TODO: make this bit a separate function, make sure all cases for direction etc are scalable (start with pathfinding)
-            s
-              { route = GameView
-              , gameState =
-                  gs
-                    { player = ps {pLocation = gridToScreenPos (gameGridInfo s) (getSpawnPoint (gMap gs))}
-                    , blinky = (blinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Blinky)}
-                    , pinky = (pinky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Pinky)}
-                    , inky = (inky gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Inky)}
-                    , clyde = (clyde gs) {gLocation = gridToScreenPos (gameGridInfo s) (getGhostSpawnPoint (gMap gs) Clyde)}
-                    }
-              , cachedWalls = processWalls $ gMap gs
-              }
+        | rectangleHovered (mousePos s) startButton = do return $ startGame s
         | rectangleHovered (mousePos s) newMapButton = do
           return
             s
@@ -198,7 +211,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                   s {editorLevel = m, route = EditorView, settings = (settings s) {editorGridDimensions = Vec2 w h}}
                 | otherwise = s
           return ns
-        | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, lastRoute = StartMenu}
+        | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = [StartMenu]}
         | rectangleHovered (mousePos s) quitButton = do exitSuccess
         | otherwise = do return s
   newState

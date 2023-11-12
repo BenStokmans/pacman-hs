@@ -31,6 +31,7 @@ library
       Router
       State
       Struct
+      Views.DebugSettingsMenu
       Views.EditorView
       Views.GameView
       Views.PauseMenu

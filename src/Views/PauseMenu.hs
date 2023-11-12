@@ -1,6 +1,6 @@
 module Views.PauseMenu where
 
-import Assets (Assets(Assets, emuFont, pacFont))
+import Assets (Assets(..))
 import Control.Monad (when)
 import Data.Aeson
 import Data.Maybe (fromMaybe, isJust)
@@ -11,12 +11,13 @@ import Graphics.Gloss.Data.Point ()
 import Graphics.Gloss.Interface.IO.Game (Event(..), Key(MouseButton), MouseButton(..), SpecialKey(KeyEsc))
 import Graphics.Gloss.Interface.IO.Interact (Key(..))
 import Graphics.UI.TinyFileDialogs (saveFileDialog)
-import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString)
+import Rendering (Rectangle(Rectangle), defaultButton, rectangleHovered, renderButton, renderString, defaultButtonImg)
 import State (GameState(..), GlobalState(..), MenuRoute(..))
 import System.Directory (getCurrentDirectory)
 import System.Exit (exitSuccess)
 import System.FilePath ((</>))
-import Views.StartMenu (drawParticles, updateParticles)
+import Views.StartMenu (drawParticles, updateParticles, settingsButton)
+import Struct (tailNull)
 
 continueButton :: Rectangle
 continueButton = Rectangle (0, 0) 400 100 10
@@ -35,11 +36,13 @@ renderPauseMenu gs = do
   drawnContinueButton <- defaultButton continueButton lEmu "Continue" mPos
   drawnMainMenuButton <- defaultButton mainMenuButton lEmu "Main Menu" mPos
   let saveText =
-        if lastRoute gs == GameView
+        if head (history gs) == GameView
           then "game"
           else "map"
   drawnSaveButton <- defaultButton saveButton lEmu ("Save " ++ saveText) mPos
-  return (pictures [drawParticles gs, title, drawnContinueButton, drawnSaveButton, drawnMainMenuButton])
+  let ass = assets gs
+  let drawnSettingsButton = defaultButtonImg settingsButton (gearIconBlue ass) (gearIconWhite ass) (mousePos gs)
+  return (pictures [drawParticles gs, title, drawnContinueButton, drawnSaveButton, drawnMainMenuButton, drawnSettingsButton])
 
 saveEditorLevel :: GlobalState -> IO ()
 saveEditorLevel s = do
@@ -57,18 +60,20 @@ saveGameState s = do
 
 handleInputPauseMenu :: Event -> GlobalState -> IO GlobalState
 handleInputPauseMenu (EventKey (SpecialKey KeyEsc) _ _ _) s = do
-  return s {route = lastRoute s}
+  return s {route = head (history s), history = tailNull (history s)}
 handleInputPauseMenu (EventKey (MouseButton LeftButton) _ _ _) s
-  | continueButtonHover = do return s {route = lastRoute s}
+  | continueButtonHover = do return s {route = head his, history = tailNull his}
   | saveButtonHover = do
-    when (lastRoute s == EditorView) $ saveEditorLevel s
-    when (lastRoute s == GameView) $ saveGameState s
+    when (head his == EditorView) $ saveEditorLevel s
+    when (head his == GameView) $ saveGameState s
     return s --TODO implement saving of game state
   | mainMenuButtonHover = do return s {route = StartMenu}
+  | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = PauseMenu : his}
   where
     continueButtonHover = rectangleHovered (mousePos s) continueButton
     saveButtonHover = rectangleHovered (mousePos s) saveButton
     mainMenuButtonHover = rectangleHovered (mousePos s) mainMenuButton
+    his = history s
 handleInputPauseMenu _ s = do
   return s
 
