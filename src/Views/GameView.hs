@@ -54,8 +54,9 @@ import Struct
   , setCell, getCellsWithType, cellHasTypes, setCells, adjacentVecs, filterLevelVec2s, headMaybe
   )
 import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState, hasFrightenedGhost, inWarpTunnel )
-import Data.Aeson (encode)
 import Data.Map (insert)
+import Data.Text.Lazy.IO (writeFile)
+import Data.Aeson.Text (encodeToLazyText)
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -363,16 +364,13 @@ handleInputGameView (EventKey k _ _ _) s = return s {gameState = gs {player = ps
       | otherwise = newDir -- technically not proper but it works
 handleInputGameView _ s = return s
 
-saveGameState :: GlobalState -> IO ()
-saveGameState s = do writeFile "assets/highscores.json" (show (encode $ highScores s))
-
 confirmHighScorePrompt :: GlobalState -> String -> IO GlobalState
 confirmHighScorePrompt s v
   | v /= "" = do
     let newState = s {highScores = insert v (score $ gameState s) (highScores s)}
-    writeFile "assets/highscores.json" (show (encode $ highScores newState))
-    return newState {route = StartMenu, prompt = Nothing}
-  | otherwise = do return s {route = StartMenu, prompt = Nothing}
+    Data.Text.Lazy.IO.writeFile "assets/highscores.json" (encodeToLazyText $ highScores newState)
+    return newState {route = LeaderBoardView, prompt = Nothing}
+  | otherwise = do return s {route = LeaderBoardView, prompt = Nothing}
   where
     set = settings s
 
@@ -382,7 +380,7 @@ updateAnimationClocks s d | pauseGameTimer gs <= 0 && lives gs == 0 = s
               { prompt =
                   Just
                     defaultPrompt
-                      { promptText = "Enter your name: "
+                      { promptText = "Leaderboard Name: "
                       , promptValue = "name"
                       , confirmAction = confirmHighScorePrompt
                       , closeAction = \state _ -> do return state {route = StartMenu, prompt = Nothing}

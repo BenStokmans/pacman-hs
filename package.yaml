@@ -23,6 +23,7 @@ dependencies:
   - linear
   - gloss-rendering
   - aeson
+  - bytestring
 
 default-extensions:
   - TupleSections

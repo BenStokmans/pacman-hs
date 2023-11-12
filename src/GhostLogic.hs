@@ -29,7 +29,6 @@ import Data.IntMap (update)
 import Data.Ord (clamp)
 import Data.Data (ConstrRep(FloatConstr))
 
-
 calculateScatterTarget :: GhostType -> GlobalState -> Vec2 -- after certain amount of dots blinky goes to chase even in scatter
 calculateScatterTarget gt s
   | gt == Blinky && hasElroyBoost (level gs) (pelletCount gs) = Vec2 xmax ymax

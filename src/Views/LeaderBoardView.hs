@@ -32,13 +32,13 @@ renderLeaderBoardView gs = do
   let sett = settings gs
   let debug = not $ debugEnabled sett
   let ds = debugSettings sett
-  let scores = sortBy (\(_,s1) (_,s2) -> compare s1 s2) (toList $ highScores gs)
-  let (_,names) = foldr (\(i,(name,score)) (y,pics) -> (y-60, renderString (0,0) mEmu white (show (i+1) ++ ". " ++ name ++ ": " ++ show score) : pics)) (180,[]) (zip [0..] scores)
+  let scores = reverse (zip [0..] $ take 8 $ sortBy (\(_,s1) (_,s2) -> compare s2 s1) (toList $ highScores gs))
+  let (_,names) = foldr (\(i,(name,score)) (y,pics) -> (y-60, renderString (0,y) mEmu white (show (i+1) ++ ". " ++ name ++ ": " ++ show score) : pics)) (180,[]) scores
   lBoardPictures <- sequence names
 
-  drawnSaveButton <- defaultButton closeButton mEmu "Close" mPos
+  drawnCloseButton <- defaultButton closeButton mEmu "Close" mPos
 
-  return (pictures [drawParticles gs, title, pictures lBoardPictures, drawnSaveButton])
+  return (pictures [drawParticles gs, title, pictures lBoardPictures, drawnCloseButton])
 
 handleInputLeaderBoardView :: Event -> GlobalState -> IO GlobalState
 handleInputLeaderBoardView (EventKey (SpecialKey KeyEsc) _ _ _) s = do

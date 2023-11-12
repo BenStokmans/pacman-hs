@@ -55,6 +55,7 @@ library
     , MonadRandom
     , aeson
     , base >=4.17
+    , bytestring
     , containers
     , directory
     , filepath
@@ -88,6 +89,7 @@ executable pacman-exe
     , MonadRandom
     , aeson
     , base >=4.17
+    , bytestring
     , containers
     , directory
     , filepath

@@ -1,7 +1,7 @@
 module State where
 
 import Assets (Assets(..), loadAssets)
-import Data.Aeson (decode)
+import Data.Aeson (decode, decodeStrict)
 import Data.Map (Map, empty)
 import Data.Text hiding (empty, map)
 import GHC.Generics
@@ -14,6 +14,8 @@ import Control.Monad (unless)
 import Data.String (fromString)
 import Data.Maybe (fromMaybe)
 import Control.Exception.Base (try, catch)
+import qualified Data.ByteString as Str
+import Data.ByteString (ByteString)
 
 data Prompt = Prompt
   { accentColor :: Color
@@ -264,14 +266,13 @@ emptyGameState =
           }
     }
 
-
-readHandler :: IOError -> IO String 
-readHandler e = return ""
+readHandler :: IOError -> IO ByteString
+readHandler _ = return ""
 
 readHighScores :: IO (Map String Int)
 readHighScores = do
-  text <- catch (readFile "assets/highscores.json") readHandler
-  return $ fromMaybe empty (decode (fromString text) :: Maybe (Map String Int))
+  text <- catch (Str.readFile "assets/highscores.json") readHandler
+  return $ fromMaybe empty (decodeStrict text :: Maybe (Map String Int))
 
 initState :: IO GlobalState
 initState = do
