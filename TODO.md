@@ -17,3 +17,4 @@
 - [x] Look into frightened duration (add ghost blink)
 - [x] Add kill ghost sequence/animation/whatever
 - [x] Add score string when killing ghost (see above)
+- [ ] Ghost go back to spawn when pacman is kill
