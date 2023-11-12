@@ -18,7 +18,7 @@ import Struct
       Vec2(..), cellHasType, isCellCond, outOfBounds )
 import Graphics.Gloss (Point)
 import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..), ghostActors)
-import Map (deleteMultiple, getAllowedGhostDirections)
+import Map (deleteMultiple, getAllowedGhostDirections, getAdjacent)
 import Pathfinding ( getAdjacentVecs, vec2Dist )
 import Rendering ( gridToScreenPos, screenToGridPos )
 import Data.Maybe ( fromMaybe, mapMaybe )
@@ -237,6 +237,10 @@ getChaseSpeed level | level == 1 = 0.75
                     | level < 5 = 0.85
                     | otherwise = 0.95
 
+getWarpSpeed :: Int -> Float
+getWarpSpeed level | level == 1 = 0.4
+                   | level < 5 = 0.45
+                   | otherwise = 0.5
 
 getElroyOnePallets :: Int -> Int
 getElroyOnePallets l | l == 1 = 20
@@ -267,8 +271,16 @@ castRay m v f d | isOutOfBounds m v = outOfBounds
                 | f v = v
                 | otherwise = castRay m (v + dirToVec2 d) f d
 
+isIntersection :: GlobalState -> Vec2 -> Bool
+isIntersection s v = t /= Wall && length adj < 2
+  where 
+    gs = gameState s
+    gmap = gMap gs
+    adj = getAdjacent (cellHasType Wall) gmap (getCell gmap v)
+    
+
 inWarpTunnel :: GlobalState -> GhostActor -> Bool
-inWarpTunnel gs ga = castRay m loc (isCellCond m (cellHasType Wall)) dir == outOfBounds
+inWarpTunnel gs ga = castRay m loc (isCellCond m (\c@(Cell _ v) -> cellHasType Wall c && isIntersection gs v)) dir == outOfBounds || castRay m loc (isCellCond m (\c@(Cell _ v) -> cellHasType Wall c && isIntersection gs v)) (oppositeDirection dir) == outOfBounds
   where
     m = gameLevel gs
     loc = screenToGridPos (gameGridInfo gs) (gLocation ga)
@@ -282,6 +294,7 @@ getGhostVelocity s ghost | behaviour == Respawning = 0
                          | l == 1 && ghostT == Inky && pellets < 30 = 0
                          | l == 1 && ghostT == Clyde && pellets < 90 = 0
                          | l == 2 && ghostT == Clyde && pellets < 50 = 0
+                         | inWarpTunnel s ghost = getWarpSpeed l
                          | behaviour == Frightened = getFrightSpeed l
                          | ghostT == Blinky = getChaseSpeed l + elroyBoost pellets l
                          | otherwise = getChaseSpeed l

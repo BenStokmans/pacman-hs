@@ -74,7 +74,6 @@ data CellType
   | Pellet
   | PowerUp
   | Wall
-  | Intersection
   | Spawn
   | GhostSpawn GhostType
   | GhostWall
@@ -85,7 +84,6 @@ instance Show CellType where
   show Empty = "E"
   show Pellet = "F"
   show Wall = "W"
-  show Intersection = "X"
   show Spawn = "S"
   show PowerUp = "A"
   show (GhostSpawn Blinky) = "B"
@@ -98,7 +96,6 @@ instance Show CellType where
 stringToCellType :: String -> CellType
 stringToCellType "F" = Pellet
 stringToCellType "W" = Wall
-stringToCellType "X" = Intersection
 stringToCellType "S" = Spawn
 stringToCellType "A" = PowerUp
 stringToCellType "B" = GhostSpawn Blinky

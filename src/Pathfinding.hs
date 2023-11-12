@@ -4,7 +4,7 @@ import Data.List (delete, maximumBy, minimumBy, sortBy)
 import Data.Maybe (isJust)
 import Struct
   ( Cell(Cell)
-  , CellType(Empty, Intersection, Wall)
+  , CellType(Empty, Wall)
   , Direction(East, North, South, West)
   , LevelMap(LevelMap)
   , Vec2(Vec2)
