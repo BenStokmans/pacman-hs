@@ -158,7 +158,8 @@ gameGridInfo gs =
    in ((x, y), gridSizePx (x, y) gs)
 
 ghostToSprite :: GlobalState -> GhostActor -> Picture
-ghostToSprite gs ghost | gCurrentBehaviour ghost == Frightened = blueGhostSprite $ assets gs
+ghostToSprite gs ghost | gCurrentBehaviour ghost == Frightened && not (gBlink ghost) = blueGhostSprite $ assets gs
+                       | gCurrentBehaviour ghost == Frightened && gBlink ghost = whiteGhostSprite $ assets gs
                        | ghostT == Blinky = blinkySprite $ assets gs
                        | ghostT == Pinky = pinkySprite $ assets gs
                        | ghostT == Inky = inkySprite $ assets gs
@@ -203,6 +204,7 @@ emptyGameState =
           , gModeClock = 0
           , gFrightenedClock = 0
           , gAnimClock = 0
+          , gBlink = False
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -219,6 +221,7 @@ emptyGameState =
           , gModeClock = 0
           , gFrightenedClock = 0
           , gAnimClock = 0
+          , gBlink = False
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -235,6 +238,7 @@ emptyGameState =
           , gModeClock = 0
           , gFrightenedClock = 0
           , gAnimClock = 0
+          , gBlink = False
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0
@@ -251,6 +255,7 @@ emptyGameState =
           , gModeClock = 0
           , gFrightenedClock = 0
           , gAnimClock = 0
+          , gBlink = False
           , gCurrentBehaviour = Scatter
           , lastModeChange = 0
           , gUpdate = 0

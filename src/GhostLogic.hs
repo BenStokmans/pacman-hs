@@ -183,7 +183,7 @@ levelToBlinkCount level | level <= 8 = 5
                         | otherwise = 0
                                      
 stillFrightened :: Float -> Float -> Int -> Bool
-stillFrightened frightenedClock blinkDuration level = levelToFrightenDuration level < (frightenedClock + (blinkDuration * levelToBlinkCount level))  
+stillFrightened frightenedClock blinkDuration level = frightenedClock < levelToFrightenDuration level + (blinkDuration * levelToBlinkCount level) 
 
 updateGhost :: GlobalState -> Float -> GhostActor -> Int -> GhostActor --TODO: on levels where frightened time is 0 ghosts should still reverse direction 
 updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = updatedGhost {gUpdate = 0, lastDirChange = outOfBounds}
@@ -194,13 +194,21 @@ updateGhost gs dt ghost l | gUpdate ghost > ghostStuckTimeout (settings gs) = up
   where 
     ghostM = gCurrentBehaviour ghost
     newClock = gModeClock ghost + dt
-    stayFrightened = stillFrightened (ghostBlinkLength $ settings gs) (gFrightenedClock ghost) l
+    blinkLength = ghostBlinkLength $ settings gs
+    stayFrightened = stillFrightened (gFrightenedClock ghost) blinkLength l
     updatedGhost = ghost {gModeClock = newClock, gUpdate = gUpdate ghost + dt}
     newMode = getBehaviour newClock l
     respawnLength = ghostRespawnTimer $ settings gs
+    animClock = gAnimClock ghost
+    progressedAnimClock | animClock > 0 = animClock - dt
+                        | otherwise = 0
+    (blink,newAnimClock) | not stayFrightened = (False,0)
+                         | gFrightenedClock ghost - levelToFrightenDuration l <= 0 = (False, 0)
+                         | newAnimClock <= 0 = (not $ gBlink ghost,blinkLength)
+                         | otherwise = (False,0)
 
 setGhostBehaviour :: GlobalState -> GhostActor -> GhostBehaviour -> GlobalState
-setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour = b, gDirection = direction, lastDirChange = newDirChange }
+setGhostBehaviour s ghost b = updateGhostGlobalState s ghost { gCurrentBehaviour = b, gDirection = direction, lastDirChange = newDirChange, gBlink = False, gAnimClock = 0 }
   where 
     ghostT = ghostType ghost
     direction | b == Frightened = oppositeDirection $ gDirection ghost

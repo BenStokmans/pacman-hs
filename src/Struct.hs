@@ -277,6 +277,7 @@ data GhostActor = GhostActor
   , gModeClock :: Float
   , gFrightenedClock :: Float -- TODO: merge frightened clock and respawn timer into one field: "ModeTimer"
   , gAnimClock :: Float
+  , gBlink :: Bool
   , gCurrentBehaviour :: GhostBehaviour
   , lastModeChange :: Float
   } deriving (Generic, Show)
