@@ -192,6 +192,9 @@ isCellCond m f v
   | Just c <- getCell m v, f c = True
   | otherwise = False
 
+isCellType :: LevelMap -> CellType -> Vec2 -> Bool
+isCellType m t = isCellCond m (cellHasType t)
+
 -- filter list of vectors with conditional on potential Cell and returns filtered list of vec2s
 filterLevelVec2s :: LevelMap -> (Cell -> Bool) -> [Vec2] -> [Vec2]
 filterLevelVec2s m f = filter (isCellCond m f)

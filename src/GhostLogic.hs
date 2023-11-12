@@ -15,7 +15,7 @@ import Struct
       GhostType(..),
       LevelMap(..),
       Player(pDirection, pLocation),
-      Vec2(..), cellHasType, isCellCond, outOfBounds )
+      Vec2(..), cellHasType, isCellCond, outOfBounds, isCellType, getCellWithType )
 import Graphics.Gloss (Point)
 import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..), ghostActors)
 import Map (deleteMultiple, getAllowedGhostDirections, getAdjacent)
@@ -271,16 +271,11 @@ castRay m v f d | isOutOfBounds m v = outOfBounds
                 | f v = v
                 | otherwise = castRay m (v + dirToVec2 d) f d
 
-isIntersection :: GlobalState -> Vec2 -> Bool
-isIntersection s v = t /= Wall && length adj < 2
-  where 
-    gs = gameState s
-    gmap = gMap gs
-    adj = getAdjacent (cellHasType Wall) gmap (getCell gmap v)
-    
+isIntersection :: LevelMap -> Vec2 -> Bool -- this doesn't want to work
+isIntersection m v = not $ isCellType m Wall v && length (maybe [] (getAdjacent (getCellWithType Wall) m) (getCell m v)) > 2
 
 inWarpTunnel :: GlobalState -> GhostActor -> Bool
-inWarpTunnel gs ga = castRay m loc (isCellCond m (\c@(Cell _ v) -> cellHasType Wall c && isIntersection gs v)) dir == outOfBounds || castRay m loc (isCellCond m (\c@(Cell _ v) -> cellHasType Wall c && isIntersection gs v)) (oppositeDirection dir) == outOfBounds
+inWarpTunnel gs ga = castRay m loc (isCellType m Wall) dir == outOfBounds || castRay m loc (isCellType m Wall) (oppositeDirection dir) == outOfBounds
   where
     m = gameLevel gs
     loc = screenToGridPos (gameGridInfo gs) (gLocation ga)
