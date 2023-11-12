@@ -82,7 +82,6 @@ data MenuRoute
   | GameView
   | EditorView
   | PauseMenu
-  | GameOverMenu
   | SettingsView
   | DebugSettingsMenu
   | LeaderBoardView

@@ -273,7 +273,7 @@ data GhostActor = GhostActor
   , gTarget :: Vec2
   , lastDirChange :: Vec2
   , gModeClock :: Float
-  , gFrightenedClock :: Float -- TODO: merge frightened clock and respawn timer into one field: "ModeTimer"
+  , gFrightenedClock :: Float 
   , gAnimClock :: Float
   , gBlink :: Bool
   , gCurrentBehaviour :: GhostBehaviour

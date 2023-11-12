@@ -32,6 +32,8 @@ import GameLogic.Map
 import GameLogic.GhostLogic
     ( setGhostBehaviour, hasFrightenedGhost )
 
+
+-- player velocity varies based on whether the ghosts are frightened and on whether pacman is eating pellets.
 getPlayerVelocity :: GlobalState -> Float
 getPlayerVelocity s | hfg && isOnPellet = frightPacDotSpd
                     | hfg = frightPacSpd

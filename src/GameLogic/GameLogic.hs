@@ -29,14 +29,14 @@ getFruitScore s | l == 1             = 100
     l = level $ gameState s
 
 speedConstant :: Float -- pps (pixels per second), source: original pacman
-speedConstant = 75.75757625 -- on grid with 8x8 pixel cells
+speedConstant = 75.75757625 -- On grid with 8x8 pixel cells.
 
-calculateGameSpeed :: GlobalState -> Direction -> Float -> Float -- directional speed calculation
+calculateGameSpeed :: GlobalState -> Direction -> Float -> Float -- Directional speed calculation.
 calculateGameSpeed gs dir speed = speed * speedScalar * speedConstant * globalSpeedScalar (settings gs)
   where
     gi = gameGridInfo gs
     (cw,ch) = cellSize gi
-    speedScalar | dir == North || dir == South = ch/8
+    speedScalar | dir == North || dir == South = ch/8 --Scalar that scales speedConstant with our cell size in pixels.
                 | otherwise = cw/8
 
 
@@ -49,8 +49,8 @@ calcPlayerSize gs gi = calcSprite16Size gi ((1 + mazeMargin (settings gs) * 2) *
 fruitAvailable :: GlobalState -> Bool
 fruitAvailable s = let gs = gameState s in not (fruitEaten gs || (fromIntegral (pelletCount gs) :: Float) < (fromIntegral (totalPelletCount gs) :: Float) / 2)
 
-
-ghostPlayerCollision :: GlobalState -> GridInfo -> GhostActor -> Bool
+--Leniency changes the ghost hitbox slightly to make the game more forgiving.
+ghostPlayerCollision :: GlobalState -> GridInfo -> GhostActor -> Bool 
 ghostPlayerCollision gs gi ga | abs (px - gx) <= (pw/2 + gw/2)*(1-leniency) && abs (py - gy) <= (ph/2 + gh/2)*(1-leniency) = True
                               | otherwise = False
   where

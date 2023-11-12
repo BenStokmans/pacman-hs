@@ -29,6 +29,7 @@ import GameLogic.Struct
   , setCells, oppositeDirection, isCellCond, getCell, ghosts
   )
 
+-- Level is only valid when it has all spawnpoints and there is nothing out of bounds or null. 
 validateLevel :: LevelMap -> Bool
 validateLevel m@(LevelMap w h cells) = w > 0 && h > 0 && not (null cells) && all (isJust . getCell m) (zipWith Vec2 [0..w-1] [0..h-1]) && getSpawnPoint m /= outOfBounds && notElem outOfBounds (map (getGhostSpawnPoint m) ghosts)
 

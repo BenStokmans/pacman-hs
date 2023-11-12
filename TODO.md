@@ -17,3 +17,5 @@
 - [x] Add kill ghost sequence/animation/whatever
 - [x] Add score string when killing ghost (see above)
 - [x] Ghost go back to spawn when pacman is kill
+- [ ] Cleanup struct
+- [ ] Add comments to pathfinding, rendering and prompt
