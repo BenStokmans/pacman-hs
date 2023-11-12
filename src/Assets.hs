@@ -85,7 +85,6 @@ startMusic p = do
   sound <- Mixer.load (p </> "theme.wav")
   Mixer.playForever sound
   Mixer.setVolume 20 Mixer.AllChannels
-  Mixer.pause Mixer.AllChannels --FIXME: move or something
   fix $ \loop -> do
     SDL.delay 50
     playing <- Mixer.playing Mixer.AllChannels
