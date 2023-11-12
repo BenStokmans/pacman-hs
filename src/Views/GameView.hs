@@ -53,7 +53,7 @@ import Struct
   , scaleVec2
   , setCell, getCellsWithType, cellHasTypes, setCells
   )
-import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState )
+import GhostLogic ( updateGhostTarget, updateGhostClock, setGhostBehaviour, updateGhostGlobalState, updateGhostVelocity, updateGhostGameState, hasFrightenedGhost )
 
 debugGrid :: GlobalState -> Picture
 debugGrid s = drawGrid (gameGridInfo s) green
@@ -520,13 +520,45 @@ checkCollisionsForGhost s ghost | godMode gs = s
                                   deadPlayerGS | lives gs == 1 = s { route = StartMenu } -- properly handle game over
                                                | otherwise = s { gameState = gs {lives = lives gs - 1, player = (player gs) { pLocation = gridToScreenPos gi $ getSpawnPoint level}}}
 
+getPlayerVelocity :: GlobalState -> Float
+getPlayerVelocity s | hfg && isOnPellet = frightPacDotSpd
+                    | hfg = frightPacSpd
+                    | isOnPellet = pacDotSpd
+                    | otherwise = pacSpd
+  where
+    ps = player gs
+    gi = gameGridInfo s
+    gs = gameState s
+    l = level gs
+    isOnPellet = isCellCond (gMap gs) (cellHasType Pellet) (screenToGridPos gi (pLocation ps)) 
+    hfg = hasFrightenedGhost s
+    frightPacDotSpd | l == 1 = 0.79
+                    | l < 5 = 0.83
+                    | otherwise = 0.87
+    frightPacSpd | l == 1 = 0.9
+                 | l < 5 = 0.95
+                 | otherwise = 1
+    pacDotSpd | l == 1 = 0.71
+              | l < 5 = 0.79
+              | l < 21 = 0.87
+              | otherwise = 0.79
+    pacSpd | l == 1 = 0.8
+           | l < 5 || l > 20 = 0.9
+           | otherwise = 1
+
+updatePlayerVelocity :: GlobalState -> GlobalState
+updatePlayerVelocity s = s {gameState = gs{player = ps {pVelocity = getPlayerVelocity s}}}
+  where
+    gs = gameState s
+    ps = player gs
 
 handleUpdateGameView :: Float -> GlobalState -> IO GlobalState
 handleUpdateGameView f gs = do
   let updatedAnimationClocks = updateAnimationClocks gs f
   let updatedClocks = foldr (\g acc ->updateGhostClock acc f (getGhostActor gs g)) updatedAnimationClocks ghosts
   let ngs = updatePlayerAnimState updatedClocks
-  let pUpdate = updatePlayerPosition f ngs
+  let updatedPlayerVelocity = updatePlayerVelocity ngs
+  let pUpdate = updatePlayerPosition f updatedPlayerVelocity
   -- update ghosts target
   ghostTargetUpdate <- foldrM (\v acc -> updateGhostTarget (getGhostActor acc v) acc) pUpdate ghosts
   -- update ghosts velocity

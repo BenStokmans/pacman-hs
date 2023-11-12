@@ -17,7 +17,7 @@ import Struct
       Player(pDirection, pLocation),
       Vec2(..), cellHasType, isCellCond, outOfBounds )
 import Graphics.Gloss (Point)
-import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..))
+import State (GlobalState (..), GameState (..), gameGridDimensions, gameGridInfo, Settings (..), ghostActors)
 import Map (deleteMultiple, getAllowedGhostDirections)
 import Pathfinding ( getAdjacentVecs, vec2Dist )
 import Rendering ( gridToScreenPos, screenToGridPos )
@@ -27,21 +27,27 @@ import Control.Monad.Random (getRandomR)
 import Data.Tree (levels)
 import Data.IntMap (update)
 import Data.Ord (clamp)
+import Data.Data (ConstrRep(FloatConstr))
 
 
-calculateScatterTarget :: GhostType -> Point -> Vec2 -- after certain amount of dots blinky goes to chase even in scatter
-calculateScatterTarget gt (xmax, ymax)
+calculateScatterTarget :: GhostType -> GlobalState -> Vec2 -- after certain amount of dots blinky goes to chase even in scatter
+calculateScatterTarget gt s
+  | gt == Blinky && hasElroyBoost (level gs) (pelletCount gs) = Vec2 xmax ymax
   | gt == Blinky = Vec2 xmax ymax
   | gt == Pinky = Vec2 0 ymax
   | gt == Inky = Vec2 xmax 0
   | gt == Clyde = Vec2 1 1
+    where 
+      ((xmax, ymax), _) = gameGridInfo s
+      gs = gameState s
+      
 
 calculateChaseTarget :: GhostType -> GlobalState -> Vec2
 calculateChaseTarget gt s
   | gt == Blinky = pLoc
   | gt == Pinky = pLoc + scaleVec2 pDir 4
   | gt == Inky = blinkyPos + scaleVec2 (pLoc + scaleVec2 pDir 2 - blinkyPos) 2 
-  | gt == Clyde && vec2Dist pLoc clydePos < 64 = calculateScatterTarget Clyde (gameGridDimensions s)
+  | gt == Clyde && vec2Dist pLoc clydePos < 64 = calculateScatterTarget Clyde s
   | otherwise = pLoc
   where
     p = player gs
@@ -89,7 +95,7 @@ updateGhostTarget ghost s
     ghostState = gCurrentBehaviour ghost
     ghostT = ghostType ghost
     m@(LevelMap lw lh cells) = gMap gs
-    gi@((xmax, ymax), _) = gameGridInfo s
+    gi = gameGridInfo s
     gs = gameState s
     currentDirection = gDirection ghost
     (px, py) = gLocation ghost
@@ -110,7 +116,7 @@ updateGhostTarget ghost s
               (deleteMultiple [oppositeDirection currentDirection, currentDirection] allDirections))) <
       2
     t v
-      | ghostState == Scatter = calculateScatterTarget ghostT (xmax, ymax)
+      | ghostState == Scatter = calculateScatterTarget ghostT s
       | ghostState == Chase = calculateChaseTarget ghostT s
       | ghostState == Frightened = v
       | otherwise = currentGridPos
@@ -221,6 +227,41 @@ updateGhostClock s dt ghost = updateGhostGlobalState s $ updateGhost s dt ghost 
   where ghostT = ghostType ghost
         l = level $ gameState s
 
+getFrightSpeed :: Int -> Float
+getFrightSpeed level | level == 1 = 0.5
+                     | level < 5 = 0.55
+                     | otherwise = 0.6 
+
+getChaseSpeed :: Int -> Float
+getChaseSpeed level | level == 1 = 0.75
+                    | level < 5 = 0.85
+                    | otherwise = 0.95
+
+
+getElroyOnePallets :: Int -> Int
+getElroyOnePallets l | l == 1 = 20
+                     | l == 2 = 30
+                     | l < 6 = 40
+                     | l < 9 = 50
+                     | l < 12 = 60
+                     | l < 15 = 80
+                     | l < 19 = 100
+                     | otherwise = 120
+
+getElroyTwoPallets :: Int -> Int
+getElroyTwoPallets l = getElroyOnePallets l `div` 2
+
+hasElroyBoost :: Int -> Int -> Bool 
+hasElroyBoost l p = p < getElroyOnePallets l 
+
+hasElroyTwoBoost :: Int -> Int -> Bool 
+hasElroyTwoBoost l p = p < getElroyTwoPallets l
+
+elroyBoost :: Int -> Int -> Float
+elroyBoost l p | hasElroyTwoBoost l p = 0.1
+               | hasElroyBoost l p = 0.05
+               | otherwise = 0
+
 getGhostVelocity ::  GlobalState -> GhostActor -> Float
 -- lvl 1 pinky leaves house instantly, inky after 30 dots clyde after 90
 -- lvl 2 pinky and inky leave instantly, clyde after 50 dots
@@ -229,8 +270,9 @@ getGhostVelocity s ghost | behaviour == Respawning = 0
                          | l == 1 && ghostT == Inky && pellets < 30 = 0
                          | l == 1 && ghostT == Clyde && pellets < 90 = 0
                          | l == 2 && ghostT == Clyde && pellets < 50 = 0
-                         | behaviour == Frightened = 0.5 -- FIXME: correct speed
-                         | otherwise = 0.75
+                         | behaviour == Frightened = getFrightSpeed l
+                         | ghostT == Blinky = getChaseSpeed l + elroyBoost pellets l
+                         | otherwise = getChaseSpeed l
   where
     ghostT = ghostType ghost
     gs = gameState s
@@ -243,3 +285,6 @@ updateGhostVelocity s ghost = let nv = getGhostVelocity s ghost in updateGhostGl
                   gVelocity = nv, 
                   lastDirChange = if gVelocity ghost == 0 && nv /= gVelocity ghost then outOfBounds else lastDirChange ghost -- make sure ghosts don't get stuck in spawn
                   }
+
+hasFrightenedGhost :: GlobalState -> Bool 
+hasFrightenedGhost s = any (\g -> gCurrentBehaviour g == Frightened) (ghostActors s)
