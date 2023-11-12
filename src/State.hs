@@ -139,6 +139,7 @@ data GlobalState = GlobalState
   , editorTool :: EditorTool
   , editorGhost :: GhostType
   , previewEditor :: Bool
+  , lastClock :: Float
   , mouseDown :: Maybe MouseButton
   , cachedWalls :: [(Cell, WallSection)]
   }
@@ -287,6 +288,7 @@ initState = do
             }
       , gameState = emptyGameState
       , gameLevelName = "default"
+      , lastClock = 1
       , gameLevel = gMap
       , editorLevel = LevelMap 25 25 []
       , cachedWalls = []

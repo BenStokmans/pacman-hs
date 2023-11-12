@@ -92,7 +92,7 @@ handleUpdate f s@(GlobalState {route = r, prompt = p}) = do
   pState <- promptState
   newState pState
   where
-    intState = s {clock = clock s + f}
+    intState = s {clock = clock s + f, lastClock = f}
     promptState
       | isJust p = handleUpdatePrompt f intState (fromMaybe emptyPrompt p)
       | otherwise = do return intState

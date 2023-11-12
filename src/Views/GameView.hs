@@ -280,7 +280,8 @@ getDebugPicture s = do
     (400, 350)
     emuS
     green
-    ("God: " ++ show (godMode gs) ++
+    ("FPS: " ++ show (round $ 1/lastClock s) ++ 
+     "\nGod: " ++ show (godMode gs) ++
      "\nLevel: " ++ show (level gs) ++
      "\nFruit: " ++ show (fruitAvailable s) ++
      "\nPellets: " ++ show (pelletCount gs) ++
@@ -444,6 +445,7 @@ updatePlayerPosition dt s
     location = pLocation ps
     currentGridPos = screenToGridPos dims location
     distMoved = calculateGameSpeed s currentDirection (pVelocity ps) * dt
+
     nextCellType = getCellType m (currentGridPos + dirToVec2 currentDirection)
     wrappedPos = calcWrappedPosition dims currentDirection location
     pastCenter = isPastCentre dims currentDirection currentGridPos wrappedPos
