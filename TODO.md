@@ -6,15 +6,15 @@
 - [x] Add correct scoring for pellets and power pellets
 - [x] Add small respawn animation for ghosts
 - [ ] Fix ghost reversing in warp tunnels
-- [ ] Make level logic for ghost respawn timers
+- [x] Make level logic for ghost respawn timers
 - [x] Fix music
 - [ ] Add more sound effects
-- [ ] Implement game saving
+- [ ] Implement leaderboard
 - [x] Fix game recreating map when restarting a game
 - [x] Make pellets respawn if they've all been consumed
-- [ ] Implement more level logic
+- [x] Implement more level logic
 - [x] Add map validation
 - [x] Look into frightened duration (add ghost blink)
 - [x] Add kill ghost sequence/animation/whatever
 - [x] Add score string when killing ghost (see above)
-- [ ] Ghost go back to spawn when pacman is kill
+- [x] Ghost go back to spawn when pacman is kill

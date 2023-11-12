@@ -370,7 +370,7 @@ confirmHighScorePrompt s v
     let newState = s {highScores = insert v (score $ gameState s) (highScores s)}
     writeFile "assets/highscores.json" (show (encode $ highScores newState))
     return newState {route = StartMenu}
-  | otherwise = do return s {route = StartMenu}
+  | otherwise = do return s {route = StartMenu, prompt = Nothing}
   where
     set = settings s
 
@@ -530,7 +530,7 @@ checkCollisionsForGhost :: GlobalState -> GhostActor -> GlobalState
 checkCollisionsForGhost s ghost | godMode gs = s
                                 | colliding && gCurrentBehaviour ghost == Frightened = deadGhostGS { gameState = (gameState deadGhostGS) { score = score gs + 200*(2^(ks-1)), killingSpree = ks+1, pauseGameTimer = 1 } }
                                 | colliding && gCurrentBehaviour ghost == Respawning = s
-                                | colliding = deadPlayerGS
+                                | colliding = foldr (\g ts -> updateGhostGlobalState ts (getGhostActor ts g) {gLocation = gridToScreenPos gi $ getGhostSpawnPoint level g}) deadPlayerGS ghosts
                                 | otherwise = s
                                 where
                                   gi = gameGridInfo s

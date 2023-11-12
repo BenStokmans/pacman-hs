@@ -60,6 +60,8 @@ data Assets = Assets
   , whiteGhostSprite :: Picture
   , gearIconBlue :: Picture
   , gearIconWhite :: Picture
+  , chartIconBlue :: Picture
+  , chartIconWhite :: Picture
   , cherrySprite :: Picture
   , strawBerrySprite :: Picture
   , orangeSprite :: Picture
@@ -119,8 +121,11 @@ loadAssets p = do
   clydeSprite <- loadSprite (p </> "ghosts/clyde.png")
   blueGhostSprite <- loadSprite (p </> "ghosts/blue_ghost.png")
   whiteGhostSprite <- loadSprite (p </> "ghosts/white_ghost.png")
+
   gearIconBlue <- loadImage (p </> "gear-solid-blue.svg")
   gearIconWhite <- loadImage (p </> "gear-solid-white.svg")
+  chartIconBlue <- loadImage (p </> "chart-bar-solid-blue.svg")
+  chartIconWhite <- loadImage (p </> "chart-bar-solid-white.svg")
 
   cherrySprite <- loadSprite (p </> "fruits/cherry.png")
   strawBerrySprite <- loadSprite (p </> "fruits/strawberry.png")
@@ -144,6 +149,8 @@ loadAssets p = do
       , whiteGhostSprite = whiteGhostSprite
       , gearIconBlue = gearIconBlue
       , gearIconWhite = gearIconWhite
+      , chartIconBlue = chartIconBlue
+      , chartIconWhite = chartIconWhite
       , cherrySprite = cherrySprite
       , strawBerrySprite = strawBerrySprite
       , orangeSprite = orangeSprite

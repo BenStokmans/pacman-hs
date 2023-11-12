@@ -1,6 +1,6 @@
 module Views.StartMenu where
 
-import Assets (Assets(Assets, emuFont, pacFont, gearIconBlue, gearIconWhite))
+import Assets (Assets(Assets, emuFont, pacFont, gearIconBlue, gearIconWhite, chartIconBlue, chartIconWhite))
 import Control.Monad.Random (MonadRandom(getRandomR), Rand, RandomGen, when)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (pack, unpack)
@@ -38,6 +38,9 @@ editMapButton = Rectangle (150, -350) 300 50 10
 
 settingsButton :: Rectangle
 settingsButton = Rectangle (365, 365) 50 50 10
+
+leaderBoardButton :: Rectangle
+leaderBoardButton = Rectangle (305, 365) 50 50 10
 
 drawParticles :: GlobalState -> Picture
 drawParticles s = Color (makeColor 0 0 1 0.4) (pictures (map (\((x, y), r) -> translate x y (circleSolid r)) (particles s)))
@@ -77,9 +80,10 @@ renderStartMenu s = do
   drawnNewMapButton <- defaultButton newMapButton mEmu "Create new map" (mousePos s)
   drawnEditMapButton <- defaultButton editMapButton mEmu "Edit existing map" (mousePos s)
   let drawnSettingsButton = defaultButtonImg settingsButton (gearIconBlue ass) (gearIconWhite ass) (mousePos s)
+  let drawLeaderBoardButton = defaultButtonImg leaderBoardButton (chartIconBlue ass) (chartIconWhite ass) (mousePos s)
   return
     (pictures
-       [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton, drawnSettingsButton])
+       [drawParticles s, titleBg, title, subTitle, drawnSelectMapButton, drawnStartButton, drawnQuitButton, drawnNewMapButton, drawnEditMapButton, drawnSettingsButton,drawLeaderBoardButton])
 
 emptyMap :: Float -> Float -> LevelMap
 emptyMap w h = LevelMap w h (fr : ors ++ [lr])
@@ -205,6 +209,7 @@ handleInputStartMenu (EventKey (MouseButton LeftButton) b c _) s = do
                 | otherwise = s {prompt = errorPrompt "Invalid map!"}
           return ns
         | rectangleHovered (mousePos s) settingsButton = do return s {route = SettingsView, history = [StartMenu]}
+        | rectangleHovered (mousePos s) leaderBoardButton = do return s {route = SettingsView, history = [StartMenu]}
         | rectangleHovered (mousePos s) quitButton = do exitSuccess
         | otherwise = do return s
   newState
