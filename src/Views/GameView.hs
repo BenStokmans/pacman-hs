@@ -447,6 +447,7 @@ updateGhostPosition dt s ghost = s {gameState = newGameState}
       -- | pastCenter && not (null allowedDirections)
       | oldChange == currentGridPos = (currentDirection, oldChange)
       | gTarget ghost == currentGridPos && not (null allowedDirections) = (head allowedDirections, currentGridPos)
+      | gTarget ghost == currentGridPos && null allowedDirections && isOutOfBounds m (currentGridPos + dirToVec2 currentDirection) = (currentDirection, oldChange)
       | gTarget ghost == currentGridPos && null allowedDirections = (oppositeDirection currentDirection, currentGridPos) -- this doesn't work exactly like I want it to
       | null path = (currentDirection, oldChange)
       | pastCenter && length walls < 2 = (head path, currentGridPos)

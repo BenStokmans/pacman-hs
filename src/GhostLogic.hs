@@ -88,7 +88,7 @@ updateGhostTarget ghost s
   | not mustPathfind || gVelocity ghost == 0 = do return s
   | ghostState == Frightened && mustPathfind = do
     let allowedDirections = filter (\d -> isCellCond m (not . cellHasType Wall) (currentGridPos + dirToVec2 d)) (delete (oppositeDirection currentDirection) allDirections)
-    rDir <- getRandomElement allowedDirections
+    rDir <- if null allowedDirections then do return currentDirection else getRandomElement allowedDirections
     return $ newState $ currentGridPos + scaleVec2 (dirToVec2 rDir) 2 -- the arbitrary scaling here is hacky but it works
   | otherwise = do return $ newState $ currentGridPos + scaleVec2 (dirToVec2 currentDirection) 2
   where
