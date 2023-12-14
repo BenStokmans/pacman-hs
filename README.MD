@@ -1,4 +1,6 @@
 # Pacman in Haskell
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FBenStokmans%2Fpacman-hs.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FBenStokmans%2Fpacman-hs?ref=badge_shield)
+
 
 ## Setup development environment (Windows)
 
@@ -31,3 +33,6 @@ stack setup
 # Build and run the game (using this command instead of stack run makes sure we use glfw and don't need GLUT dependencies)
 stack build --flag gloss:glfw --flag gloss:-glut --fast :pacman-exe --exec pacman-exe
 ```
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FBenStokmans%2Fpacman-hs.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FBenStokmans%2Fpacman-hs?ref=badge_large)
